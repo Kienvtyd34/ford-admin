@@ -1,5 +1,4 @@
-// 1. Nhớ thêm dòng import này ở đầu file!
-import Booking from '../models/Booking.js'; 
+import Booking from '../models/Booking.js';
 
 export const handleSepayWebhook = async (req, res) => {
     try {
