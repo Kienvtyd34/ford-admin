@@ -44,7 +44,7 @@ app.use("/api/users", authRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/bookings", bookingRoutes); 
 app.use('/api/news', newsRoutes);
-app.use('/api/ai-chat', aiChatbotRoutes);s
+app.use('/api/ai-chat', aiChatbotRoutes);
 // --- TỰ ĐỘNG HÓA ---
 setInterval(autoCancelExpiredBookings, 60 * 60 * 1000);
 
