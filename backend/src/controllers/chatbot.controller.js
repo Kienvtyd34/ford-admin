@@ -1,7 +1,7 @@
-import VehicleModel from "../models/vehicleModel.js";
-import Variant from "../models/variant.js";
-import VehicleColor from "../models/vehicleColor.js";
-import Inventory from "../models/inventory.js";
+import VehicleModel from "../models/VehicleModel.js";
+import Variant from "../models/Variant.js";
+import VehicleColor from "../models/VehicleColor.js";
+import Inventory from "../models/Inventory.js";
 
 // =========================
 // 1. Lấy giá xe theo tên
