@@ -1,0 +1,22 @@
+# Node
+node_modules/
+
+# Python
+rasa_env/
+__pycache__/
+*.pyc
+
+# Rasa
+models/
+.cache/
+*.tar.gz
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

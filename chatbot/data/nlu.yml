@@ -1,0 +1,26 @@
+version: "3.1"
+
+nlu:
+- intent: greet
+  examples: |
+    - xin chào
+    - chào bạn
+    - hello
+
+- intent: ask_price
+  examples: |
+    - xe ranger giá bao nhiêu
+    - ford everest giá nhiêu
+    - giá xe explorer
+    - ranger bao nhiêu tiền
+
+- intent: ask_recommend
+  examples: |
+    - 300 triệu mua xe gì
+    - xe nào phù hợp gia đình
+    - tư vấn xe cho tôi
+
+- intent: goodbye
+  examples: |
+    - tạm biệt
+    - bye

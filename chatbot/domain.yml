@@ -1,0 +1,21 @@
+version: "3.1"
+
+intents:
+  - greet
+  - ask_price
+  - ask_recommend
+  - goodbye
+
+responses:
+  utter_greet:
+    - text: "Xin chào! Tôi có thể giúp gì về xe?"
+
+  utter_goodbye:
+    - text: "Tạm biệt bạn!"
+
+  utter_iamabot:
+    - text: "Tôi là chatbot hỗ trợ tư vấn xe 🚗"
+
+actions:
+  - action_get_car_price
+  - action_recommend_car
