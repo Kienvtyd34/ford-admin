@@ -4,17 +4,40 @@ intents:
   - greet
   - ask_price
   - ask_recommend
+  - provide_info
   - goodbye
+
+entities:
+  - price
+  - seats
+  - type
+
+slots:
+  price:
+    type: float
+    influence_conversation: true
+  seats:
+    type: float
+    influence_conversation: true
+  type:
+    type: text
+    influence_conversation: true
 
 responses:
   utter_greet:
-    - text: "Xin chào! Tôi có thể giúp gì về xe?"
+    - text: "Xin chào! Bạn đang quan tâm dòng xe nào hoặc tầm giá bao nhiêu ạ?"
+
+  utter_ask_price:
+    - text: "Bạn dự kiến ngân sách khoảng bao nhiêu?"
+
+  utter_ask_seats:
+    - text: "Bạn cần xe mấy chỗ ạ?"
+
+  utter_ask_type:
+    - text: "Bạn thích SUV, Sedan hay bán tải?"
 
   utter_goodbye:
-    - text: "Tạm biệt bạn!"
-
-  utter_iamabot:
-    - text: "Tôi là chatbot hỗ trợ tư vấn xe 🚗"
+    - text: "Cảm ơn bạn! Khi nào cần tư vấn xe cứ quay lại nhé 🚗"
 
 actions:
   - action_get_car_price

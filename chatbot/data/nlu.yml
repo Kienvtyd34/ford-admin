@@ -1,11 +1,14 @@
 version: "3.1"
 
 nlu:
+
 - intent: greet
   examples: |
     - xin chào
     - chào bạn
     - hello
+    - hi
+    - chào shop
 
 - intent: ask_price
   examples: |
@@ -13,14 +16,31 @@ nlu:
     - ford everest giá nhiêu
     - giá xe explorer
     - ranger bao nhiêu tiền
+    - cho tôi giá everest
+    - everest giá bao nhiêu
 
 - intent: ask_recommend
   examples: |
     - 300 triệu mua xe gì
+    - dưới 1 tỷ mua xe nào
     - xe nào phù hợp gia đình
     - tư vấn xe cho tôi
+    - tôi cần xe 7 chỗ
+    - xe suv giá khoảng 1 tỷ
+    - xe cho gia đình 5 người
+    - xe gầm cao dưới 1 tỷ
+
+- intent: provide_info
+  examples: |
+    - tôi có 1 tỷ
+    - ngân sách khoảng 800 triệu
+    - tôi cần 7 chỗ
+    - xe suv
+    - xe bán tải
+    - gia đình tôi 5 người
 
 - intent: goodbye
   examples: |
     - tạm biệt
     - bye
+    - hẹn gặp lại

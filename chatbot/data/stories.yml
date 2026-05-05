@@ -1,14 +1,22 @@
 version: "3.1"
 
 stories:
+
 - story: hỏi giá xe
   steps:
     - intent: ask_price
     - action: action_get_car_price
 
-- story: tư vấn xe
+- story: tư vấn xe trực tiếp
   steps:
     - intent: ask_recommend
+    - action: action_recommend_car
+
+- story: tư vấn + bổ sung thông tin
+  steps:
+    - intent: ask_recommend
+    - action: utter_ask_price
+    - intent: provide_info
     - action: action_recommend_car
 
 - story: chào hỏi
