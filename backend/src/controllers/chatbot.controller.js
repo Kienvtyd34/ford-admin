@@ -8,10 +8,27 @@ import Inventory from "../models/Inventory.js";
 // =========================
 export const getCarPrice = async (req, res) => {
   try {
-    const { name } = req.query;
+    let { name } = req.query;
+
+    if (!name) {
+      return res.json({ message: "Thiếu tên xe" });
+    }
+
+    // 👉 chuẩn hoá text
+    name = name.toLowerCase();
+
+    // 👉 lọc keyword (rất quan trọng)
+    let keyword = "";
+
+    if (name.includes("everest")) keyword = "everest";
+    else if (name.includes("ranger")) keyword = "ranger";
+    else if (name.includes("territory")) keyword = "territory";
+    else keyword = name;
+
+    console.log("Keyword search:", keyword);
 
     const model = await VehicleModel.findOne({
-      name: { $regex: name, $options: "i" }
+      name: { $regex: keyword, $options: "i" }
     });
 
     if (!model) {
@@ -34,7 +51,6 @@ export const getCarPrice = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 // =========================
 // 2. Gợi ý xe theo nhu cầu

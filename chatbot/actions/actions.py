@@ -6,10 +6,13 @@ class ActionGetCarPrice(Action):
         return "action_get_car_price"
 
     def run(self, dispatcher, tracker, domain):
-        car_name = tracker.get_slot("car_name")
+
+        # 👉 lấy full câu user
+        user_message = tracker.latest_message.get("text")
 
         res = requests.get(
-            f"https://ford-admin.onrender.com/api/ai-chat/price?name={car_name}"
+            "https://ford-admin.onrender.com/api/ai-chat/price",
+            params={"name": user_message}
         )
 
         data = res.json()
@@ -19,7 +22,7 @@ class ActionGetCarPrice(Action):
             for v in data["variants"]:
                 msg += f"- {v['variant']}: {v['price']:,} VND\n"
         else:
-            msg = "Không tìm thấy xe"
+            msg = data.get("message", "Không tìm thấy xe")
 
         dispatcher.utter_message(text=msg)
         return []
