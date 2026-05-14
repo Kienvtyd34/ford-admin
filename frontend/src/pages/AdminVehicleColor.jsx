@@ -14,16 +14,14 @@ const AdminVehicle = () => {
     name: '',
     type: 'SUV',
     seats: 5,
-    specs: {
-      engine: '',
-      fuelType: '',
-      wheel: ''
-    },
     description: '',
     isHot: false
   });
 
   const [mainImage, setMainImage] = useState(null);
+
+  // ✅ THÊM ẢNH BẢNG THÔNG SỐ
+  const [specImage, setSpecImage] = useState(null);
 
   // ================= STATE QUẢN LÝ MÀU SẮC =================
   const [selectedModel, setSelectedModel] = useState(null);
@@ -75,11 +73,6 @@ const AdminVehicle = () => {
       name: model.name || '',
       type: model.type || 'SUV',
       seats: model.seats || 5,
-      specs: {
-        engine: model.specs?.engine || '',
-        fuelType: model.specs?.fuelType || '',
-        wheel: model.specs?.wheel || ''
-      },
       description: model.description || '',
       isHot: model.isHot || false
     });
@@ -100,11 +93,16 @@ const AdminVehicle = () => {
       formData.append('type', modelForm.type);
       formData.append('seats', modelForm.seats);
       formData.append('description', modelForm.description);
-      formData.append('specs', JSON.stringify(modelForm.specs));
       formData.append('isHot', modelForm.isHot);
 
+      // ✅ ẢNH ĐẠI DIỆN
       if (mainImage) {
         formData.append('image', mainImage);
+      }
+
+      // ✅ ẢNH BẢNG THÔNG SỐ
+      if (specImage) {
+        formData.append('specImage', specImage);
       }
 
       await api.patch(`/vehicles/${selectedModel._id}`, formData, {
@@ -116,7 +114,9 @@ const AdminVehicle = () => {
       alert('Cập nhật dòng xe thành công!');
 
       setIsEditingModel(false);
+
       setMainImage(null);
+      setSpecImage(null);
 
       fetchVehicles();
     } catch (err) {
@@ -304,22 +304,14 @@ const AdminVehicle = () => {
                     )}
                   </div>
 
-                  {/* SPECS */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-bold text-gray-500 uppercase">
-                    <div className="flex items-center gap-2">
-                      ⚙️ {v.specs?.engine || 'N/A'}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      ⛽ {v.specs?.fuelType || 'N/A'}
-                    </div>
-
+                  {/* INFO */}
+                  <div className="grid grid-cols-2 md:grid-cols-2 gap-4 text-xs font-bold text-gray-500 uppercase">
                     <div className="flex items-center gap-2">
                       💺 {v.seats || '0'} Chỗ
                     </div>
 
                     <div className="flex items-center gap-2">
-                      🛞 {v.specs?.wheel || 'N/A'}
+                      🚘 {v.brand || 'Ford'}
                     </div>
                   </div>
 
@@ -466,6 +458,7 @@ const AdminVehicle = () => {
                     </div>
                   </div>
 
+                  {/* ẢNH ĐẠI DIỆN */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
                       Thay đổi ảnh đại diện
@@ -473,9 +466,26 @@ const AdminVehicle = () => {
 
                     <input
                       type="file"
+                      accept="image/*"
                       className="w-full border-2 border-gray-100 p-2.5 rounded-xl text-sm"
                       onChange={(e) =>
                         setMainImage(e.target.files[0])
+                      }
+                    />
+                  </div>
+
+                  {/* ẢNH BẢNG THÔNG SỐ */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
+                      Thêm ảnh bảng thông số
+                    </label>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="w-full border-2 border-gray-100 p-2.5 rounded-xl text-sm"
+                      onChange={(e) =>
+                        setSpecImage(e.target.files[0])
                       }
                     />
                   </div>
@@ -496,54 +506,6 @@ const AdminVehicle = () => {
                     <label className="font-bold text-gray-700 cursor-pointer">
                       Đánh dấu dòng xe HOT
                     </label>
-                  </div>
-
-                  {/* SPECS */}
-                  <div className="space-y-3">
-                    <input
-                      placeholder="Động cơ"
-                      className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none"
-                      value={modelForm.specs.engine}
-                      onChange={(e) =>
-                        setModelForm({
-                          ...modelForm,
-                          specs: {
-                            ...modelForm.specs,
-                            engine: e.target.value
-                          }
-                        })
-                      }
-                    />
-
-                    <input
-                      placeholder="Loại nhiên liệu"
-                      className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none"
-                      value={modelForm.specs.fuelType}
-                      onChange={(e) =>
-                        setModelForm({
-                          ...modelForm,
-                          specs: {
-                            ...modelForm.specs,
-                            fuelType: e.target.value
-                          }
-                        })
-                      }
-                    />
-
-                    <input
-                      placeholder="Thông số mâm/vỏ"
-                      className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none"
-                      value={modelForm.specs.wheel}
-                      onChange={(e) =>
-                        setModelForm({
-                          ...modelForm,
-                          specs: {
-                            ...modelForm.specs,
-                            wheel: e.target.value
-                          }
-                        })
-                      }
-                    />
                   </div>
                 </div>
 
