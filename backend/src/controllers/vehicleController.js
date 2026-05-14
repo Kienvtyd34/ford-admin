@@ -95,10 +95,12 @@ export const getVehicles = async (req, res) => {
 // 2. Chi tiết xe
 export const getVehicleDetails = async (req, res) => {
     try {
+
         const model = await VehicleModel.findById(req.params.id).lean();
 
         if (!model) {
             return res.status(404).json({
+                success: false,
                 message: "Không tìm thấy xe"
             });
         }
@@ -109,14 +111,27 @@ export const getVehicleDetails = async (req, res) => {
 
         const variantsWithColors = await Promise.all(
             variants.map(async (v) => {
-                const colors = await VehicleColor.find({
-                    variantId: v._id
-                });
 
-                return {
-                    ...v,
-                    colors
-                };
+                try {
+
+                    const colors = await VehicleColor.find({
+                        variantId: v._id
+                    }).lean();
+
+                    return {
+                        ...v,
+                        colors
+                    };
+
+                } catch (err) {
+
+                    console.log(err);
+
+                    return {
+                        ...v,
+                        colors: []
+                    };
+                }
             })
         );
 
@@ -129,7 +144,11 @@ export const getVehicleDetails = async (req, res) => {
         });
 
     } catch (err) {
+
+        console.log("DETAIL ERROR:", err);
+
         res.status(500).json({
+            success: false,
             error: err.message
         });
     }
@@ -495,27 +514,34 @@ export const confirmDelivery = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
-export const addVariant = async (req, res) => {
+export const addVehicle = async (req, res) => {
     try {
-        const { modelId } = req.body;
 
-        const model = await VehicleModel.findById(modelId);
+        let data = { ...req.body };
 
-        if (!model) {
-            return res.status(404).json({
-                message: "Model không tồn tại"
-            });
+        // ẢNH THÔNG SỐ
+        if (req.files?.imageUrl?.[0]) {
+            data.imageUrl = req.files.imageUrl[0].path;
         }
 
-        const variant = await Variant.create(req.body);
+        // GALLERY ẢNH XE
+        if (req.files?.images?.length > 0) {
+            data.images = req.files.images.map(file => file.path);
+        }
+
+        const newModel = await VehicleModel.create(data);
 
         res.status(201).json({
             success: true,
-            data: variant
+            data: newModel
         });
 
     } catch (err) {
+
+        console.log("ADD VEHICLE ERROR:", err);
+
         res.status(400).json({
+            success: false,
             error: err.message
         });
     }
