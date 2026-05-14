@@ -157,15 +157,16 @@ export const getVehicleDetails = async (req, res) => {
 // 3. Thêm xe
 export const addVehicle = async (req, res) => {
     try {
+
         let data = { ...req.body };
 
-        // Ảnh bảng thông số kỹ thuật
-        if (req.file) {
-            data.imageUrl = req.file.path;
+        // ẢNH THÔNG SỐ
+        if (req.files?.imageUrl?.[0]) {
+            data.imageUrl = req.files.imageUrl[0].path;
         }
 
-        // Gallery ảnh xe
-        if (req.files?.images) {
+        // GALLERY ẢNH XE
+        if (req.files?.images?.length > 0) {
             data.images = req.files.images.map(file => file.path);
         }
 
@@ -177,7 +178,11 @@ export const addVehicle = async (req, res) => {
         });
 
     } catch (err) {
+
+        console.log("ADD VEHICLE ERROR:", err);
+
         res.status(400).json({
+            success: false,
             error: err.message
         });
     }
@@ -512,37 +517,5 @@ export const confirmDelivery = async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
-    }
-};
-export const addVehicle = async (req, res) => {
-    try {
-
-        let data = { ...req.body };
-
-        // ẢNH THÔNG SỐ
-        if (req.files?.imageUrl?.[0]) {
-            data.imageUrl = req.files.imageUrl[0].path;
-        }
-
-        // GALLERY ẢNH XE
-        if (req.files?.images?.length > 0) {
-            data.images = req.files.images.map(file => file.path);
-        }
-
-        const newModel = await VehicleModel.create(data);
-
-        res.status(201).json({
-            success: true,
-            data: newModel
-        });
-
-    } catch (err) {
-
-        console.log("ADD VEHICLE ERROR:", err);
-
-        res.status(400).json({
-            success: false,
-            error: err.message
-        });
     }
 };
