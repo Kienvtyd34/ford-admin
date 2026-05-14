@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion'; // 1. Import motion
+import { motion } from 'framer-motion';
 import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,7 +34,6 @@ const PriceList = () => {
         </div>
     );
 
-    // Cấu hình hiệu ứng cho từng hàng xe
     const rowVariants = {
         hidden: { opacity: 0, y: 50 },
         visible: { 
@@ -47,7 +46,7 @@ const PriceList = () => {
     return (
         <div className="bg-white min-h-screen">
             <div className="container mx-auto px-4 pt-20 max-w-6xl">
-                {/* Tiêu đề trang với hiệu ứng hiện ra */}
+                {/* Tiêu đề trang */}
                 <motion.div 
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -63,8 +62,8 @@ const PriceList = () => {
                             key={item._id} 
                             variants={rowVariants}
                             initial="hidden"
-                            whileInView="visible" // Kích hoạt khi cuộn tới
-                            viewport={{ once: true, margin: "-100px" }} // Chạy 1 lần khi cách mép màn hình 100px
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
                             className="grid md:grid-cols-12 gap-8 items-start border-b pb-16"
                         >
                             {/* Cột 1: Tên xe và Hình ảnh */}
@@ -76,7 +75,7 @@ const PriceList = () => {
                                     <img 
                                         src={item.imageUrl} 
                                         alt={item.name} 
-                                        loading="lazy" // Tối ưu: Chỉ tải ảnh khi cuộn tới gần
+                                        loading="lazy"
                                         className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-105" 
                                     />
                                 </div>
@@ -96,7 +95,8 @@ const PriceList = () => {
                                             item.variants.map((variant) => (
                                                 <tr key={variant._id} className="border-b hover:bg-gray-50 transition-colors">
                                                     <td className="py-5 px-2 font-bold text-slate-800 uppercase italic">
-                                                        {item.name} {variant.variantName}
+                                                        {/* CÁCH A: Chỉ hiển thị tên phiên bản từ database */}
+                                                        {variant.variantName}
                                                     </td>
                                                     <td className="py-5 px-2 text-right text-red-600 font-black text-base">
                                                         {formatPrice(variant.basePrice)}

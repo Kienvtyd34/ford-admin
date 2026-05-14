@@ -14,94 +14,119 @@ const safeParse = (data) => {
 
 // ================= VEHICLE MODEL =================
 
-// 1. Lấy danh sách dòng xe (Bao gồm Variant và Colors của từng Variant)
+// 1. Lấy danh sách dòng xe
 export const getVehicles = async (req, res) => {
-    try {
-        const { type, search, isHot } = req.query;
+  try {
+    const { type, search, isHot } = req.query;
 
-        let query = {};
-        if (search) query.name = { $regex: search, $options: "i" };
-        if (type && type !== 'Tất cả') query.type = type;
-        if (isHot === 'true') query.isHot = true;
+    let query = {};
+    if (search) query.name = { $regex: search, $options: "i" };
+    if (type && type !== "Tất cả") query.type = type;
+    if (isHot === "true") query.isHot = true;
 
-        const models = await VehicleModel.find(query).sort({ createdAt: -1 }).lean();
+    const models = await VehicleModel.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
 
-        // Query lồng nhau để lấy cấu trúc: Model -> Variant -> Color
-        const data = await Promise.all(models.map(async (model) => {
-            const variants = await Variant.find({ modelId: model._id }).lean();
-            
-            const variantsWithColors = await Promise.all(variants.map(async (v) => {
-                const colors = await VehicleColor.find({ variantId: v._id });
-                return { ...v, colors };
-            }));
-
-            return { ...model, variants: variantsWithColors };
-        }));
-
-        res.json({ success: true, data });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-};
-
-// 2. Chi tiết dòng xe
-export const getVehicleDetails = async (req, res) => {
-    try {
-        const model = await VehicleModel.findById(req.params.id).lean();
-        if (!model) return res.status(404).json({ message: "Không tìm thấy xe" });
-
+    const data = await Promise.all(
+      models.map(async (model) => {
         const variants = await Variant.find({ modelId: model._id }).lean();
-        const variantsWithColors = await Promise.all(variants.map(async (v) => {
+
+        const variantsWithColors = await Promise.all(
+          variants.map(async (v) => {
             const colors = await VehicleColor.find({ variantId: v._id });
             return { ...v, colors };
-        }));
+          })
+        );
 
-        res.json({ success: true, data: { ...model, variants: variantsWithColors } });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        return { ...model, variants: variantsWithColors };
+      })
+    );
+
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 };
 
-// 3. Thêm dòng xe
+// 2. Chi tiết xe
+export const getVehicleDetails = async (req, res) => {
+  try {
+    const model = await VehicleModel.findById(req.params.id).lean();
+    if (!model)
+      return res.status(404).json({ message: "Không tìm thấy xe" });
+
+    const variants = await Variant.find({ modelId: model._id }).lean();
+
+    const variantsWithColors = await Promise.all(
+      variants.map(async (v) => {
+        const colors = await VehicleColor.find({ variantId: v._id });
+        return { ...v, colors };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: { ...model, variants: variantsWithColors },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// 3. Thêm xe
 export const addVehicle = async (req, res) => {
-    try {
-        let data = { ...req.body };
-        if (req.file) data.imageUrl = req.file.path;
-        data.specs = safeParse(data.specs);
+  try {
+    let data = { ...req.body };
 
-        const newModel = await VehicleModel.create(data);
-        res.status(201).json({ success: true, data: newModel });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
+    if (req.file) data.imageUrl = req.file.path;
+
+    const newModel = await VehicleModel.create(data);
+
+    res.status(201).json({ success: true, data: newModel });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 };
 
-// 4. Update dòng xe
+// 4. Update xe
 export const updateVehicle = async (req, res) => {
-    try {
-        let data = { ...req.body };
-        if (req.file) data.imageUrl = req.file.path;
-        data.specs = safeParse(data.specs);
+  try {
+    let data = { ...req.body };
 
-        const updated = await VehicleModel.findByIdAndUpdate(req.params.id, data, { new: true });
-        res.json({ success: true, data: updated });
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
+    if (req.file) data.imageUrl = req.file.path;
+
+    const updated = await VehicleModel.findByIdAndUpdate(
+      req.params.id,
+      data,
+      { new: true }
+    );
+
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 };
 
-// 5. Xóa dòng xe
+// 5. Xóa xe
 export const deleteVehicle = async (req, res) => {
-    try {
-        const hasVariant = await Variant.exists({ modelId: req.params.id });
-        if (hasVariant) return res.status(400).json({ message: "Không thể xóa vì còn phiên bản!" });
-        await VehicleModel.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+  try {
+    const hasVariant = await Variant.exists({
+      modelId: req.params.id,
+    });
 
+    if (hasVariant)
+      return res.status(400).json({
+        message: "Không thể xóa vì còn phiên bản!",
+      });
+
+    await VehicleModel.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 // ================= VARIANT =================
 
 export const addVariant = async (req, res) => {

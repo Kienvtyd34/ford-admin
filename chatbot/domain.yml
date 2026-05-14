@@ -4,40 +4,30 @@ intents:
   - greet
   - ask_price
   - ask_recommend
-  - provide_info
   - goodbye
 
 entities:
-  - price
-  - seats
-  - type
+  - car_name
 
 slots:
-  price:
-    type: float
-    influence_conversation: true
-  seats:
-    type: float
-    influence_conversation: true
-  type:
+  car_name:
     type: text
     influence_conversation: true
+    mappings:
+      - type: from_text
 
 responses:
   utter_greet:
-    - text: "Xin chào! Bạn đang quan tâm dòng xe nào hoặc tầm giá bao nhiêu ạ?"
-
-  utter_ask_price:
-    - text: "Bạn dự kiến ngân sách khoảng bao nhiêu?"
-
-  utter_ask_seats:
-    - text: "Bạn cần xe mấy chỗ ạ?"
-
-  utter_ask_type:
-    - text: "Bạn thích SUV, Sedan hay bán tải?"
+    - text: "Xin chào 👋 Tôi là chuyên viên tư vấn xe Ford. Bạn đang quan tâm dòng xe nào hoặc tầm giá bao nhiêu?"
 
   utter_goodbye:
-    - text: "Cảm ơn bạn! Khi nào cần tư vấn xe cứ quay lại nhé 🚗"
+    - text: "Tạm biệt bạn! 🚗"
+
+  utter_ask_car:
+    - text: "Bạn muốn hỏi xe nào?"
+
+  utter_followup:
+    - text: "👉 Bạn muốn xem giá, thông số hay đặt lịch lái thử?"
 
 actions:
   - action_get_car_price

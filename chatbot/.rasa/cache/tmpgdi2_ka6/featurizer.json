@@ -1,0 +1,58 @@
+{
+  "type": "IntentMaxHistoryTrackerFeaturizer",
+  "state_featurizer": {
+    "action_texts": [],
+    "entity_tag_specs": [],
+    "feature_states": {
+      "intent": {
+        "ask_available": 0,
+        "ask_detail": 1,
+        "ask_price": 2,
+        "ask_recommend": 3,
+        "back": 4,
+        "goodbye": 5,
+        "greet": 6,
+        "nlu_fallback": 7,
+        "out_of_scope": 8,
+        "restart": 9,
+        "session_start": 10
+      },
+      "action_name": {
+        "action_listen": 0,
+        "action_restart": 1,
+        "action_session_start": 2,
+        "action_default_fallback": 3,
+        "action_deactivate_loop": 4,
+        "action_revert_fallback_events": 5,
+        "action_default_ask_affirmation": 6,
+        "action_default_ask_rephrase": 7,
+        "action_two_stage_fallback": 8,
+        "action_unlikely_intent": 9,
+        "action_back": 10,
+        "...": 11,
+        "action_extract_slots": 12,
+        "action_get_car_price": 13,
+        "action_recommend_car": 14,
+        "action_check_available": 15,
+        "action_car_detail": 16,
+        "utter_goodbye": 17,
+        "utter_greet": 18
+      },
+      "entities": {
+        "price": 0,
+        "seats": 1,
+        "type": 2
+      },
+      "slots": {
+        "price_0": 0,
+        "price_1": 1,
+        "seats_0": 2,
+        "seats_1": 3,
+        "type_0": 4
+      },
+      "active_loop": {}
+    }
+  },
+  "remove_duplicates": true,
+  "max_history": 5
+}
