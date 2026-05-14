@@ -495,3 +495,28 @@ export const confirmDelivery = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+export const addVariant = async (req, res) => {
+    try {
+        const { modelId } = req.body;
+
+        const model = await VehicleModel.findById(modelId);
+
+        if (!model) {
+            return res.status(404).json({
+                message: "Model không tồn tại"
+            });
+        }
+
+        const variant = await Variant.create(req.body);
+
+        res.status(201).json({
+            success: true,
+            data: variant
+        });
+
+    } catch (err) {
+        res.status(400).json({
+            error: err.message
+        });
+    }
+};
