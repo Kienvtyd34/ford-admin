@@ -199,82 +199,141 @@ export const addVehicle = async (req, res) => {
 // ================= UPDATE VEHICLE =================
 
 export const updateVehicle = async (req, res) => {
-    try {
+  try {
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
 
-        console.log("BODY:", req.body);
-        console.log("FILES:", req.files);
+    let data = { ...req.body };
 
-        const vehicle = await VehicleModel.findById(req.params.id);
+    const vehicle = await VehicleModel.findById(
+      req.params.id
+    );
 
-        if (!vehicle) {
-            return res.status(404).json({
-                success: false,
-                message: "Không tìm thấy xe"
-            });
-        }
-
-        const updateData = {
-            name: req.body.name,
-            type: req.body.type,
-            seats: req.body.seats,
-            description: req.body.description,
-            isHot: req.body.isHot
-        };
-
-        // ================= IMAGEURL =================
-
-        if (
-            req.files &&
-            req.files.imageUrl &&
-            req.files.imageUrl.length > 0
-        ) {
-
-            const imageFile = req.files.imageUrl[0];
-
-            updateData.imageUrl =
-                imageFile.path ||
-                imageFile.secure_url ||
-                imageFile.url;
-        }
-
-        // ================= GALLERY =================
-
-        if (
-            req.files &&
-            req.files.images &&
-            req.files.images.length > 0
-        ) {
-
-            updateData.images = req.files.images.map(file =>
-                file.path ||
-                file.secure_url ||
-                file.url
-            );
-        }
-
-        const updated = await VehicleModel.findByIdAndUpdate(
-            req.params.id,
-            updateData,
-            {
-                new: true
-            }
-        );
-
-        res.json({
-            success: true,
-            data: updated
-        });
-
-    } catch (err) {
-
-        console.log("UPDATE VEHICLE ERROR:");
-        console.log(err);
-
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy xe"
+      });
     }
+
+    // ================= IMAGEURL =================
+    if (req.files?.imageUrl?.[0]) {
+
+      // Xóa ảnh cũ nếu có
+      try {
+        if (vehicle.imageUrl) {
+
+          const oldUrl = vehicle.imageUrl;
+
+          const parts = oldUrl.split("/");
+
+          const fileName =
+            parts[parts.length - 1];
+
+          const publicId =
+            "ford/" +
+            fileName.split(".")[0];
+
+          console.log(
+            "DELETE IMAGEURL:",
+            publicId
+          );
+
+          await cloudinary.uploader.destroy(
+            publicId
+          );
+        }
+      } catch (err) {
+        console.log(
+          "DELETE IMAGEURL ERROR:",
+          err.message
+        );
+      }
+
+      data.imageUrl =
+        req.files.imageUrl[0].path;
+    }
+
+    // ================= IMAGES =================
+    if (req.files?.images?.length > 0) {
+
+      try {
+
+        if (
+          vehicle.images &&
+          vehicle.images.length > 0
+        ) {
+
+          for (const img of vehicle.images) {
+
+            try {
+
+              const parts = img.split("/");
+
+              const fileName =
+                parts[parts.length - 1];
+
+              const publicId =
+                "ford/" +
+                fileName.split(".")[0];
+
+              console.log(
+                "DELETE IMAGE:",
+                publicId
+              );
+
+              await cloudinary.uploader.destroy(
+                publicId
+              );
+
+            } catch (e) {
+              console.log(
+                "DELETE IMAGE ERROR:",
+                e.message
+              );
+            }
+          }
+        }
+
+      } catch (err) {
+        console.log(
+          "DELETE GALLERY ERROR:",
+          err.message
+        );
+      }
+
+      data.images = req.files.images.map(
+        (file) => file.path
+      );
+    }
+
+    const updated =
+      await VehicleModel.findByIdAndUpdate(
+        req.params.id,
+        data,
+        {
+          new: true
+        }
+      );
+
+    res.json({
+      success: true,
+      data: updated
+    });
+
+  } catch (err) {
+
+    console.log(
+      "UPDATE VEHICLE ERROR:"
+    );
+
+    console.log(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 // 5. Xóa xe
 export const deleteVehicle = async (req, res) => {
