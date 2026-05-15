@@ -155,6 +155,8 @@ export const getVehicleDetails = async (req, res) => {
 };
 
 // 3. Thêm xe
+// ================= ADD VEHICLE =================
+
 export const addVehicle = async (req, res) => {
     try {
 
@@ -162,12 +164,18 @@ export const addVehicle = async (req, res) => {
 
         // ẢNH THÔNG SỐ
         if (req.files?.imageUrl?.[0]) {
-            data.imageUrl = req.files.imageUrl[0].path;
+
+            data.imageUrl =
+                req.files.imageUrl[0].path ||
+                req.files.imageUrl[0].secure_url;
         }
 
-        // GALLERY ẢNH XE
+        // GALLERY
         if (req.files?.images?.length > 0) {
-            data.images = req.files.images.map(file => file.path);
+
+            data.images = req.files.images.map(file =>
+                file.path || file.secure_url
+            );
         }
 
         const newModel = await VehicleModel.create(data);
@@ -181,62 +189,82 @@ export const addVehicle = async (req, res) => {
 
         console.log("ADD VEHICLE ERROR:", err);
 
-        res.status(400).json({
+        res.status(500).json({
             success: false,
             error: err.message
         });
     }
 };
 
-// 4. Update xe
+// ================= UPDATE VEHICLE =================
+
 export const updateVehicle = async (req, res) => {
     try {
+
         let data = { ...req.body };
+
+        console.log("BODY:", req.body);
+        console.log("FILES:", req.files);
 
         const vehicle = await VehicleModel.findById(req.params.id);
 
         if (!vehicle) {
             return res.status(404).json({
+                success: false,
                 message: "Không tìm thấy xe"
             });
         }
 
-        // ================= UPDATE IMAGEURL =================
-        // imageUrl = ảnh thông số kỹ thuật
+        // ================= IMAGEURL =================
 
         if (req.files?.imageUrl?.[0]) {
 
-            // Xoá ảnh cũ trên cloudinary
             if (vehicle.imageUrl) {
+
                 const publicId = getPublicIdFromUrl(vehicle.imageUrl);
 
                 if (publicId) {
-                    await cloudinary.uploader.destroy(publicId);
+                    try {
+                        await cloudinary.uploader.destroy(publicId);
+                    } catch (e) {
+                        console.log("DELETE OLD IMAGE ERROR:", e);
+                    }
                 }
             }
 
-            data.imageUrl = req.files.imageUrl[0].path;
+            data.imageUrl =
+                req.files.imageUrl[0].path ||
+                req.files.imageUrl[0].secure_url;
         }
 
-        // ================= UPDATE IMAGES =================
-        // images = gallery ảnh xe
+        // ================= GALLERY =================
 
         if (req.files?.images?.length > 0) {
 
-            // Xoá toàn bộ ảnh cũ
             if (vehicle.images?.length > 0) {
+
                 await Promise.all(
                     vehicle.images.map(async (img) => {
-                        const publicId = getPublicIdFromUrl(img);
 
-                        if (publicId) {
-                            await cloudinary.uploader.destroy(publicId);
+                        try {
+
+                            const publicId = getPublicIdFromUrl(img);
+
+                            if (publicId) {
+                                await cloudinary.uploader.destroy(publicId);
+                            }
+
+                        } catch (e) {
+
+                            console.log("DELETE GALLERY ERROR:", e);
                         }
                     })
                 );
             }
 
-            data.images = req.files.images.map(file => file.path);
+            data.images = req.files.images.map(file =>
+                file.path || file.secure_url
+            );
         }
 
         const updated = await VehicleModel.findByIdAndUpdate(
@@ -251,12 +279,15 @@ export const updateVehicle = async (req, res) => {
         });
 
     } catch (err) {
-        res.status(400).json({
+
+        console.log("UPDATE VEHICLE ERROR:", err);
+
+        res.status(500).json({
+            success: false,
             error: err.message
         });
     }
 };
-
 // 5. Xóa xe
 export const deleteVehicle = async (req, res) => {
     try {
