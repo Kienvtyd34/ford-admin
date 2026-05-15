@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axios';
-import axios from 'axios';
 import { Editor } from '@tinymce/tinymce-react';
+
+const FALLBACK_IMG =
+  'https://dummyimage.com/600x400/e5e7eb/6b7280&text=No+Image';
 
 const AdminVehicle = () => {
   const [vehicles, setVehicles] = useState([]);
@@ -35,6 +37,15 @@ const AdminVehicle = () => {
   });
 
   const [colorImages, setColorImages] = useState([]);
+
+  // ================= GET VEHICLE IMAGE =================
+  const getVehicleImage = (vehicle) => {
+    return (
+      vehicle?.images?.[0] ||
+      vehicle?.thumbnail ||
+      FALLBACK_IMG
+    );
+  };
 
   // ================= FETCH VEHICLES =================
   const fetchVehicles = async () => {
@@ -93,20 +104,32 @@ const AdminVehicle = () => {
       formData.append('name', modelForm.name);
       formData.append('type', modelForm.type);
       formData.append('seats', modelForm.seats);
+
       formData.append(
         'description',
         modelForm.description
       );
-      formData.append('isHot', modelForm.isHot);
 
-      // gallery ảnh
+      formData.append(
+        'isHot',
+        modelForm.isHot
+      );
+
+      // ================= ẢNH ĐẠI DIỆN =================
       if (mainImage) {
-        formData.append('images', mainImage);
+        formData.append(
+          'images',
+          mainImage
+        );
       }
 
-      // ảnh thông số
+      // ================= ẢNH THÔNG SỐ =================
+      // ================= ẢNH THÔNG SỐ =================
       if (specImage) {
-        formData.append('imageUrl', specImage);
+        formData.append(
+          'imageUrl',
+          specImage
+        );
       }
 
       await api.patch(
@@ -114,7 +137,8 @@ const AdminVehicle = () => {
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type':
+              'multipart/form-data'
           }
         }
       );
@@ -326,13 +350,13 @@ const AdminVehicle = () => {
               <div className="w-full md:w-1/4">
 
                 <img
-                  src={
-                    v.images?.[0] ||
-                    v.imageUrl ||
-                    'https://via.placeholder.com/300x200'
-                  }
+                  src={getVehicleImage(v)}
                   alt={v.name}
-                  className="w-full h-52 object-contain"
+                  onError={(e) => {
+                    e.target.src =
+                      FALLBACK_IMG;
+                  }}
+                  className="w-full h-52 object-contain rounded-2xl bg-white"
                 />
 
               </div>
@@ -591,12 +615,19 @@ const AdminVehicle = () => {
                                                   index
                                                 }
                                                 src={
-                                                  img
+                                                  img ||
+                                                  FALLBACK_IMG
                                                 }
                                                 alt={
                                                   color.name
                                                 }
-                                                className="w-28 h-20 object-cover rounded-xl border"
+                                                onError={(
+                                                  e
+                                                ) => {
+                                                  e.target.src =
+                                                    FALLBACK_IMG;
+                                                }}
+                                                className="w-28 h-20 object-cover rounded-xl border bg-white"
                                               />
                                             )
                                           )}
@@ -749,7 +780,7 @@ const AdminVehicle = () => {
                   <div>
 
                     <label className="font-bold text-sm text-gray-500">
-                      Ảnh xe
+                      Ảnh đại diện xe
                     </label>
 
                     <input
