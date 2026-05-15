@@ -18,9 +18,10 @@ const AdminVehicle = () => {
     isHot: false
   });
 
+  // ✅ GALLERY ẢNH XE
   const [mainImage, setMainImage] = useState(null);
 
-  // ✅ THÊM ẢNH BẢNG THÔNG SỐ
+  // ✅ ẢNH BẢNG THÔNG SỐ
   const [specImage, setSpecImage] = useState(null);
 
   // ================= STATE QUẢN LÝ MÀU SẮC =================
@@ -95,14 +96,14 @@ const AdminVehicle = () => {
       formData.append('description', modelForm.description);
       formData.append('isHot', modelForm.isHot);
 
-      // ✅ ẢNH ĐẠI DIỆN
+      // ✅ GALLERY ẢNH XE
       if (mainImage) {
-        formData.append('image', mainImage);
+        formData.append('images', mainImage);
       }
 
       // ✅ ẢNH BẢNG THÔNG SỐ
       if (specImage) {
-        formData.append('specImage', specImage);
+        formData.append('imageUrl', specImage);
       }
 
       await api.patch(`/vehicles/${selectedModel._id}`, formData, {
@@ -151,107 +152,6 @@ const AdminVehicle = () => {
     }
   };
 
-  // ================= ADD COLOR =================
-  const handleAddColor = async () => {
-    try {
-      if (!selectedVariant)
-        return alert('Vui lòng chọn phiên bản trước!');
-
-      if (!colorForm.name || !colorForm.hexCode)
-        return alert('Vui lòng điền đủ tên màu và mã màu!');
-
-      setLoading(true);
-
-      const formData = new FormData();
-
-      formData.append('variantId', selectedVariant._id);
-      formData.append('name', colorForm.name);
-      formData.append('hexCode', colorForm.hexCode);
-
-      colorImages.forEach((img) => formData.append('images', img));
-
-      await api.post('/vehicles/colors', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      alert('Thêm màu thành công');
-
-      setColorForm({
-        name: '',
-        hexCode: ''
-      });
-
-      setColorImages([]);
-
-      fetchColors(selectedVariant._id);
-    } catch (err) {
-      console.error(err);
-      alert('Lỗi thêm màu');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ================= DELETE COLOR =================
-  const handleDeleteColor = async (id) => {
-    if (!window.confirm('Xóa màu này?')) return;
-
-    try {
-      await api.delete(`/vehicles/colors/${id}`);
-
-      fetchColors(selectedVariant._id);
-    } catch (err) {
-      alert('Lỗi xóa màu');
-    }
-  };
-
-  // ================= UPDATE COLOR =================
-  const handleUpdateColor = async () => {
-    try {
-      setLoading(true);
-
-      const formData = new FormData();
-
-      formData.append('name', colorForm.name);
-      formData.append('hexCode', colorForm.hexCode);
-
-      if (colorImages.length > 0) {
-        colorImages.forEach((img) =>
-          formData.append('images', img)
-        );
-      }
-
-      await api.patch(
-        `/vehicles/colors/${editingColor._id}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-
-      alert('Cập nhật thành công');
-
-      setEditingColor(null);
-
-      setColorForm({
-        name: '',
-        hexCode: ''
-      });
-
-      setColorImages([]);
-
-      fetchColors(selectedVariant._id);
-    } catch (err) {
-      alert('Lỗi cập nhật');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="p-8 space-y-10 bg-gray-50 min-h-screen font-sans">
       {/* ================= HEADER ================= */}
@@ -278,6 +178,7 @@ const AdminVehicle = () => {
                 <div className="w-full md:w-1/4 flex flex-col items-center justify-center">
                   <img
                     src={
+                      v.images?.[0] ||
                       v.imageUrl ||
                       'https://via.placeholder.com/300x200'
                     }
@@ -395,8 +296,10 @@ const AdminVehicle = () => {
               className="space-y-8"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
                 {/* LEFT */}
                 <div className="space-y-5">
+
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
                       Tên dòng xe
@@ -417,6 +320,7 @@ const AdminVehicle = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
+
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
                         Loại xe
@@ -458,10 +362,10 @@ const AdminVehicle = () => {
                     </div>
                   </div>
 
-                  {/* ẢNH ĐẠI DIỆN */}
+                  {/* GALLERY */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                      Thay đổi ảnh đại diện
+                      Ảnh xe
                     </label>
 
                     <input
@@ -474,10 +378,10 @@ const AdminVehicle = () => {
                     />
                   </div>
 
-                  {/* ẢNH BẢNG THÔNG SỐ */}
+                  {/* THÔNG SỐ */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
-                      Thêm ảnh bảng thông số
+                      Ảnh bảng thông số
                     </label>
 
                     <input
@@ -490,27 +394,11 @@ const AdminVehicle = () => {
                     />
                   </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 cursor-pointer"
-                      checked={modelForm.isHot}
-                      onChange={(e) =>
-                        setModelForm({
-                          ...modelForm,
-                          isHot: e.target.checked
-                        })
-                      }
-                    />
-
-                    <label className="font-bold text-gray-700 cursor-pointer">
-                      Đánh dấu dòng xe HOT
-                    </label>
-                  </div>
                 </div>
 
                 {/* RIGHT */}
                 <div className="space-y-5">
+
                   <label className="block text-xs font-bold text-gray-400 uppercase mb-2">
                     Mô tả chi tiết
                   </label>
@@ -525,76 +413,32 @@ const AdminVehicle = () => {
                       })
                     }
                     init={{
-                      height: 500,
-                      menubar: 'insert table view format',
-                      plugins:
-                        'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table code help wordcount',
-                      toolbar:
-                        'undo redo | blocks | bold italic forecolor | alignleft aligncenter alignright alignjustify | bullist numlist | image table | removeformat',
-                      automatic_uploads: true,
-
-                      images_upload_handler: async (
-                        blobInfo
-                      ) => {
-                        try {
-                          const uploadFormData =
-                            new FormData();
-
-                          uploadFormData.append(
-                            'file',
-                            blobInfo.blob(),
-                            blobInfo.filename()
-                          );
-
-                          const userInfo = JSON.parse(
-                            localStorage.getItem('userInfo')
-                          );
-
-                          const res = await axios.post(
-                            'https://ford-admin.onrender.com/api/vehicles/upload-editor',
-                            uploadFormData,
-                            {
-                              headers: {
-                                'Content-Type':
-                                  'multipart/form-data',
-                                Authorization: `Bearer ${userInfo?.token}`
-                              }
-                            }
-                          );
-
-                          return res.data.location;
-                        } catch (err) {
-                          console.error(err);
-
-                          throw new Error(
-                            'Upload ảnh thất bại'
-                          );
-                        }
-                      }
+                      height: 500
                     }}
                   />
+
                 </div>
               </div>
 
               {/* ACTIONS */}
               <div className="flex justify-end gap-4 mt-6">
+
                 <button
                   type="button"
                   onClick={() => setIsEditingModel(false)}
-                  className="px-8 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                  className="px-8 py-3 bg-gray-100 text-gray-500 font-bold rounded-xl"
                 >
-                  HỦY BỎ
+                  HỦY
                 </button>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-12 py-3 bg-blue-900 text-white font-bold rounded-xl shadow-xl hover:bg-blue-950 disabled:bg-gray-400 transition-all"
+                  className="px-12 py-3 bg-blue-900 text-white font-bold rounded-xl"
                 >
-                  {loading
-                    ? 'ĐANG LƯU...'
-                    : 'CẬP NHẬT DÒNG XE'}
+                  {loading ? 'ĐANG LƯU...' : 'CẬP NHẬT'}
                 </button>
+
               </div>
             </form>
           </div>
