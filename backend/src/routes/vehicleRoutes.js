@@ -1,6 +1,4 @@
 import express from "express";
-import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 
 import {
   getVehicles,
@@ -23,21 +21,9 @@ import {
 
 import { protect, staff } from "../middleware/authMiddleware.js";
 
-import cloudinary from "../config/cloudinary.js";
+import { uploadCloud } from "../config/cloudinary.js";
 
 const router = express.Router();
-
-// ================= CLOUDINARY STORAGE =================
-
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: async (req, file) => ({
-    folder: "ford",
-    allowed_formats: ["jpg", "jpeg", "png", "webp"]
-  })
-});
-
-const upload = multer({ storage });
 
 // ================= PUBLIC =================
 
@@ -45,10 +31,14 @@ router.get("/", getVehicles);
 
 router.get("/detail/:id", getVehicleDetails);
 
-// ================= ADMIN =================
+// ================= INVENTORY =================
 
-// INVENTORY
-router.get("/inventory", protect, staff, getInventory);
+router.get(
+  "/inventory",
+  protect,
+  staff,
+  getInventory
+);
 
 router.patch(
   "/inventory/:id",
@@ -64,7 +54,8 @@ router.post(
   addInventory
 );
 
-// DASHBOARD
+// ================= DASHBOARD =================
+
 router.get(
   "/dashboard",
   protect,
@@ -74,12 +65,12 @@ router.get(
 
 // ================= VEHICLE =================
 
-// THÊM XE
+// ADD VEHICLE
 router.post(
   "/",
   protect,
   staff,
-  upload.fields([
+  uploadCloud.fields([
     {
       name: "images",
       maxCount: 10
@@ -92,12 +83,12 @@ router.post(
   addVehicle
 );
 
-// UPDATE XE
+// UPDATE VEHICLE
 router.patch(
   "/:id",
   protect,
   staff,
-  upload.fields([
+  uploadCloud.fields([
     {
       name: "images",
       maxCount: 10
@@ -110,7 +101,7 @@ router.patch(
   updateVehicle
 );
 
-// XÓA XE
+// DELETE VEHICLE
 router.delete(
   "/:id",
   protect,
@@ -127,39 +118,39 @@ router.post(
   addVariant
 );
 
-// ================= VEHICLE COLOR =================
+// ================= VEHICLE COLORS =================
 
-// THÊM MÀU
+// ADD COLOR
 router.post(
   "/colors",
   protect,
   staff,
-  upload.array("images", 5),
+  uploadCloud.array("images", 5),
   addVehicleColor
 );
 
-// LẤY MÀU THEO VARIANT
+// GET COLORS BY VARIANT
 router.get(
   "/colors/variant/:variantId",
   getColorsByVariant
 );
 
-// LẤY MÀU THEO MODEL
+// GET COLORS BY MODEL
 router.get(
   "/colors/:modelId",
   getColorsByModel
 );
 
-// UPDATE MÀU
+// UPDATE COLOR
 router.patch(
   "/colors/:id",
   protect,
   staff,
-  upload.array("images", 5),
+  uploadCloud.array("images", 5),
   updateVehicleColor
 );
 
-// XÓA MÀU
+// DELETE COLOR
 router.delete(
   "/colors/:id",
   protect,

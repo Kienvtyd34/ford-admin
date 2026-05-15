@@ -1,221 +1,227 @@
-import VehicleModel from '../models/VehicleModel.js';
-import Variant from '../models/Variant.js';
-import Inventory from '../models/Inventory.js';
-import Booking from '../models/Booking.js';
+import VehicleModel from "../models/VehicleModel.js";
+import Variant from "../models/Variant.js";
+import Inventory from "../models/Inventory.js";
+import Booking from "../models/Booking.js";
 import VehicleColor from "../models/VehicleColor.js";
 
 import cloudinary from "../config/cloudinary.js";
 
 // ================= HELPER =================
-const safeParse = (data) => {
-    if (typeof data === 'string') {
-        try { return JSON.parse(data); } catch { return data; }
-    }
-    return data;
-};
 
-// ================= CLOUDINARY HELPER =================
-
-// Lấy public_id từ url cloudinary
 const getPublicIdFromUrl = (url) => {
-    try {
+  try {
 
-        const urlParts = url.split("/upload/");
+    const urlParts = url.split("/upload/");
 
-        if (urlParts.length < 2) return null;
+    if (urlParts.length < 2) return null;
 
-        let publicIdWithVersion = urlParts[1];
+    let publicIdWithVersion = urlParts[1];
 
-        // remove version
-        publicIdWithVersion =
-            publicIdWithVersion.replace(/^v\d+\//, "");
+    // remove version
+    publicIdWithVersion =
+      publicIdWithVersion.replace(/^v\d+\//, "");
 
-        // remove extension
-        const publicId =
-            publicIdWithVersion.replace(/\.[^/.]+$/, "");
+    // remove extension
+    const publicId =
+      publicIdWithVersion.replace(/\.[^/.]+$/, "");
 
-        return publicId;
+    return publicId;
 
-    } catch (err) {
+  } catch (err) {
 
-        console.log("GET PUBLIC ID ERROR:", err);
+    console.log("GET PUBLIC ID ERROR:", err);
 
-        return null;
-    }
+    return null;
+  }
 };
 
-// ================= VEHICLE MODEL =================
+// ================= GET VEHICLES =================
 
-// 1. Lấy danh sách dòng xe
 export const getVehicles = async (req, res) => {
-    try {
-        const { type, search, isHot } = req.query;
+  try {
 
-        let query = {};
+    const { type, search, isHot } = req.query;
 
-        if (search) query.name = { $regex: search, $options: "i" };
-        if (type && type !== "Tất cả") query.type = type;
-        if (isHot === "true") query.isHot = true;
+    let query = {};
 
-        const models = await VehicleModel.find(query)
-            .sort({ createdAt: -1 })
-            .lean();
-
-        const data = await Promise.all(
-            models.map(async (model) => {
-                const variants = await Variant.find({
-                    modelId: model._id
-                }).lean();
-
-                const variantsWithColors = await Promise.all(
-                    variants.map(async (v) => {
-                        const colors = await VehicleColor.find({
-                            variantId: v._id
-                        });
-
-                        return {
-                            ...v,
-                            colors
-                        };
-                    })
-                );
-
-                return {
-                    ...model,
-                    variants: variantsWithColors
-                };
-            })
-        );
-
-        res.json({
-            success: true,
-            data
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
+    if (search) {
+      query.name = {
+        $regex: search,
+        $options: "i"
+      };
     }
-};
 
-// 2. Chi tiết xe
-export const getVehicleDetails = async (req, res) => {
-    try {
+    if (type && type !== "Tất cả") {
+      query.type = type;
+    }
 
-        const model = await VehicleModel.findById(req.params.id).lean();
+    if (isHot === "true") {
+      query.isHot = true;
+    }
 
-        if (!model) {
-            return res.status(404).json({
-                success: false,
-                message: "Không tìm thấy xe"
-            });
-        }
+    const models = await VehicleModel.find(query)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const data = await Promise.all(
+      models.map(async (model) => {
 
         const variants = await Variant.find({
-            modelId: model._id
+          modelId: model._id
         }).lean();
 
-        const variantsWithColors = await Promise.all(
-            variants.map(async (v) => {
+        const variantsWithColors =
+          await Promise.all(
+            variants.map(async (variant) => {
 
-                try {
+              const colors =
+                await VehicleColor.find({
+                  variantId: variant._id
+                }).lean();
 
-                    const colors = await VehicleColor.find({
-                        variantId: v._id
-                    }).lean();
-
-                    return {
-                        ...v,
-                        colors
-                    };
-
-                } catch (err) {
-
-                    console.log(err);
-
-                    return {
-                        ...v,
-                        colors: []
-                    };
-                }
+              return {
+                ...variant,
+                colors
+              };
             })
-        );
+          );
 
-        res.json({
-            success: true,
-            data: {
-                ...model,
-                variants: variantsWithColors
-            }
-        });
+        return {
+          ...model,
+          variants: variantsWithColors
+        };
+      })
+    );
 
-    } catch (err) {
+    res.json({
+      success: true,
+      data
+    });
 
-        console.log("DETAIL ERROR:", err);
+  } catch (err) {
 
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
-    }
+    console.log("GET VEHICLES ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 
-// 3. Thêm xe
+// ================= GET VEHICLE DETAILS =================
+
+export const getVehicleDetails = async (req, res) => {
+  try {
+
+    const model =
+      await VehicleModel.findById(
+        req.params.id
+      ).lean();
+
+    if (!model) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy xe"
+      });
+    }
+
+    const variants = await Variant.find({
+      modelId: model._id
+    }).lean();
+
+    const variantsWithColors =
+      await Promise.all(
+        variants.map(async (variant) => {
+
+          const colors =
+            await VehicleColor.find({
+              variantId: variant._id
+            }).lean();
+
+          return {
+            ...variant,
+            colors
+          };
+        })
+      );
+
+    res.json({
+      success: true,
+      data: {
+        ...model,
+        variants: variantsWithColors
+      }
+    });
+
+  } catch (err) {
+
+    console.log("DETAIL ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
+
 // ================= ADD VEHICLE =================
 
 export const addVehicle = async (req, res) => {
-    try {
+  try {
 
-        let data = { ...req.body };
+    let data = { ...req.body };
 
-        // ẢNH THÔNG SỐ
-        if (req.files?.imageUrl?.[0]) {
+    // IMAGE SPEC
+    if (req.files?.imageUrl?.[0]) {
 
-            data.imageUrl =
-                req.files.imageUrl[0].path ||
-                req.files.imageUrl[0].secure_url;
-        }
-
-        // GALLERY
-        if (req.files?.images?.length > 0) {
-
-            data.images = req.files.images.map(file =>
-                file.path || file.secure_url
-            );
-        }
-
-        const newModel = await VehicleModel.create(data);
-
-        res.status(201).json({
-            success: true,
-            data: newModel
-        });
-
-    } catch (err) {
-
-        console.log("ADD VEHICLE ERROR:", err);
-
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
+      data.imageUrl =
+        req.files.imageUrl[0].path ||
+        req.files.imageUrl[0].secure_url;
     }
+
+    // GALLERY
+    if (req.files?.images?.length > 0) {
+
+      data.images =
+        req.files.images.map(
+          file => file.path || file.secure_url
+        );
+    }
+
+    const newVehicle =
+      await VehicleModel.create(data);
+
+    res.status(201).json({
+      success: true,
+      data: newVehicle
+    });
+
+  } catch (err) {
+
+    console.log("ADD VEHICLE ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 
 // ================= UPDATE VEHICLE =================
 
 export const updateVehicle = async (req, res) => {
   try {
+
     console.log("BODY:", req.body);
     console.log("FILES:", req.files);
 
     let data = { ...req.body };
 
-    const vehicle = await VehicleModel.findById(
-      req.params.id
-    );
+    const vehicle =
+      await VehicleModel.findById(
+        req.params.id
+      );
 
     if (!vehicle) {
       return res.status(404).json({
@@ -224,34 +230,34 @@ export const updateVehicle = async (req, res) => {
       });
     }
 
-    // ================= IMAGEURL =================
+    // ================= UPDATE IMAGEURL =================
+
     if (req.files?.imageUrl?.[0]) {
 
-      // Xóa ảnh cũ nếu có
       try {
+
         if (vehicle.imageUrl) {
 
-          const oldUrl = vehicle.imageUrl;
-
-          const parts = oldUrl.split("/");
-
-          const fileName =
-            parts[parts.length - 1];
-
           const publicId =
-            "ford/" +
-            fileName.split(".")[0];
+            getPublicIdFromUrl(
+              vehicle.imageUrl
+            );
 
-          console.log(
-            "DELETE IMAGEURL:",
-            publicId
-          );
+          if (publicId) {
 
-          await cloudinary.uploader.destroy(
-            publicId
-          );
+            console.log(
+              "DELETE IMAGEURL:",
+              publicId
+            );
+
+            await cloudinary.uploader.destroy(
+              publicId
+            );
+          }
         }
+
       } catch (err) {
+
         console.log(
           "DELETE IMAGEURL ERROR:",
           err.message
@@ -262,7 +268,8 @@ export const updateVehicle = async (req, res) => {
         req.files.imageUrl[0].path;
     }
 
-    // ================= IMAGES =================
+    // ================= UPDATE GALLERY =================
+
     if (req.files?.images?.length > 0) {
 
       try {
@@ -274,16 +281,10 @@ export const updateVehicle = async (req, res) => {
 
           for (const img of vehicle.images) {
 
-            try {
+            const publicId =
+              getPublicIdFromUrl(img);
 
-              const parts = img.split("/");
-
-              const fileName =
-                parts[parts.length - 1];
-
-              const publicId =
-                "ford/" +
-                fileName.split(".")[0];
+            if (publicId) {
 
               console.log(
                 "DELETE IMAGE:",
@@ -293,35 +294,29 @@ export const updateVehicle = async (req, res) => {
               await cloudinary.uploader.destroy(
                 publicId
               );
-
-            } catch (e) {
-              console.log(
-                "DELETE IMAGE ERROR:",
-                e.message
-              );
             }
           }
         }
 
       } catch (err) {
+
         console.log(
           "DELETE GALLERY ERROR:",
           err.message
         );
       }
 
-      data.images = req.files.images.map(
-        (file) => file.path
-      );
+      data.images =
+        req.files.images.map(
+          file => file.path
+        );
     }
 
     const updated =
       await VehicleModel.findByIdAndUpdate(
         req.params.id,
         data,
-        {
-          new: true
-        }
+        { new: true }
       );
 
     res.json({
@@ -343,296 +338,573 @@ export const updateVehicle = async (req, res) => {
     });
   }
 };
-// 5. Xóa xe
+
+// ================= DELETE VEHICLE =================
+
 export const deleteVehicle = async (req, res) => {
-    try {
+  try {
 
-        const hasVariant = await Variant.exists({
-            modelId: req.params.id,
-        });
+    const hasVariant =
+      await Variant.exists({
+        modelId: req.params.id
+      });
 
-        if (hasVariant) {
-            return res.status(400).json({
-                message: "Không thể xóa vì còn phiên bản!",
-            });
-        }
-
-        const vehicle = await VehicleModel.findById(req.params.id);
-
-        if (!vehicle) {
-            return res.status(404).json({
-                message: "Không tìm thấy xe"
-            });
-        }
-
-        // ================= XÓA IMAGEURL =================
-        if (vehicle.imageUrl) {
-            const publicId = getPublicIdFromUrl(vehicle.imageUrl);
-
-            if (publicId) {
-                await cloudinary.uploader.destroy(publicId);
-            }
-        }
-
-        // ================= XÓA GALLERY =================
-        if (vehicle.images?.length > 0) {
-            await Promise.all(
-                vehicle.images.map(async (img) => {
-                    const publicId = getPublicIdFromUrl(img);
-
-                    if (publicId) {
-                        await cloudinary.uploader.destroy(publicId);
-                    }
-                })
-            );
-        }
-
-        await VehicleModel.findByIdAndDelete(req.params.id);
-
-        res.json({
-            success: true
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            error: err.message
-        });
+    if (hasVariant) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Không thể xóa vì còn phiên bản!"
+      });
     }
+
+    const vehicle =
+      await VehicleModel.findById(
+        req.params.id
+      );
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy xe"
+      });
+    }
+
+    // DELETE IMAGEURL
+    if (vehicle.imageUrl) {
+
+      const publicId =
+        getPublicIdFromUrl(
+          vehicle.imageUrl
+        );
+
+      if (publicId) {
+
+        await cloudinary.uploader.destroy(
+          publicId
+        );
+      }
+    }
+
+    // DELETE GALLERY
+    if (
+      vehicle.images &&
+      vehicle.images.length > 0
+    ) {
+
+      for (const img of vehicle.images) {
+
+        const publicId =
+          getPublicIdFromUrl(img);
+
+        if (publicId) {
+
+          await cloudinary.uploader.destroy(
+            publicId
+          );
+        }
+      }
+    }
+
+    await VehicleModel.findByIdAndDelete(
+      req.params.id
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    console.log("DELETE ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 
-// ================= VEHICLE COLOR (CHỈNH SỬA THEO VARIANT) =================
+// ================= ADD COLOR =================
 
-// Thêm màu (Gắn vào variantId)
 export const addVehicleColor = async (req, res) => {
-    try {
-        const { variantId, name, hexCode } = req.body;
+  try {
 
-        const images = req.files?.map(f => f.path) || [];
+    const {
+      variantId,
+      name,
+      hexCode
+    } = req.body;
 
-        const color = await VehicleColor.create({
-            variantId,
-            name,
-            hexCode,
-            images
-        });
+    const images =
+      req.files?.map(
+        file => file.path
+      ) || [];
 
-        res.json({ success: true, data: color });
+    const color =
+      await VehicleColor.create({
+        variantId,
+        name,
+        hexCode,
+        images
+      });
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    res.json({
+      success: true,
+      data: color
+    });
+
+  } catch (err) {
+
+    console.log("ADD COLOR ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 
-// Lấy màu theo variantId (Sửa tên hàm cho đồng nhất)
+// ================= GET COLORS BY VARIANT =================
+
 export const getColorsByVariant = async (req, res) => {
-    try {
-        const colors = await VehicleColor.find({ variantId: req.params.variantId });
-        res.json({ success: true, data: colors });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+
+    const colors =
+      await VehicleColor.find({
+        variantId: req.params.variantId
+      });
+
+    res.json({
+      success: true,
+      data: colors
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 
-// Giữ lại tên cũ nhưng logic mới để tránh lỗi Route nếu bạn chưa sửa file Route
+// ================= GET COLORS BY MODEL =================
+
 export const getColorsByModel = async (req, res) => {
-    try {
-        // Nếu route vẫn truyền modelId, chúng ta tìm tất cả variants của model đó rồi lấy màu
-        const variants = await Variant.find({ modelId: req.params.modelId }).select('_id');
-        const variantIds = variants.map(v => v._id);
-        const colors = await VehicleColor.find({ variantId: { $in: variantIds } });
-        res.json({ success: true, data: colors });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+
+    const variants =
+      await Variant.find({
+        modelId: req.params.modelId
+      }).select("_id");
+
+    const variantIds =
+      variants.map(v => v._id);
+
+    const colors =
+      await VehicleColor.find({
+        variantId: {
+          $in: variantIds
+        }
+      });
+
+    res.json({
+      success: true,
+      data: colors
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
 
-export const deleteVehicleColor = async (req, res) => {
-    try {
-        await VehicleColor.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
+// ================= UPDATE COLOR =================
 
 export const updateVehicleColor = async (req, res) => {
-    try {
-        const { name, hexCode } = req.body;
-        const images = req.files?.map(f => f.path);
+  try {
 
-        const color = await VehicleColor.findById(req.params.id);
-        if (!color) return res.status(404).json({ message: "Không tìm thấy màu" });
+    const {
+      name,
+      hexCode
+    } = req.body;
 
-        if (name) color.name = name;
-        if (hexCode) color.hexCode = hexCode;
-        if (images?.length) color.images = images;
+    const images =
+      req.files?.map(
+        file => file.path
+      );
 
-        await color.save();
+    const color =
+      await VehicleColor.findById(
+        req.params.id
+      );
 
-        res.json({ success: true, data: color });
-
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (!color) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy màu"
+      });
     }
+
+    if (name) {
+      color.name = name;
+    }
+
+    if (hexCode) {
+      color.hexCode = hexCode;
+    }
+
+    if (images?.length > 0) {
+      color.images = images;
+    }
+
+    await color.save();
+
+    res.json({
+      success: true,
+      data: color
+    });
+
+  } catch (err) {
+
+    console.log("UPDATE COLOR ERROR:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
-// ================= INVENTORY & DASHBOARD =================
+
+// ================= DELETE COLOR =================
+
+export const deleteVehicleColor = async (req, res) => {
+  try {
+
+    await VehicleColor.findByIdAndDelete(
+      req.params.id
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
+};
 
 // ================= INVENTORY =================
 
 export const getInventory = async (req, res) => {
-    try {
-        const { status, category, vin, modelId, variantId } = req.query;
+  try {
 
-        let query = {};
-        if (status) query.status = status;
-        if (category) query.category = category;
-        if (variantId) query.variantId = variantId;
-        if (vin) query.vin = { $regex: vin, $options: "i" };
+    const {
+      status,
+      category,
+      vin,
+      modelId,
+      variantId
+    } = req.query;
 
-        let items = await Inventory.find(query)
-            .populate({
-                path: 'variantId',
-                populate: { path: 'modelId' }
-            })
-            .populate({
-                path: 'colorId',
-                select: 'name hexCode images'
-            })
-            .sort({ createdAt: -1 })
-            .lean();
+    let query = {};
 
-        items = items.map(i => ({
-            ...i,
-
-            modelName: i.variantId?.modelId?.name || '',
-            variantName: i.variantId?.variantName || '',
-
-            // 🔥 CHUẨN ẢNH THEO COLOR + VARIANT
-            image: (() => {
-                if (i.colorId?.images?.length > 0) {
-                    return i.colorId.images[0];
-                }
-                return i.variantId?.modelId?.imageUrl || '';
-            })(),
-
-            color: i.colorId || null
-        }));
-
-        if (modelId) {
-            items = items.filter(i =>
-                i.variantId?.modelId?._id.toString() === modelId
-            );
-        }
-
-        res.json({
-            success: true,
-            data: items
-        });
-
-    } catch (err) {
-        res.status(500).json({
-            success: false,
-            error: err.message
-        });
+    if (status) {
+      query.status = status;
     }
+
+    if (category) {
+      query.category = category;
+    }
+
+    if (variantId) {
+      query.variantId = variantId;
+    }
+
+    if (vin) {
+      query.vin = {
+        $regex: vin,
+        $options: "i"
+      };
+    }
+
+    let items =
+      await Inventory.find(query)
+        .populate({
+          path: "variantId",
+          populate: {
+            path: "modelId"
+          }
+        })
+        .populate({
+          path: "colorId",
+          select: "name hexCode images"
+        })
+        .sort({
+          createdAt: -1
+        })
+        .lean();
+
+    items = items.map(item => ({
+      ...item,
+
+      modelName:
+        item.variantId?.modelId?.name || "",
+
+      variantName:
+        item.variantId?.variantName || "",
+
+      image:
+        item.colorId?.images?.[0] ||
+        item.variantId?.modelId?.imageUrl ||
+        "",
+
+      color:
+        item.colorId || null
+    }));
+
+    if (modelId) {
+
+      items = items.filter(
+        item =>
+          item.variantId?.modelId?._id.toString()
+          === modelId
+      );
+    }
+
+    res.json({
+      success: true,
+      data: items
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
+
+// ================= UPDATE INVENTORY =================
+
 export const updateInventory = async (req, res) => {
-    try {
-        const { importPrice, status, colorId } = req.body;
+  try {
 
-        const item = await Inventory.findById(req.params.id);
-        if (!item) return res.status(404).json({ message: "Không tìm thấy xe" });
+    const {
+      importPrice,
+      status,
+      colorId
+    } = req.body;
 
-        if (importPrice !== undefined) item.importPrice = importPrice;
-        if (status) item.status = status;
-        if (colorId) item.colorId = colorId;
+    const item =
+      await Inventory.findById(
+        req.params.id
+      );
 
-        await item.save();
-
-        res.json({ success: true, data: item });
-
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy xe"
+      });
     }
+
+    if (importPrice !== undefined) {
+      item.importPrice = importPrice;
+    }
+
+    if (status) {
+      item.status = status;
+    }
+
+    if (colorId) {
+      item.colorId = colorId;
+    }
+
+    await item.save();
+
+    res.json({
+      success: true,
+      data: item
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
+
+// ================= ADD INVENTORY =================
 
 export const addInventory = async (req, res) => {
-    try {
-        const { variantId, vin, colorId, importPrice, status, category } = req.body;
-        const existed = await Inventory.findOne({ vin });
-        if (existed) return res.status(400).json({ message: "VIN đã tồn tại!" });
+  try {
 
-        const newItem = await Inventory.create({
-            variantId, vin: vin.toUpperCase().trim(), colorId,
-            importPrice, status, category, importDate: new Date()
-        });
-        res.status(201).json({ success: true, data: newItem });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    const {
+      variantId,
+      vin,
+      colorId,
+      importPrice,
+      status,
+      category
+    } = req.body;
+
+    const existed =
+      await Inventory.findOne({ vin });
+
+    if (existed) {
+      return res.status(400).json({
+        success: false,
+        message: "VIN đã tồn tại!"
+      });
     }
+
+    const item =
+      await Inventory.create({
+        variantId,
+        vin: vin.toUpperCase().trim(),
+        colorId,
+        importPrice,
+        status,
+        category,
+        importDate: new Date()
+      });
+
+    res.status(201).json({
+      success: true,
+      data: item
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
+
+// ================= DASHBOARD =================
 
 export const getDashboard = async (req, res) => {
-    try {
-        const inventory = await Inventory.find().lean();
-        const bookings = await Booking.find({ orderStatus: 'Completed' }).lean();
-        res.json({
-            success: true,
-            data: {
-                totalCars: inventory.length,
-                totalValue: inventory.reduce((sum, i) => sum + (i.importPrice || 0), 0),
-            }
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+  try {
+
+    const inventory =
+      await Inventory.find().lean();
+
+    res.json({
+      success: true,
+      data: {
+        totalCars: inventory.length,
+        totalValue:
+          inventory.reduce(
+            (sum, item) =>
+              sum + (item.importPrice || 0),
+            0
+          )
+      }
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
+
+// ================= CONFIRM DELIVERY =================
 
 export const confirmDelivery = async (req, res) => {
-    try {
-        const { bookingId } = req.params;
-        const { vin, confirmedBy } = req.body;
-        const booking = await Booking.findById(bookingId);
-        const item = await Inventory.findOneAndUpdate({ vin, status: "Trong kho" }, { status: "Đã bán" });
-        if (!item) return res.status(400).json({ message: "VIN không hợp lệ" });
+  try {
 
-        booking.orderStatus = 'Completed';
-        booking.paymentStatus = 'Paid';
-        booking.confirmedBy = confirmedBy;
-        await booking.save();
-        res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+    const { bookingId } = req.params;
+
+    const {
+      vin,
+      confirmedBy
+    } = req.body;
+
+    const booking =
+      await Booking.findById(bookingId);
+
+    const item =
+      await Inventory.findOneAndUpdate(
+        {
+          vin,
+          status: "Trong kho"
+        },
+        {
+          status: "Đã bán"
+        }
+      );
+
+    if (!item) {
+      return res.status(400).json({
+        success: false,
+        message: "VIN không hợp lệ"
+      });
     }
+
+    booking.orderStatus = "Completed";
+    booking.paymentStatus = "Paid";
+    booking.confirmedBy = confirmedBy;
+
+    await booking.save();
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+
+    res.status(500).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
-// ================= VARIANT =================
+
+// ================= ADD VARIANT =================
 
 export const addVariant = async (req, res) => {
-    try {
+  try {
 
-        const { modelId } = req.body;
+    const { modelId } = req.body;
 
-        const model = await VehicleModel.findById(modelId);
+    const model =
+      await VehicleModel.findById(modelId);
 
-        if (!model) {
-            return res.status(404).json({
-                success: false,
-                message: "Model không tồn tại"
-            });
-        }
-
-        const variant = await Variant.create(req.body);
-
-        res.status(201).json({
-            success: true,
-            data: variant
-        });
-
-    } catch (err) {
-
-        res.status(400).json({
-            success: false,
-            error: err.message
-        });
+    if (!model) {
+      return res.status(404).json({
+        success: false,
+        message: "Model không tồn tại"
+      });
     }
+
+    const variant =
+      await Variant.create(req.body);
+
+    res.status(201).json({
+      success: true,
+      data: variant
+    });
+
+  } catch (err) {
+
+    res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
 };
