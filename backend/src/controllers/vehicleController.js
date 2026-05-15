@@ -19,19 +19,27 @@ const safeParse = (data) => {
 // Lấy public_id từ url cloudinary
 const getPublicIdFromUrl = (url) => {
     try {
-        const parts = url.split('/');
-        const fileName = parts[parts.length - 1];
-        const publicId = fileName.split('.')[0];
 
-        // folder/uploads/abc123
-        const folderIndex = parts.findIndex(p => p === 'upload');
-        const folderParts = parts.slice(folderIndex + 2, parts.length - 1);
+        const urlParts = url.split("/upload/");
 
-        return folderParts.length
-            ? `${folderParts.join('/')}/${publicId}`
-            : publicId;
+        if (urlParts.length < 2) return null;
 
-    } catch {
+        let publicIdWithVersion = urlParts[1];
+
+        // remove version
+        publicIdWithVersion =
+            publicIdWithVersion.replace(/^v\d+\//, "");
+
+        // remove extension
+        const publicId =
+            publicIdWithVersion.replace(/\.[^/.]+$/, "");
+
+        return publicId;
+
+    } catch (err) {
+
+        console.log("GET PUBLIC ID ERROR:", err);
+
         return null;
     }
 };
