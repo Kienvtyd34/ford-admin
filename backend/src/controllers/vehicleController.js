@@ -201,8 +201,6 @@ export const addVehicle = async (req, res) => {
 export const updateVehicle = async (req, res) => {
     try {
 
-        let data = { ...req.body };
-
         console.log("BODY:", req.body);
         console.log("FILES:", req.files);
 
@@ -215,62 +213,51 @@ export const updateVehicle = async (req, res) => {
             });
         }
 
+        const updateData = {
+            name: req.body.name,
+            type: req.body.type,
+            seats: req.body.seats,
+            description: req.body.description,
+            isHot: req.body.isHot
+        };
+
         // ================= IMAGEURL =================
 
-        if (req.files?.imageUrl?.[0]) {
+        if (
+            req.files &&
+            req.files.imageUrl &&
+            req.files.imageUrl.length > 0
+        ) {
 
-            if (vehicle.imageUrl) {
+            const imageFile = req.files.imageUrl[0];
 
-                const publicId = getPublicIdFromUrl(vehicle.imageUrl);
-
-                if (publicId) {
-                    try {
-                        await cloudinary.uploader.destroy(publicId);
-                    } catch (e) {
-                        console.log("DELETE OLD IMAGE ERROR:", e);
-                    }
-                }
-            }
-
-            data.imageUrl =
-                req.files.imageUrl[0].path ||
-                req.files.imageUrl[0].secure_url;
+            updateData.imageUrl =
+                imageFile.path ||
+                imageFile.secure_url ||
+                imageFile.url;
         }
 
         // ================= GALLERY =================
 
-        if (req.files?.images?.length > 0) {
+        if (
+            req.files &&
+            req.files.images &&
+            req.files.images.length > 0
+        ) {
 
-            if (vehicle.images?.length > 0) {
-
-                await Promise.all(
-                    vehicle.images.map(async (img) => {
-
-                        try {
-
-                            const publicId = getPublicIdFromUrl(img);
-
-                            if (publicId) {
-                                await cloudinary.uploader.destroy(publicId);
-                            }
-
-                        } catch (e) {
-
-                            console.log("DELETE GALLERY ERROR:", e);
-                        }
-                    })
-                );
-            }
-
-            data.images = req.files.images.map(file =>
-                file.path || file.secure_url
+            updateData.images = req.files.images.map(file =>
+                file.path ||
+                file.secure_url ||
+                file.url
             );
         }
 
         const updated = await VehicleModel.findByIdAndUpdate(
             req.params.id,
-            data,
-            { new: true }
+            updateData,
+            {
+                new: true
+            }
         );
 
         res.json({
@@ -280,7 +267,8 @@ export const updateVehicle = async (req, res) => {
 
     } catch (err) {
 
-        console.log("UPDATE VEHICLE ERROR:", err);
+        console.log("UPDATE VEHICLE ERROR:");
+        console.log(err);
 
         res.status(500).json({
             success: false,
