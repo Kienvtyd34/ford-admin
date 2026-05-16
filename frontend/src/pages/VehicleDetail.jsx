@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import BookingModal from "../components/BookingModal";
 
 const FALLBACK_IMG =
   "https://via.placeholder.com/500x300?text=No+Image";
 
 const VehicleDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const [vehicle, setVehicle] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -18,6 +20,12 @@ const VehicleDetail = () => {
   const [activeTab, setActiveTab] =
     useState("info");
 
+  const [isBookingOpen, setIsBookingOpen] =
+    useState(false);
+
+  const [showLoginModal, setShowLoginModal] =
+    useState(false);
+
   // ================= HD IMAGE =================
   const getHDImage = (url) => {
     if (!url) return FALLBACK_IMG;
@@ -28,11 +36,35 @@ const VehicleDetail = () => {
     );
   };
 
+  // ================= CHECK LOGIN =================
+  const handleOpenBooking = () => {
+    const userInfo =
+      localStorage.getItem("userInfo");
+
+    if (!userInfo) {
+      setShowLoginModal(true);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(userInfo);
+
+      if (!parsed?.token) {
+        setShowLoginModal(true);
+        return;
+      }
+
+      setIsBookingOpen(true);
+
+    } catch (err) {
+      setShowLoginModal(true);
+    }
+  };
+
   // ================= FETCH DATA =================
   useEffect(() => {
     const fetchData = async () => {
       try {
-
         const res =
           await api.get(`/vehicles/detail/${id}`);
 
@@ -51,12 +83,11 @@ const VehicleDetail = () => {
 
         setActiveImage(
           firstColor?.images?.[0] ||
-          data.imageUrl ||
-          FALLBACK_IMG
+            data.imageUrl ||
+            FALLBACK_IMG
         );
 
       } catch (err) {
-
         console.error(
           "FETCH VEHICLE DETAIL ERROR:",
           err
@@ -93,6 +124,118 @@ const VehicleDetail = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+
+      {/* ================= LOGIN REQUIRED MODAL ================= */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex justify-center items-center p-4 backdrop-blur-sm">
+
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+
+            <div className="bg-blue-900 px-6 py-5 text-white">
+
+              <h2 className="text-2xl font-black uppercase italic">
+                Yêu cầu đăng nhập
+              </h2>
+
+              <p className="text-sm text-blue-100 mt-1">
+                Bạn cần đăng nhập để thực hiện đặt cọc xe.
+              </p>
+
+            </div>
+
+            <div className="p-8 text-center">
+
+              <div
+                className="
+                  w-24 h-24
+                  mx-auto
+                  rounded-full
+                  bg-blue-50
+                  flex items-center justify-center
+                  mb-6
+                "
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-12 w-12 text-blue-900"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </div>
+
+              <h3 className="text-xl font-black text-slate-900 uppercase">
+                Vui lòng đăng nhập
+              </h3>
+
+              <p className="text-gray-500 mt-3 leading-relaxed">
+                Đăng nhập tài khoản để tiếp tục
+                đặt cọc xe và theo dõi lịch sử
+                giao dịch của bạn.
+              </p>
+
+              <div className="mt-8 space-y-3">
+
+                <button
+                  onClick={() => navigate("/login")}
+                  className="
+                    w-full
+                    bg-blue-900
+                    hover:bg-blue-800
+                    text-white
+                    py-4
+                    rounded-2xl
+                    font-black
+                    uppercase
+                    tracking-wider
+                    transition-all
+                    shadow-xl
+                  "
+                >
+                  Đi tới trang đăng nhập
+                </button>
+
+                <button
+                  onClick={() =>
+                    setShowLoginModal(false)
+                  }
+                  className="
+                    w-full
+                    border-2 border-gray-200
+                    text-gray-500
+                    hover:bg-gray-100
+                    py-4
+                    rounded-2xl
+                    font-black
+                    uppercase
+                    tracking-wider
+                    transition-all
+                  "
+                >
+                  Đóng
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= BOOKING MODAL ================= */}
+      <BookingModal
+        car={vehicle}
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
+        selectedVariant={selectedVariant}
+        selectedColorName={selectedColor?.name}
+      />
 
       <div className="container mx-auto px-6 py-10">
 
@@ -141,7 +284,9 @@ const VehicleDetail = () => {
                   key={i}
                   src={getHDImage(img)}
                   alt={`gallery-${i}`}
-                  onClick={() => setActiveImage(img)}
+                  onClick={() =>
+                    setActiveImage(img)
+                  }
                   onError={(e) => {
                     e.target.src = FALLBACK_IMG;
                   }}
@@ -211,8 +356,8 @@ const VehicleDetail = () => {
 
                       setActiveImage(
                         firstColor?.images?.[0] ||
-                        vehicle.imageUrl ||
-                        FALLBACK_IMG
+                          vehicle.imageUrl ||
+                          FALLBACK_IMG
                       );
                     }}
                     className={`
@@ -223,7 +368,8 @@ const VehicleDetail = () => {
                       font-bold
                       transition-all
                       ${
-                        selectedVariant?._id === v._id
+                        selectedVariant?._id ===
+                        v._id
                           ? "bg-slate-900 text-white border-slate-900 shadow-lg"
                           : "bg-white text-slate-700 border-gray-300 hover:border-slate-900"
                       }
@@ -257,8 +403,8 @@ const VehicleDetail = () => {
 
                       setActiveImage(
                         c?.images?.[0] ||
-                        vehicle.imageUrl ||
-                        FALLBACK_IMG
+                          vehicle.imageUrl ||
+                          FALLBACK_IMG
                       );
                     }}
                     className={`
@@ -270,7 +416,8 @@ const VehicleDetail = () => {
                       transition-all
                       hover:scale-110
                       ${
-                        selectedColor?._id === c._id
+                        selectedColor?._id ===
+                        c._id
                           ? "border-blue-600 scale-110 shadow-xl"
                           : "border-white shadow-md"
                       }
@@ -300,6 +447,7 @@ const VehicleDetail = () => {
             <div className="mt-10 space-y-4">
 
               <button
+                onClick={handleOpenBooking}
                 className="
                   w-full
                   bg-red-600
@@ -316,7 +464,7 @@ const VehicleDetail = () => {
                   shadow-red-100
                 "
               >
-                Nhận báo giá lăn bánh
+                Đặt cọc xe 2.000₫
               </button>
 
               <button
@@ -348,7 +496,9 @@ const VehicleDetail = () => {
           <div className="flex gap-8 border-b border-gray-200">
 
             <button
-              onClick={() => setActiveTab("info")}
+              onClick={() =>
+                setActiveTab("info")
+              }
               className={`
                 pb-4
                 text-sm
@@ -367,7 +517,9 @@ const VehicleDetail = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab("specs")}
+              onClick={() =>
+                setActiveTab("specs")
+              }
               className={`
                 pb-4
                 text-sm
@@ -414,11 +566,15 @@ const VehicleDetail = () => {
                   <div className="mb-8">
 
                     <img
-                      src={getHDImage(vehicle.imageUrl)}
+                      src={getHDImage(
+                        vehicle.imageUrl
+                      )}
                       alt="Thông số kỹ thuật"
                       onClick={() =>
                         window.open(
-                          getHDImage(vehicle.imageUrl),
+                          getHDImage(
+                            vehicle.imageUrl
+                          ),
                           "_blank"
                         )
                       }
@@ -438,33 +594,35 @@ const VehicleDetail = () => {
 
                 {/* TEXT SPECS */}
                 {vehicle.specs &&
-                Object.keys(vehicle.specs).length > 0 ? (
+                Object.keys(vehicle.specs)
+                  .length > 0 ? (
 
                   <div className="grid md:grid-cols-2 gap-x-12 gap-y-2">
 
-                    {Object.entries(vehicle.specs).map(
-                      ([key, value]) => (
+                    {Object.entries(
+                      vehicle.specs
+                    ).map(([key, value]) => (
 
-                        <div
-                          key={key}
-                          className="
-                            flex justify-between
-                            border-b border-gray-100
-                            py-3 gap-5
-                          "
-                        >
+                      <div
+                        key={key}
+                        className="
+                          flex justify-between
+                          border-b border-gray-100
+                          py-3 gap-5
+                        "
+                      >
 
-                          <span className="text-gray-500 font-medium">
-                            {key}
-                          </span>
+                        <span className="text-gray-500 font-medium">
+                          {key}
+                        </span>
 
-                          <span className="text-slate-900 font-semibold text-right">
-                            {value}
-                          </span>
+                        <span className="text-slate-900 font-semibold text-right">
+                          {value}
+                        </span>
 
-                        </div>
-                      )
-                    )}
+                      </div>
+
+                    ))}
 
                   </div>
 
