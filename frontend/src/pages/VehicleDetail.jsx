@@ -468,22 +468,31 @@ const VehicleDetail = () => {
               </button>
 
               <button
-                className="
-                  w-full
-                  border-2 border-slate-900
-                  text-slate-900
-                  hover:bg-slate-900
-                  hover:text-white
-                  py-4
-                  rounded-xl
-                  font-black
-                  uppercase
-                  tracking-wider
-                  transition-all
-                "
-              >
-                Đăng ký lái thử
-              </button>
+  onClick={() =>
+    navigate("/test-drive", {
+      state: {
+        carName: vehicle.name,
+        vehicleId: vehicle._id,
+        variantName: selectedVariant?.variantName || "",
+      },
+    })
+  }
+  className="
+    w-full
+    border-2 border-slate-900
+    text-slate-900
+    hover:bg-slate-900
+    hover:text-white
+    py-4
+    rounded-xl
+    font-black
+    uppercase
+    tracking-wider
+    transition-all
+  "
+>
+  Đăng ký lái thử
+</button>
 
             </div>
           </div>

@@ -72,12 +72,31 @@ const PriceList = () => {
                                     {item.name}
                                 </h3>
                                 <div className="relative group cursor-pointer" onClick={() => navigate(`/vehicle/${item._id}`)}>
-                                    <img 
-                                        src={item.imageUrl} 
-                                        alt={item.name} 
-                                        loading="lazy"
-                                        className="w-full h-auto object-contain transition-transform duration-500 group-hover:scale-105" 
-                                    />
+                            <img 
+    src={
+        (
+            item.images?.[0] ||
+            "https://via.placeholder.com/500x300?text=No+Image"
+        ).replace(
+            "/upload/",
+            "/upload/q_100,f_auto/"
+        )
+    }
+    alt={item.name}
+    loading="lazy"
+    className="
+        w-full 
+        h-auto 
+        object-contain 
+        transition-transform 
+        duration-500 
+        group-hover:scale-105
+    "
+    onError={(e) => {
+        e.target.src =
+            "https://via.placeholder.com/500x300?text=No+Image";
+    }}
+/>
                                 </div>
                             </div>
 
