@@ -1,5 +1,5 @@
 import CarProblem
-from "../../src/models/CarProblem.js";
+from "../models/CarProblem.js";
 
 import {
   calculateScore
