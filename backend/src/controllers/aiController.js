@@ -1,6 +1,6 @@
 import {
   diagnoseProblem
-} from "../ai/diagnosisEngine.js";
+} from "../../ai/diagnosisEngine.js";
 
 export const diagnose =
 async (req, res) => {
