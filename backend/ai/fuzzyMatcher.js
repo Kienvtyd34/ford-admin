@@ -1,5 +1,4 @@
-import fuzz from "fuzzball";
-
+import * as fuzz from "fuzzball";
 import removeAccents
 from "remove-accents";
 
