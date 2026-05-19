@@ -48,7 +48,7 @@ export const processUserQuestion = async (message) => {
     if (
       keyword &&
       (
-        text === keyword ||
+        text.includes(keyword) ||
         text.includes("thông số") ||
         text.includes("chi tiết") ||
         text.includes("giới thiệu") ||
