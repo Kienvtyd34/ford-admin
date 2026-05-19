@@ -1,29 +1,13 @@
-import {
-  processUserQuestion
-} from "../../ai/chatbotEngine.js";
+import { AIEngine } from "../../ai/coreEngine.js";
 
-export const chatbot =
-async (req, res) => {
+export const chatController = async (req, res) => {
 
-  try {
+  const { message } = req.body;
 
-    const { message } = req.body;
+  const response = await AIEngine(message);
 
-    const result =
-      await processUserQuestion(
-        message
-      );
-
-    res.json({
-      success: true,
-      data: result
-    });
-
-  } catch (err) {
-
-    res.status(500).json({
-      success: false,
-      error: err.message
-    });
-  }
+  res.json({
+    success: true,
+    reply: response
+  });
 };
