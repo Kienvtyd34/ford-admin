@@ -1,9 +1,9 @@
-import VehicleModel from "../models/VehicleModel.js";
-import Variant from "../models/Variant.js";
-import VehicleColor from "../models/VehicleColor.js";
-import Inventory from "../models/Inventory.js";
-import News from "../models/News.js";
-import CarProblem from "../models/CarProblem.js";
+import VehicleModel from "../src/models/VehicleModel.js";
+import Variant from "../src/models/Variant.js";
+import VehicleColor from "../src/models/VehicleColor.js";
+import Inventory from "../src/models/Inventory.js";
+import News from "../src/models/News.js";
+import CarProblem from "../src/models/CarProblem.js";
 
 const normalize = (text = "") => {
   return text.toLowerCase();
