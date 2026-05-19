@@ -35,7 +35,7 @@ export default function Chatbot() {
 
     try {
       const res = await axios.post(
-        "https://ford-admin.onrender.com/api/ai-chat/chat",
+        "https://ford-admin.onrender.com/api/ai/chat",
         {
           message: userText,
           userId: "user_1", // nếu bạn dùng memory sau này
