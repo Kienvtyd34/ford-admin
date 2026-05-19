@@ -3,7 +3,7 @@ import Variant from "../src/models/Variant.js";
 import CarProblem from "../src/models/CarProblem.js";
 import News from "../src/models/News.js";
 
-import { saveMemory } from "../src/memory.js";
+import { saveMemory } from "../src/models/memory.js";
 import { search } from "./vectorStore.js";
 
 const classifyIntent = (msg, results = []) => {
