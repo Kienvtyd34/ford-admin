@@ -30,6 +30,7 @@ import InventoryDashboard from './pages/InventoryDashboard';
 import AdminVehicle from './pages/AdminVehicleColor';
 import TestDrivePage from './pages/TestDrivePage';
 import TestDriveList from './pages/TestDriveList';
+import Chatbot from './components/Chatbot';
 function App() {
   return (
     <VehicleProvider>
@@ -49,6 +50,7 @@ function App() {
           <Route path="/tin-tuc/:slug" element={<NewsDetail />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/test-drive" element={<TestDrivePage />} />
+            <Route path="/chatbot" element={<Chatbot />} />
           {/* ĐƯỜNG DẪN CHI TIẾT XE: Phải khớp với Link trong Header */}
           <Route path="/vehicle/:id" element={<VehicleDetail />} />
         </Route>
@@ -67,7 +69,6 @@ function App() {
   <Route path="dashboard" element={<InventoryDashboard />} />
   <Route path="vehicle" element={<AdminVehicle/>}/>
   <Route path="test-drive-list" element={<TestDriveList />} />
-  
   {/* CHỈ ADMIN MỚI VÀO ĐƯỢC TRANG NÀY */}
   <Route 
     path="hr-management" 

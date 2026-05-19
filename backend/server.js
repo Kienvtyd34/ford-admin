@@ -10,7 +10,6 @@ import vehicleRoutes from "./src/routes/vehicleRoutes.js";
 import contactRoutes from "./src/routes/contactRoutes.js";
 import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
-import aiChatbotRoutes from "./src/routes/aichatbotRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
 // Controllers
 import { handleSepayWebhook } from "./src/controllers/paymentController.js"; 
@@ -45,7 +44,7 @@ app.use("/api/users", authRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/bookings", bookingRoutes); 
 app.use('/api/news', newsRoutes);
-app.use('/api/ai-chat', aiChatbotRoutes);
+app.use('/api/ai-chat', aiRoutes);
 // --- TỰ ĐỘNG HÓA ---
 setInterval(autoCancelExpiredBookings, 60 * 60 * 1000);
 
