@@ -1,4 +1,4 @@
-import { chatEngine } from "../ai/chatEngine.js";
+import { chatEngine } from "../../ai/chatEngine.js";
 
 export const chatController = async (req, res) => {
 
