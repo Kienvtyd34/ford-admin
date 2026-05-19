@@ -4,17 +4,27 @@ export const chatController = async (req, res) => {
   try {
     const { message, userId } = req.body;
 
+    // ✅ VALIDATION
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({
+        success: false,
+        reply: "Tin nhắn không hợp lệ"
+      });
+    }
+
     const reply = await semanticAI(userId || "guest", message);
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      reply: reply.message
+      reply: reply?.message || "Không có phản hồi"
     });
 
   } catch (err) {
-    res.status(500).json({
+    console.error("CHAT ERROR:", err);
+
+    return res.status(500).json({
       success: false,
-      error: err.message
+      reply: "Server đang bận, vui lòng thử lại"
     });
   }
 };
