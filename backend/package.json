@@ -22,17 +22,21 @@
     "express": "^5.2.1",
     "fuzzball": "^2.2.6",
     "jsonwebtoken": "^9.0.3",
+    "lodash": "^4.18.1",
     "moment": "^2.30.1",
     "mongoose": "^9.0.1",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^4.0.0",
+    "natural": "^8.1.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.12",
     "ollama": "^0.6.3",
     "remove-accents": "^0.5.0",
     "slugify": "^1.6.6",
     "string-similarity": "^4.0.4",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "wink-nlp": "^2.4.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"
