@@ -3,24 +3,19 @@ import natural from "natural";
 const tokenizer = new natural.WordTokenizer();
 
 export const search = (query, k = 5) => {
-  const words = tokenizer.tokenize(query.toLowerCase());
+  const queryVec = Float32Array.from(textToVector(query));
 
-  if (!global.__vectorIndex || !global.__idMap) {
-    return [];
-  }
+  const result = index.search(queryVec, k);
 
-  const scores = global.__vectorIndex.map((doc, i) => {
-    let score = 0;
+  return result.labels
+    .map((i, idx) => {
+      if (i === -1) return null;
 
-    words.forEach(w => {
-      if (doc.includes(w)) score += 1;
-    });
-
-    return { i, score };
-  });
-
-  return scores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, k)
-    .map(s => global.__idMap[s.i]);
+      return {
+        ...idMap[i],
+        score: result.distances[idx] // càng nhỏ càng giống
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.score - b.score);
 };

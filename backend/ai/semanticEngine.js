@@ -3,165 +3,143 @@ import Variant from "../src/models/Variant.js";
 import CarProblem from "../src/models/CarProblem.js";
 import News from "../src/models/News.js";
 
-import { detectIntent } from "./intent.js";
-import { saveMemory } from "../src/models/memory.js";
+import { saveMemory } from "./memory.js";
 import { search } from "./vectorStore.js";
+
+const classifyIntent = (msg, results = []) => {
+  const text = msg.toLowerCase();
+
+  // semantic boost từ vector
+  const topScore = results?.[0]?.score || 999;
+
+  if (text.includes("giá") || text.includes("bao nhiêu")) return "price";
+  if (text.includes("tin")) return "news";
+  if (text.includes("lỗi") || text.includes("hỏng")) return "problem";
+
+  // SEMANTIC RULE (QUAN TRỌNG)
+  if (topScore < 0.35) return "recommend";
+
+  return "smart";
+};
 
 export const semanticAI = async (userId, message) => {
   try {
-    const msg = (message || "").toLowerCase();
+    const msg = message.toLowerCase();
 
-    if (!msg.trim()) {
-      return {
-        message: "❌ Tin nhắn không hợp lệ"
-      };
-    }
+    // 🔥 1. VECTOR SEARCH (AI CORE)
+    const semanticResults = search(message, 5) || [];
 
-    const intent = detectIntent(msg);
+    // 🔥 2. INTENT AI (hybrid rule + semantic)
+    const intent = classifyIntent(msg, semanticResults);
 
     await saveMemory(userId, "user", message, intent);
 
-    // =========================
-    // VECTOR FALLBACK SAFE
-    // =========================
-    let semanticResults = [];
+    // ======================
+    // SMART RECOMMEND (GPT STYLE)
+    // ======================
+    if (intent === "recommend") {
+      const variants = await Variant.find()
+        .populate("modelId")
+        .lean();
 
-    if (intent === "unknown") {
-      try {
-        semanticResults = (await search(message, 5)) || [];
-      } catch (err) {
-        console.error("VECTOR ERROR:", err);
-        semanticResults = [];
-      }
-    }
+      const ranked = variants
+        .map(v => {
+          const name = v.modelId?.name || "";
+          const matchScore = semanticResults.find(r =>
+            r.modelId?.name === name
+          )?.score || 1;
 
-    // =========================
-    // PRICE
-    // =========================
-    if (intent === "price") {
-      const models = await VehicleModel.find().lean();
+          return {
+            ...v,
+            score: matchScore
+          };
+        })
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 5);
 
       return {
         message:
-          "💰 Danh sách xe Ford:\n\n" +
-          models.map(m => `• ${m?.name || "Unknown"}`).join("\n")
+          "🚗 Tôi gợi ý cho bạn:\n\n" +
+          ranked.map(v => {
+            return `• ${v.modelId.name} (${v.modelId.seats} chỗ) - ${Number(v.basePrice).toLocaleString()} VNĐ`;
+          }).join("\n")
       };
     }
 
-    // =========================
+    // ======================
+    // PRICE (SMART FILTER)
+    // ======================
+    if (intent === "price") {
+      const models = await VehicleModel.find().lean();
+
+      const matched = models.filter(m =>
+        msg.includes(m.name.toLowerCase())
+      );
+
+      const data = matched.length ? matched : models;
+
+      return {
+        message:
+          "💰 Giá xe Ford:\n\n" +
+          data.map(m =>
+            `• ${m.name} - ${(m.price || 0).toLocaleString()} VNĐ`
+          ).join("\n")
+      };
+    }
+
+    // ======================
     // NEWS
-    // =========================
+    // ======================
     if (intent === "news") {
       const news = await News.find().limit(5).lean();
 
       return {
         message:
           "📰 Tin tức Ford:\n\n" +
-          news.map(n => `• ${n?.title || "No title"}`).join("\n")
+          news.map(n => `• ${n.title}`).join("\n")
       };
     }
 
-    // =========================
+    // ======================
     // PROBLEM
-    // =========================
+    // ======================
     if (intent === "problem") {
       const problems = await CarProblem.find().lean();
 
       return {
         message:
           "⚠️ Lỗi thường gặp:\n\n" +
-          problems.map(p => `• ${p?.title || "Unknown"}`).join("\n")
+          problems.map(p => `• ${p.title}`).join("\n")
       };
     }
 
-    // =========================
-    // RECOMMEND (SAFE + FIXED)
-    // =========================
-    if (intent === "recommend") {
-      let variants = [];
-
-      try {
-        variants = await Variant.find()
-          .populate("modelId")
-          .lean();
-      } catch (err) {
-        console.error("DB ERROR:", err);
-        return {
-          message: "❌ Lỗi dữ liệu xe, vui lòng thử lại sau"
-        };
-      }
-
-      // CLEAN DATA
-      variants = (variants || []).filter(
-        v => v && v.modelId && v.modelId.name
-      );
-
-      // FILTER
-      if (msg.includes("7 chỗ") || msg.includes("gia đình")) {
-        variants = variants.filter(v => v.modelId.seats >= 7);
-      }
-
-      if (msg.includes("suv")) {
-        variants = variants.filter(v => v.modelId.type === "SUV");
-      }
-
-      if (msg.includes("bán tải")) {
-        variants = variants.filter(v =>
-          /ranger|raptor/i.test(v.modelId.name)
-        );
-      }
-
-      if (msg.includes("mạnh nhất")) {
-        variants = variants.sort(
-          (a, b) => (b.basePrice || 0) - (a.basePrice || 0)
-        );
-      }
-
-      const top = variants.slice(0, 5);
-
-      return {
-        message:
-          "🚗 Gợi ý xe phù hợp:\n\n" +
-          (top.length > 0
-            ? top
-                .map(v => {
-                  const name = v.modelId.name;
-                  const seats = v.modelId.seats;
-                  const price = Number(v.basePrice || 0).toLocaleString();
-
-                  return `• ${name} (${seats} chỗ) - ${price} VNĐ`;
-                })
-                .join("\n")
-            : "⚠️ Không tìm thấy xe phù hợp")
-      };
-    }
-
-    // =========================
-    // VECTOR RESULT
-    // =========================
+    // ======================
+    // GPT FALLBACK (SEMANIC)
+    // ======================
     if (semanticResults.length > 0) {
       return {
         message:
-          "🔎 Thông tin liên quan:\n\n" +
+          "🔎 Tôi hiểu bạn đang quan tâm:\n\n" +
           semanticResults
-            .map(r => `• ${r?.title || r?.name || "No data"}`)
+            .slice(0, 5)
+            .map(r => `• ${r.title || r.name}`)
             .join("\n")
       };
     }
 
-    // =========================
-    // DEFAULT
-    // =========================
+    // ======================
+    // FINAL GPT STYLE
+    // ======================
     return {
       message:
-        "🚗 Tôi có thể hỗ trợ bạn:\n" +
-        "- Xe gia đình\n- SUV\n- Bán tải\n- Giá xe Ford\n- Tin tức"
+        "🚗 Tôi có thể giúp bạn chọn xe Ford phù hợp (gia đình, SUV, bán tải, giá xe)."
     };
+
   } catch (err) {
-    console.error("🔥 GLOBAL ERROR:", err);
+    console.error("🔥 AI ERROR:", err);
 
     return {
-      message: "❌ Hệ thống đang tạm gián đoạn, vui lòng thử lại"
+      message: "❌ AI đang xử lý quá tải, thử lại sau"
     };
   }
 };
