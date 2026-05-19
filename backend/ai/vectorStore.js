@@ -1,21 +1,27 @@
-import natural from "natural";
-
-const tokenizer = new natural.WordTokenizer();
+import { index, idMap, textToVector } from "./vectorStore.js";
 
 export const search = (query, k = 5) => {
-  const queryVec = Float32Array.from(textToVector(query));
+  try {
+    if (!query) return [];
 
-  const result = index.search(queryVec, k);
+    const queryVec = Float32Array.from(textToVector(query));
 
-  return result.labels
-    .map((i, idx) => {
-      if (i === -1) return null;
+    const result = index.search(queryVec, k);
 
-      return {
-        ...idMap[i],
-        score: result.distances[idx] // càng nhỏ càng giống
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => a.score - b.score);
+    return result.labels
+      .map((i, idx) => {
+        if (i === -1) return null;
+
+        return {
+          ...idMap[i],
+          score: result.distances?.[idx] ?? 999
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.score - b.score);
+
+  } catch (err) {
+    console.error("VECTOR ERROR:", err);
+    return [];
+  }
 };

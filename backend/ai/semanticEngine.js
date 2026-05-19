@@ -38,33 +38,36 @@ export const semanticAI = async (userId, message) => {
     // SMART RECOMMEND (GPT STYLE)
     // ======================
     if (intent === "recommend") {
-      const variants = await Variant.find()
-        .populate("modelId")
-        .lean();
+  const variants = await Variant.find()
+    .populate("modelId")
+    .lean();
 
-      const ranked = variants
-        .map(v => {
-          const name = v.modelId?.name || "";
-          const matchScore = semanticResults.find(r =>
-            r.modelId?.name === name
-          )?.score || 1;
+  // SAFE FILTER
+  const clean = (variants || []).filter(v => v?.modelId?.name);
 
-          return {
-            ...v,
-            score: matchScore
-          };
-        })
-        .sort((a, b) => a.score - b.score)
-        .slice(0, 5);
+  // SMART MATCH SCORE (FIX BUG)
+  const ranked = clean
+    .map(v => {
+      const match = semanticResults.find(r =>
+        r?.name === v.modelId?.name
+      );
 
       return {
-        message:
-          "🚗 Tôi gợi ý cho bạn:\n\n" +
-          ranked.map(v => {
-            return `• ${v.modelId.name} (${v.modelId.seats} chỗ) - ${Number(v.basePrice).toLocaleString()} VNĐ`;
-          }).join("\n")
+        ...v,
+        score: match?.score ?? 999
       };
-    }
+    })
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 5);
+
+  return {
+    message:
+      "🚗 Gợi ý xe phù hợp:\n\n" +
+      ranked.map(v =>
+        `• ${v.modelId.name} (${v.modelId.seats} chỗ) - ${Number(v.basePrice).toLocaleString()} VNĐ`
+      ).join("\n")
+  };
+}
 
     // ======================
     // PRICE (SMART FILTER)
