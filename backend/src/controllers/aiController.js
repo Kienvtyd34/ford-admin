@@ -1,6 +1,6 @@
 import {
   processUserQuestion
-} from "../ai/chatbotEngine.js";
+} from "../../ai/chatbotEngine.js";
 
 export const chatbot =
 async (req, res) => {
