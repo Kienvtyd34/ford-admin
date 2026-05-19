@@ -3,45 +3,25 @@ import Variant from "../src/models/Variant.js";
 import CarProblem from "../src/models/CarProblem.js";
 import News from "../src/models/News.js";
 
-import { vectorize, cosineSimilarity } from "./word2vecLite.js";
-import { getMemory, saveMemory } from "./memoryStore.js";
-
-const intents = [
-  { name: "price", text: "giá bao nhiêu giá xe bao nhiêu tiền" },
-  { name: "detail", text: "thông số chi tiết xe giới thiệu" },
-  { name: "recommend", text: "xe gia đình 7 chỗ suv gợi ý" },
-  { name: "problem", text: "xe lỗi không nổ phanh kêu" },
-  { name: "news", text: "tin tức khuyến mãi sự kiện" }
-];
-
-const detectIntent = (text) => {
-  const inputVec = vectorize(text);
-
-  let best = { name: "unknown", score: 0 };
-
-  for (let i of intents) {
-    const vec = vectorize(i.text);
-    const score = cosineSimilarity(inputVec, vec);
-
-    if (score > best.score) {
-      best = { name: i.name, score };
-    }
-  }
-
-  return best.name;
-};
+import { detectIntent } from "./intent.js";
+import { saveMemory } from "./memory.js";
+import { search } from "./vectorStore.js";
 
 export const semanticAI = async (userId, message) => {
 
   const intent = detectIntent(message);
 
-  saveMemory(userId, message, intent);
+  await saveMemory(userId, "user", message, intent);
+
+  // =======================
+  // VECTOR SEARCH (semantic fallback)
+  // =======================
+  const semanticResults = search(message, 5);
 
   // =======================
   // RECOMMEND
   // =======================
   if (intent === "recommend") {
-
     const variants = await Variant.find().populate("modelId");
 
     const result = variants
@@ -61,7 +41,6 @@ export const semanticAI = async (userId, message) => {
   // PRICE
   // =======================
   if (intent === "price") {
-
     const models = await VehicleModel.find();
 
     return {
@@ -75,7 +54,6 @@ export const semanticAI = async (userId, message) => {
   // PROBLEM
   // =======================
   if (intent === "problem") {
-
     const problems = await CarProblem.find();
 
     return {
@@ -89,7 +67,6 @@ export const semanticAI = async (userId, message) => {
   // NEWS
   // =======================
   if (intent === "news") {
-
     const news = await News.find().limit(5);
 
     return {
@@ -99,7 +76,18 @@ export const semanticAI = async (userId, message) => {
     };
   }
 
+  // =======================
+  // FALLBACK: VECTOR AI
+  // =======================
+  if (semanticResults.length > 0) {
+    return {
+      message:
+        "🔎 Tôi tìm thấy thông tin liên quan:\n\n" +
+        semanticResults.map(r => `• ${r.title || r.name}`).join("\n")
+    };
+  }
+
   return {
-    message: "Tôi có thể tư vấn xe Ford 🚗 giá, màu, lỗi, và khuyến mãi!"
+    message: "🚗 Tôi có thể tư vấn xe Ford: giá, SUV, lỗi, khuyến mãi..."
   };
 };

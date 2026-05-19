@@ -1,7 +1,6 @@
 import { semanticAI } from "../../ai/semanticEngine.js";
 
 export const chatController = async (req, res) => {
-
   try {
     const { message, userId } = req.body;
 
