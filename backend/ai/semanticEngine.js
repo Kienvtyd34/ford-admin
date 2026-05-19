@@ -1,7 +1,7 @@
-import VehicleModel from "../models/VehicleModel.js";
-import Variant from "../models/Variant.js";
-import CarProblem from "../models/CarProblem.js";
-import News from "../models/News.js";
+import VehicleModel from "../src/models/VehicleModel.js";
+import Variant from "../src/models/Variant.js";
+import CarProblem from "../src/models/CarProblem.js";
+import News from "../src/models/News.js";
 
 import { vectorize, cosineSimilarity } from "./word2vecLite.js";
 import { getMemory, saveMemory } from "./memoryStore.js";
