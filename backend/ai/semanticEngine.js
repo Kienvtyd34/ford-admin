@@ -4,7 +4,7 @@ import CarProblem from "../src/models/CarProblem.js";
 import News from "../src/models/News.js";
 
 import { detectIntent } from "./intent.js";
-import { saveMemory } from "./memory.js";
+import { saveMemory } from "../src/models/memory.js";
 import { search } from "./vectorStore.js";
 
 export const semanticAI = async (userId, message) => {
