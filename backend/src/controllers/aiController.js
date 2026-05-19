@@ -1,8 +1,8 @@
 import {
-  diagnoseProblem
-} from "../../ai/diagnosisEngine.js";
+  processUserQuestion
+} from "../ai/chatbotEngine.js";
 
-export const diagnose =
+export const chatbot =
 async (req, res) => {
 
   try {
@@ -10,18 +10,9 @@ async (req, res) => {
     const { message } = req.body;
 
     const result =
-      await diagnoseProblem(
+      await processUserQuestion(
         message
       );
-
-    if (!result) {
-
-      return res.json({
-        success: false,
-        message:
-          "Không xác định được lỗi"
-      });
-    }
 
     res.json({
       success: true,

@@ -1,14 +1,14 @@
 import express from "express";
 
 import {
-  diagnose
+  chatbot
 } from "../controllers/aiController.js";
 
 const router = express.Router();
 
 router.post(
-  "/diagnose",
-  diagnose
+  "/chat",
+  chatbot
 );
 
 export default router;
