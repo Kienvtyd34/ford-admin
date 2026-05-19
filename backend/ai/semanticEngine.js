@@ -1,68 +1,71 @@
-import VehicleModel from "../src/models/VehicleModel.js";
-import Variant from "../src/models/Variant.js";
-import CarProblem from "../src/models/CarProblem.js";
-import News from "../src/models/News.js";
-
-import { detectIntent } from "./intent.js";
-import { saveMemory } from "./memory.js";
-import { search } from "./vectorStore.js";
-
 export const semanticAI = async (userId, message) => {
   try {
-    if (!message || typeof message !== "string") {
-      return {
-        message: "❌ Tin nhắn không hợp lệ"
-      };
-    }
+    const msg = message.toLowerCase();
+
+    let intent = detectIntent(msg);
+
+    await saveMemory(userId, "user", message, intent);
 
     // =======================
-    // INTENT DETECTION (SAFE)
-    // =======================
-    let intent = "unknown";
-    try {
-      intent = detectIntent(message);
-    } catch (err) {
-      console.error("detectIntent error:", err);
-    }
-
-    // =======================
-    // MEMORY
-    // =======================
-    try {
-      await saveMemory(userId, "user", message, intent);
-    } catch (err) {
-      console.error("saveMemory error:", err);
-    }
-
-    // =======================
-    // VECTOR SEARCH (SAFE)
+    // VECTOR SEARCH (ONLY fallback)
     // =======================
     let semanticResults = [];
-    try {
+    if (intent === "unknown") {
       semanticResults = (await search(message, 5)) || [];
-    } catch (err) {
-      console.error("vector search error:", err);
     }
 
     // =======================
-    // RECOMMEND
+    // SMART RECOMMEND ENGINE
     // =======================
     if (intent === "recommend") {
-      const variants = await Variant.find().populate("modelId");
+      let variants = await Variant.find().populate("modelId");
 
-      const result = variants
-        .filter(v => v.basePrice && v.basePrice <= 1000000000)
-        .slice(0, 5);
+      // =======================
+      // FILTER LOGIC
+      // =======================
+
+      // 7 chỗ / gia đình
+      if (msg.includes("7 chỗ") || msg.includes("gia đình")) {
+        variants = variants.filter(v =>
+          v.modelId?.name?.includes("Everest") ||
+          v.modelId?.name?.includes("Territory") ||
+          v.modelId?.name?.includes("Explorer")
+        );
+      }
+
+      // bán tải
+      if (msg.includes("bán tải")) {
+        variants = variants.filter(v =>
+          v.modelId?.name?.includes("Ranger") ||
+          v.modelId?.name?.includes("Raptor")
+        );
+      }
+
+      // SUV
+      if (msg.includes("suv")) {
+        variants = variants.filter(v =>
+          v.modelId?.name?.includes("Everest") ||
+          v.modelId?.name?.includes("Territory")
+        );
+      }
+
+      // mạnh nhất
+      if (msg.includes("mạnh nhất")) {
+        variants = variants.sort((a, b) => b.basePrice - a.basePrice);
+      }
+
+      // =======================
+      // LIMIT + SAFE
+      // =======================
+      const result = variants.slice(0, 5);
 
       return {
         message:
           "🚗 Gợi ý xe phù hợp:\n\n" +
-          result
-            .map(v => {
-              const price = Number(v.basePrice || 0).toLocaleString();
-              return `• ${v.modelId?.name || "Unknown"} ${v.variantName} - ${price} VNĐ`;
-            })
-            .join("\n")
+          result.map(v => {
+            const price = Number(v.basePrice || 0).toLocaleString();
+            return `• ${v.modelId?.name || "Unknown"} ${v.variantName} - ${price} VNĐ`;
+          }).join("\n")
       };
     }
 
@@ -112,26 +115,24 @@ export const semanticAI = async (userId, message) => {
       return {
         message:
           "🔎 Tôi tìm thấy thông tin liên quan:\n\n" +
-          semanticResults
-            .map(r => `• ${r.title || r.name || "Không rõ tiêu đề"}`)
-            .join("\n")
+          semanticResults.map(r => `• ${r.title || r.name}`).join("\n")
       };
     }
 
     // =======================
-    // DEFAULT RESPONSE
+    // DEFAULT
     // =======================
     return {
       message:
-        "🚗 Tôi có thể tư vấn xe Ford:\n" +
-        "giá xe, dòng SUV, lỗi thường gặp, tin tức, khuyến mãi..."
+        "🚗 Tôi có thể tư vấn:\n" +
+        "xe gia đình, SUV, bán tải, giá xe, khuyến mãi..."
     };
 
   } catch (err) {
-    console.error("semanticAI CRASH:", err);
+    console.error("semanticAI error:", err);
 
     return {
-      message: "❌ Hệ thống đang quá tải, vui lòng thử lại sau"
+      message: "❌ Hệ thống đang bận, vui lòng thử lại sau"
     };
   }
 };

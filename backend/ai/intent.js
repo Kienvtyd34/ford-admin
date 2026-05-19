@@ -1,31 +1,54 @@
-import { textToVector } from "./vectorStore.js";
+export const detectIntent = (text = "") => {
+  const msg = text.toLowerCase();
 
-const intents = [
-  { name: "price", samples: ["giá bao nhiêu", "bao nhiêu tiền", "giá xe"] },
-  { name: "recommend", samples: ["xe gia đình", "7 chỗ", "SUV", "gợi ý xe"] },
-  { name: "problem", samples: ["xe lỗi", "không nổ máy", "phanh kêu"] },
-  { name: "news", samples: ["tin tức", "khuyến mãi", "sự kiện"] }
-];
-
-const cosine = (a, b) => {
-  let dot = 0;
-  for (let i = 0; i < a.length; i++) dot += a[i] * b[i];
-  return dot;
-};
-
-export const detectIntent = (text) => {
-  const input = textToVector(text);
-
-  let best = { name: "unknown", score: 0 };
-
-  for (let i of intents) {
-    const vec = textToVector(i.samples.join(" "));
-    const score = cosine(input, vec);
-
-    if (score > best.score) {
-      best = { name: i.name, score };
-    }
+  // =======================
+  // PRICE
+  // =======================
+  if (
+    msg.includes("giá") ||
+    msg.includes("bao nhiêu") ||
+    msg.includes("price")
+  ) {
+    return "price";
   }
 
-  return best.name;
+  // =======================
+  // NEWS
+  // =======================
+  if (
+    msg.includes("tin tức") ||
+    msg.includes("mới nhất") ||
+    msg.includes("news")
+  ) {
+    return "news";
+  }
+
+  // =======================
+  // PROBLEM
+  // =======================
+  if (
+    msg.includes("lỗi") ||
+    msg.includes("hỏng") ||
+    msg.includes("bị gì")
+  ) {
+    return "problem";
+  }
+
+  // =======================
+  // RECOMMEND (SMART UPGRADE)
+  // =======================
+  if (
+    msg.includes("xe") ||
+    msg.includes("tư vấn") ||
+    msg.includes("chọn xe") ||
+    msg.includes("7 chỗ") ||
+    msg.includes("gia đình") ||
+    msg.includes("bán tải") ||
+    msg.includes("mạnh nhất") ||
+    msg.includes("suv")
+  ) {
+    return "recommend";
+  }
+
+  return "unknown";
 };
