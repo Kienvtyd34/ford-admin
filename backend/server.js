@@ -43,7 +43,7 @@ app.use("/api/users", authRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/bookings", bookingRoutes); 
 app.use('/api/news', newsRoutes);
-app.use('/api/ai-chat', chatRoutes);
+app.use('/api/ai', chatRoutes);
 // --- TỰ ĐỘNG HÓA ---
 setInterval(autoCancelExpiredBookings, 60 * 60 * 1000);
 
