@@ -4,95 +4,88 @@ import CarProblem from "../src/models/CarProblem.js";
 import News from "../src/models/News.js";
 
 import { saveMemory } from "../src/models/memory.js";
-import { search } from "./vectorStore.js";
+import { search } from "./search.js";
+import { detectIntent } from "./intent.js";
 
+// =====================
+// CLASSIFY
+// =====================
 const classifyIntent = (msg, results = []) => {
   const text = msg.toLowerCase();
 
-  // semantic boost từ vector
-  const topScore = results?.[0]?.score || 999;
+  const topScore = results?.[0]?.score ?? 999;
 
-  if (text.includes("giá") || text.includes("bao nhiêu")) return "price";
-  if (text.includes("tin")) return "news";
-  if (text.includes("lỗi") || text.includes("hỏng")) return "problem";
+  if (/(giá|bao nhiêu)/.test(text)) return "price";
+  if (/(tin)/.test(text)) return "news";
+  if (/(lỗi|hỏng)/.test(text)) return "problem";
 
-  // SEMANTIC RULE (QUAN TRỌNG)
-  if (topScore < 0.35) return "recommend";
+  if (topScore < 0.4) return "recommend";
 
-  return "smart";
+  return detectIntent(text);
 };
 
+// =====================
+// MAIN AI
+// =====================
 export const semanticAI = async (userId, message) => {
   try {
     const msg = message.toLowerCase();
 
-    // 🔥 1. VECTOR SEARCH (AI CORE)
-    const semanticResults = search(message, 5) || [];
+    // VECTOR SEARCH
+    const semanticResults = search(message, 5);
 
-    // 🔥 2. INTENT AI (hybrid rule + semantic)
+    // INTENT
     const intent = classifyIntent(msg, semanticResults);
 
     await saveMemory(userId, "user", message, intent);
 
-    // ======================
-    // SMART RECOMMEND (GPT STYLE)
-    // ======================
+    // =====================
+    // RECOMMEND
+    // =====================
     if (intent === "recommend") {
-  const variants = await Variant.find()
-    .populate("modelId")
-    .lean();
+      const variants = await Variant.find().populate("modelId").lean();
 
-  // SAFE FILTER
-  const clean = (variants || []).filter(v => v?.modelId?.name);
+      const ranked = variants
+        .map(v => {
+          const match = semanticResults.find(r =>
+            r?.name === v?.modelId?.name
+          );
 
-  // SMART MATCH SCORE (FIX BUG)
-  const ranked = clean
-    .map(v => {
-      const match = semanticResults.find(r =>
-        r?.name === v.modelId?.name
-      );
+          return {
+            ...v,
+            score: match?.score ?? 999
+          };
+        })
+        .sort((a, b) => a.score - b.score)
+        .slice(0, 5);
 
       return {
-        ...v,
-        score: match?.score ?? 999
+        message:
+          "🚗 Gợi ý xe phù hợp:\n\n" +
+          ranked.map(v =>
+            `• ${v.modelId.name} (${v.modelId.seats} chỗ) - ${Number(v.basePrice).toLocaleString()} VNĐ`
+          ).join("\n")
       };
-    })
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 5);
+    }
 
-  return {
-    message:
-      "🚗 Gợi ý xe phù hợp:\n\n" +
-      ranked.map(v =>
-        `• ${v.modelId.name} (${v.modelId.seats} chỗ) - ${Number(v.basePrice).toLocaleString()} VNĐ`
-      ).join("\n")
-  };
-}
-
-    // ======================
-    // PRICE (SMART FILTER)
-    // ======================
+    // =====================
+    // PRICE
+    // =====================
     if (intent === "price") {
       const models = await VehicleModel.find().lean();
-
-      const matched = models.filter(m =>
-        msg.includes(m.name.toLowerCase())
-      );
-
-      const data = matched.length ? matched : models;
 
       return {
         message:
           "💰 Giá xe Ford:\n\n" +
-          data.map(m =>
+          models.map(m =>
             `• ${m.name} - ${(m.price || 0).toLocaleString()} VNĐ`
           ).join("\n")
       };
     }
 
-    // ======================
+    // =====================
     // NEWS
-    // ======================
+    // =====================
     if (intent === "news") {
       const news = await News.find().limit(5).lean();
 
@@ -103,9 +96,9 @@ export const semanticAI = async (userId, message) => {
       };
     }
 
-    // ======================
+    // =====================
     // PROBLEM
-    // ======================
+    // =====================
     if (intent === "problem") {
       const problems = await CarProblem.find().lean();
 
@@ -116,33 +109,29 @@ export const semanticAI = async (userId, message) => {
       };
     }
 
-    // ======================
-    // GPT FALLBACK (SEMANIC)
-    // ======================
+    // =====================
+    // FALLBACK
+    // =====================
     if (semanticResults.length > 0) {
       return {
         message:
           "🔎 Tôi hiểu bạn đang quan tâm:\n\n" +
-          semanticResults
-            .slice(0, 5)
-            .map(r => `• ${r.title || r.name}`)
+          semanticResults.slice(0, 5)
+            .map(r => `• ${r.name || r.title}`)
             .join("\n")
       };
     }
 
-    // ======================
-    // FINAL GPT STYLE
-    // ======================
     return {
       message:
-        "🚗 Tôi có thể giúp bạn chọn xe Ford phù hợp (gia đình, SUV, bán tải, giá xe)."
+        "🚗 Tôi có thể giúp bạn chọn xe Ford (gia đình, SUV, bán tải, giá xe)."
     };
 
   } catch (err) {
-    console.error("🔥 AI ERROR:", err);
+    console.error("AI ERROR:", err);
 
     return {
-      message: "❌ AI đang xử lý quá tải, thử lại sau"
+      message: "❌ Hệ thống tạm gián đoạn, vui lòng thử lại"
     };
   }
 };

@@ -1,27 +1,55 @@
-import { index, idMap, textToVector } from "./vectorStore.js";
+import faiss from "faiss-node";
+import natural from "natural";
 
-export const search = (query, k = 5) => {
-  try {
-    if (!query) return [];
+const tokenizer = new natural.WordTokenizer();
 
-    const queryVec = Float32Array.from(textToVector(query));
+export const DIM = 100;
 
-    const result = index.search(queryVec, k);
+export const index = new faiss.IndexFlatL2(DIM);
+export const idMap = [];
 
-    return result.labels
-      .map((i, idx) => {
-        if (i === -1) return null;
-
-        return {
-          ...idMap[i],
-          score: result.distances?.[idx] ?? 999
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.score - b.score);
-
-  } catch (err) {
-    console.error("VECTOR ERROR:", err);
-    return [];
+// =====================
+// HASH
+// =====================
+const hash = (str) => {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h << 5) - h + str.charCodeAt(i);
+    h |= 0;
   }
+  return h;
+};
+
+// =====================
+// NORMALIZE
+// =====================
+const normalize = (vec) => {
+  const norm = Math.sqrt(vec.reduce((a, b) => a + b * b, 0)) || 1;
+  return vec.map(v => v / norm);
+};
+
+// =====================
+// TEXT → VECTOR
+// =====================
+export const textToVector = (text = "") => {
+  const words = tokenizer.tokenize(text.toLowerCase());
+
+  const vec = new Array(DIM).fill(0);
+
+  words.forEach((w) => {
+    const idx = Math.abs(hash(w)) % DIM;
+    vec[idx] += 1;
+  });
+
+  return normalize(vec);
+};
+
+// =====================
+// ADD VECTOR
+// =====================
+export const addToIndex = (text, data) => {
+  const vec = Float32Array.from(textToVector(text));
+
+  index.add(vec);
+  idMap.push(data);
 };

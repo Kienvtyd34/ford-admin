@@ -1,10 +1,8 @@
 import mongoose from "mongoose";
 
-// =====================
-// MODEL
-// =====================
 const memorySchema = new mongoose.Schema({
-  userId: String,
+  userId: { type: String, index: true },
+
   messages: [
     {
       role: String,
@@ -20,20 +18,15 @@ const Memory = mongoose.model("Memory", memorySchema);
 export default Memory;
 
 // =====================
-// SERVICE FUNCTIONS
+// SAVE MEMORY
 // =====================
 export const saveMemory = async (userId, role, text, intent = null) => {
   try {
-    return await Memory.updateOne(
+    await Memory.updateOne(
       { userId },
       {
         $push: {
-          messages: {
-            role,
-            text,
-            intent,
-            time: new Date()
-          }
+          messages: { role, text, intent, time: new Date() }
         }
       },
       { upsert: true }
@@ -43,6 +36,9 @@ export const saveMemory = async (userId, role, text, intent = null) => {
   }
 };
 
+// =====================
+// GET MEMORY
+// =====================
 export const getMemory = async (userId) => {
   try {
     return await Memory.findOne({ userId });
