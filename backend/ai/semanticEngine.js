@@ -1,4 +1,4 @@
-import CarProblem from "../models/CarProblem.js";
+import CarProblem from "../src/models/CarProblem.js";
 
 export const findProblem = async (text) => {
 

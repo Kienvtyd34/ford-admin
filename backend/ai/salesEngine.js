@@ -1,4 +1,4 @@
-import Variant from "../models/Variant.js";
+import Variant from "../src/models/Variant.js";
 
 export const recommendCars = async (session, text) => {
 
