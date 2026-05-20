@@ -99,12 +99,21 @@ export const chatRouter = async (
 
   // ================= SALES =================
 
-  const sales =
-    await salesEngine(
-      message,
-      results,
-      context
-    );
+ const sales =
+  await salesEngine(
+    message,
+    results,
+    context
+  );
+
+// SAVE ENTITIES
+if (sales.entities) {
+
+  saveConversationContext(
+    userId,
+    sales.entities
+  );
+}
 
   if (sales.success) {
 
@@ -134,13 +143,6 @@ export const chatRouter = async (
 
   // ================= SAVE PARTIAL CONTEXT =================
 
-  if (sales.entities) {
-
-    saveConversationContext(
-      userId,
-      sales.entities
-    );
-  }
 
   return {
     mode: "fallback",

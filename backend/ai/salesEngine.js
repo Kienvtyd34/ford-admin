@@ -45,11 +45,29 @@ export const salesEngine = async (
 
   // ================= VEHICLES =================
 
-  const vehicles =
-    results.filter(
-      (r) =>
-        r.type === "vehicle"
-    );
+ let vehicles =
+  results.filter(
+    (r) =>
+      r.type === "vehicle"
+  );
+
+// FALLBACK:
+// nếu semantic search không trả đủ vehicle
+// lấy trực tiếp từ brainMap
+
+if (vehicles.length === 0) {
+
+  const {
+    brainMap,
+  } = await import(
+    "./vector/vectorStore.js"
+  );
+
+  vehicles = brainMap.filter(
+    (r) =>
+      r.type === "vehicle"
+  );
+}
 
   // DEBUG
 

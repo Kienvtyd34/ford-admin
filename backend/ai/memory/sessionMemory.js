@@ -4,19 +4,20 @@ export const saveConversationContext = (
   userId,
   data
 ) => {
-  const old =
+
+  const current =
     sessions.get(userId) || {};
 
   sessions.set(userId, {
-    ...old,
+    ...current,
     ...data,
-    updatedAt: Date.now(),
   });
 };
 
 export const getConversationContext = (
   userId
 ) => {
+
   return (
     sessions.get(userId) || {}
   );

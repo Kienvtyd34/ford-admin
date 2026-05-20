@@ -32,7 +32,7 @@ export const chatController = async (
     const result =
       await chatRouter(
         message,
-        userId
+        userId || "guest"
       );
 
     // =========================
