@@ -8,10 +8,12 @@ const memorySchema = new mongoose.Schema({
       role: String,
       text: String,
       intent: String,
-      vector: { type: [Number] }, // ✅ FIX CRITICAL
+      vector: { type: [Number] },
       time: { type: Date, default: Date.now },
     },
   ],
 });
 
-export default mongoose.model("Memory", memorySchema);
+const Memory = mongoose.model("Memory", memorySchema);
+
+export default Memory;

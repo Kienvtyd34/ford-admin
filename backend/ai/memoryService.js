@@ -1,6 +1,7 @@
-import Memory from "../src/models/memory.js";
+import Memory from "../src/models/memory.model.js";
 import { embedText } from "./embedding.js";
 
+// ===================== SAVE MEMORY =====================
 export const saveMemory = async (userId, role, text, intent = null) => {
   try {
     const vector = await embedText(text);
@@ -23,4 +24,9 @@ export const saveMemory = async (userId, role, text, intent = null) => {
   } catch (err) {
     console.error("MEMORY ERROR:", err);
   }
+};
+
+// ===================== GET MEMORY =====================
+export const getMemory = async (userId) => {
+  return await Memory.findOne({ userId });
 };

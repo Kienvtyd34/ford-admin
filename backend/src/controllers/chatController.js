@@ -1,5 +1,5 @@
 import { chatRouter } from "../../ai/router.js";
-import { saveMemory } from "../../src/models/memory.js";
+import { saveMemory } from "../../ai/memoryService.js";
 
 export const chatController = async (req, res) => {
   try {
