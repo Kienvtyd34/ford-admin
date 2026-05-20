@@ -1,23 +1,49 @@
 import { embedText } from "../vector/embedding.js";
-import { brainIndex, brainMap } from "../vector/vectorStore.js";
+import {
+  brainIndex,
+  brainMap,
+} from "../vector/vectorStore.js";
 
-export const searchBrain = async (query, k = 10) => {
-  const vec = await embedText(query);
+export const searchBrain = async (
+  query,
+  k = 10
+) => {
 
-  const result = brainIndex.search(
-    Float32Array.from(vec),
-    k
-  );
+  if (brainMap.length === 0) {
+    return [];
+  }
+
+  const vec =
+    await embedText(query);
+
+  const queryVector =
+    new Float32Array(vec);
+
+  const result =
+    brainIndex.search(
+      queryVector,
+      Math.min(k, brainMap.length)
+    );
 
   return result.labels
-    .map((i, idx) => {
-      if (i === -1) return null;
+    .map((id, idx) => {
+
+      if (
+        id === -1 ||
+        !brainMap[id]
+      ) {
+        return null;
+      }
 
       return {
-        ...brainMap[i],
-        score: result.distances[idx],
+        ...brainMap[id],
+        score:
+          result.distances[idx],
       };
     })
     .filter(Boolean)
-    .sort((a, b) => b.score - a.score);
+    .sort(
+      (a, b) =>
+        b.score - a.score
+    );
 };
