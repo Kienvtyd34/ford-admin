@@ -12,6 +12,8 @@ import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
 import { initIntents } from "./ai/intentEngine.js";
+import { buildBrain } from "./ai/brainLayer.js";
+import { loadBrainToIndex } from "./ai/brainStore.js";
 
 
 // Controllers
@@ -55,3 +57,7 @@ app.listen(PORT, () => {
     console.log(`🚀 Server is running at http://localhost:${PORT}`);
     console.log(`🤖 AI Chat API: http://localhost:${PORT}/api/ai-chat`);
 });
+const brain = await buildBrain();
+loadBrainToIndex(brain);
+
+console.log("🧠 AI Brain loaded:", brain.length);
