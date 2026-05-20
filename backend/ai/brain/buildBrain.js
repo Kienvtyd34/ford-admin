@@ -6,7 +6,10 @@ import CarProblem from "../../src/models/CarProblem.js";
 import News from "../../src/models/News.js";
 
 import { embedText } from "../vector/embedding.js";
-import { addBrainItem } from "../vector/vectorStore.js";
+import {
+  addBrainItem,
+  brainMap,
+} from "../vector/vectorStore.js";
 
 export const buildBrain = async () => {
 
@@ -14,16 +17,49 @@ export const buildBrain = async () => {
 
   // ================= LOAD DATA =================
 
-  const vehicles = await VehicleModel.find();
-  const variants = await Variant.find();
-  const inventory = await Inventory.find();
-  const colors = await VehicleColor.find();
-  const problems = await CarProblem.find();
-  const news = await News.find();
+  const vehicles =
+    await VehicleModel.find();
+
+  const variants =
+    await Variant.find();
+
+  const inventory =
+    await Inventory.find();
+
+  const colors =
+    await VehicleColor.find();
+
+  const problems =
+    await CarProblem.find();
+
+  const news =
+    await News.find();
+
+  console.log(
+    "🚗 VEHICLES:",
+    vehicles.length
+  );
+
+  console.log(
+    "💰 VARIANTS:",
+    variants.length
+  );
+
+  console.log(
+    "🔧 PROBLEMS:",
+    problems.length
+  );
 
   // ================= VEHICLES =================
 
   for (const v of vehicles) {
+
+    console.log(
+      "ADD VEHICLE:",
+      v.name,
+      v.type,
+      v.seats
+    );
 
     const text = `
       ${v.name}
@@ -33,7 +69,13 @@ export const buildBrain = async () => {
       ${v.brand || "Ford"}
     `;
 
-    const vector = await embedText(text);
+    const vector =
+      await embedText(text);
+
+    console.log(
+      "VECTOR LENGTH:",
+      vector.length
+    );
 
     addBrainItem(vector, {
       type: "vehicle",
@@ -53,7 +95,8 @@ export const buildBrain = async () => {
       ${v.driveTrain}
     `;
 
-    const vector = await embedText(text);
+    const vector =
+      await embedText(text);
 
     addBrainItem(vector, {
       type: "variant",
@@ -72,7 +115,8 @@ export const buildBrain = async () => {
       ${i.category}
     `;
 
-    const vector = await embedText(text);
+    const vector =
+      await embedText(text);
 
     addBrainItem(vector, {
       type: "inventory",
@@ -90,7 +134,8 @@ export const buildBrain = async () => {
       ${c.hexCode}
     `;
 
-    const vector = await embedText(text);
+    const vector =
+      await embedText(text);
 
     addBrainItem(vector, {
       type: "color",
@@ -103,6 +148,11 @@ export const buildBrain = async () => {
 
   for (const p of problems) {
 
+    console.log(
+      "ADD PROBLEM:",
+      p.title
+    );
+
     const text = `
       ${p.title}
       ${p.symptoms.join(" ")}
@@ -110,7 +160,8 @@ export const buildBrain = async () => {
       ${p.solutions.join(" ")}
     `;
 
-    const vector = await embedText(text);
+    const vector =
+      await embedText(text);
 
     addBrainItem(vector, {
       type: "problem",
@@ -129,7 +180,8 @@ export const buildBrain = async () => {
       ${n.category}
     `;
 
-    const vector = await embedText(text);
+    const vector =
+      await embedText(text);
 
     addBrainItem(vector, {
       type: "news",
@@ -138,5 +190,12 @@ export const buildBrain = async () => {
     });
   }
 
-  console.log("✅ AI Brain completed");
+  console.log(
+    "🧠 TOTAL INDEXED:",
+    brainMap.length
+  );
+
+  console.log(
+    "✅ AI Brain completed"
+  );
 };
