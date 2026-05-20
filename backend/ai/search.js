@@ -1,27 +1,31 @@
-import { index, idMap, textToVector } from "./vectorStore.js";
+import { index, idMap } from "./vectorStore.js";
+import { embedText } from "./embedding.js";
 
-export const search = (query, k = 5) => {
-  try {
-    if (!query) return [];
+const keywordBoost = (q) => {
+  let score = 0;
+  const t = q.toLowerCase();
 
-    const vec = Float32Array.from(textToVector(query));
+  if (t.includes("ford")) score += 0.05;
+  if (t.includes("suv")) score += 0.05;
+  if (t.includes("7 chỗ")) score += 0.07;
 
-    const result = index.search(vec, k);
+  return score;
+};
 
-    return result.labels
-      .map((i, idx) => {
-        if (i === -1) return null;
+export const search = async (query, k = 5) => {
+  const vec = await embedText(query);
 
-        return {
-          ...idMap[i],
-          score: result.distances?.[idx] ?? 999
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.score - b.score);
+  const result = index.search(Float32Array.from(vec), k);
 
-  } catch (err) {
-    console.error("VECTOR SEARCH ERROR:", err);
-    return [];
-  }
+  return result.labels
+    .map((i, idx) => {
+      if (i === -1) return null;
+
+      return {
+        ...idMap[i],
+        score: result.distances[idx] + keywordBoost(query),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score);
 };

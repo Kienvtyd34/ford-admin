@@ -1,30 +1,49 @@
-import { semanticAI } from "../../ai/semanticEngine.js";
+import { chatRouter } from "../../ai/router.js";
 
 export const chatController = async (req, res) => {
   try {
     const { message, userId } = req.body;
 
-    // ✅ VALIDATION
-    if (!message || typeof message !== "string") {
+    if (!message?.trim()) {
       return res.status(400).json({
         success: false,
-        reply: "Tin nhắn không hợp lệ"
+        reply: "Tin nhắn không hợp lệ",
       });
     }
 
-    const reply = await semanticAI(userId || "guest", message);
+    const result = await chatRouter(message, { userId });
 
-    return res.status(200).json({
+    if (result.mode === "clarify") {
+      return res.json({ success: true, reply: result.message });
+    }
+
+    if (result.mode === "rag" || result.mode === "hybrid") {
+      return res.json({
+        success: true,
+        reply:
+          "🔎 Kết quả:\n\n" +
+          result.data
+            .slice(0, 5)
+            .map((r) => `• ${r.modelId?.name || r.name}`)
+            .join("\n"),
+      });
+    }
+
+    if (result.mode === "direct") {
+      return res.json({
+        success: true,
+        reply: `👉 Intent: ${result.intent}`,
+      });
+    }
+
+    return res.json({
       success: true,
-      reply: reply?.message || "Không có phản hồi"
+      reply: "🚗 Tôi có thể giúp bạn chọn xe Ford",
     });
-
   } catch (err) {
-    console.error("CHAT ERROR:", err);
-
     return res.status(500).json({
       success: false,
-      reply: "Server đang bận, vui lòng thử lại"
+      reply: "Server lỗi",
     });
   }
 };

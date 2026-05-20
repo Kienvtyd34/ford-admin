@@ -72,16 +72,16 @@ export const semanticAI = async (userId, message) => {
     // PRICE
     // =====================
     if (intent === "price") {
-      const models = await VehicleModel.find().lean();
+  const models = await VehicleModel.find().lean();
 
-      return {
-        message:
-          "💰 Giá xe Ford:\n\n" +
-          models.map(m =>
-            `• ${m.name} - ${(m.price || 0).toLocaleString()} VNĐ`
-          ).join("\n")
-      };
-    }
+  return {
+    message:
+      "💰 Giá xe Ford:\n\n" +
+      models.map(m =>
+        `• ${m.name} - ${Number(m.basePrice || m.price || 0).toLocaleString()} VNĐ`
+      ).join("\n")
+  };
+}
 
     // =====================
     // NEWS

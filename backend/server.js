@@ -11,6 +11,9 @@ import contactRoutes from "./src/routes/contactRoutes.js";
 import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
+import { initIntents } from "./ai/intentEngine.js";
+
+
 // Controllers
 import { handleSepayWebhook } from "./src/controllers/paymentController.js"; 
 import { autoCancelExpiredBookings } from './src/controllers/bookingController.js';
@@ -19,7 +22,7 @@ const app = express();
 
 // Kết nối Database
 connectDB();
-
+await initIntents();
 // Middlewares
 app.use(cors({
     origin: [
