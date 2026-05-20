@@ -1,4 +1,5 @@
 import { searchBrain } from "./brain/brainSearch.js";
+
 import { salesEngine } from "./salesEngine.js";
 import { problemEngine } from "./problemEngine.js";
 import { priceEngine } from "./priceEngine.js";
@@ -8,42 +9,61 @@ import {
   getConversationContext,
 } from "./memory/sessionMemory.js";
 
+// ================= NORMALIZE =================
+
+const normalize = (text = "") => {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+};
+
 export const chatRouter = async (
   message,
   userId = "guest"
 ) => {
 
-  const lower = message.toLowerCase();
+  const text = normalize(message);
 
-  // ================= CONTEXT =================
+  // =========================
+  // CONTEXT
+  // =========================
 
   const context =
     getConversationContext(userId);
 
-  // ================= SEARCH =================
+  // =========================
+  // SEARCH
+  // =========================
 
   const results =
-    await searchBrain(
-      message,
-      20
-    );
+    await searchBrain(message, 20);
 
-  // ================= PROBLEM =================
+  // =====================================================
+  // PROBLEM DETECTION
+  // =====================================================
 
   const problemKeywords = [
     "rung",
-    "giật",
-    "lỗi",
-    "hỏng",
-    "máy",
-    "động cơ",
-    "vào số",
-    "không lạnh",
+    "giat",
+    "loi",
+    "hong",
+    "nong",
+    "khong mat",
+    "khong lanh",
+    "dieu hoa",
+    "vao so",
+    "dong co",
+    "chet may",
+    "khong no",
+    "abs",
+    "u3000",
   ];
 
   const isProblem =
     problemKeywords.some((k) =>
-      lower.includes(k)
+      text.includes(k)
     );
 
   if (isProblem) {
@@ -68,22 +88,18 @@ export const chatRouter = async (
         data: problem,
       };
     }
-    if (isProblem && !problem) {
-  return {
-    mode: "fallback",
-    reply:
-      "Anh/chị có thể mô tả rõ lỗi xe hơn được không ạ?",
-  };
-}
   }
 
-  // ================= PRICE =================
+  // =====================================================
+  // PRICE
+  // =====================================================
 
-  if (
-    lower.includes("giá") ||
-    lower.includes("báo giá") ||
-    lower.includes("bao nhiêu")
-  ) {
+  const isPrice =
+    text.includes("gia") ||
+    text.includes("bao nhieu") ||
+    text.includes("bao gia");
+
+  if (isPrice) {
 
     const prices =
       await priceEngine(
@@ -91,63 +107,97 @@ export const chatRouter = async (
         context
       );
 
+    if (
+      !prices ||
+      prices.length === 0
+    ) {
+      return {
+        mode: "fallback",
+        reply:
+          "Hiện chưa tìm thấy bảng giá phù hợp",
+      };
+    }
+
     return {
       mode: "price",
       data: prices,
     };
   }
 
-  // ================= SALES =================
+  // =====================================================
+  // SALES DETECTION
+  // =====================================================
 
- const sales =
-  await salesEngine(
-    message,
-    results,
-    context
-  );
+  const salesKeywords = [
+    "xe",
+    "tim xe",
+    "mua xe",
+    "gia dinh",
+    "suv",
+    "sedan",
+    "ban tai",
+    "5 cho",
+    "7 cho",
+    "tra gop",
+    "lai thu",
+  ];
 
-// SAVE ENTITIES
-if (sales.entities) {
-
-  saveConversationContext(
-    userId,
-    sales.entities
-  );
-}
-
-  if (sales.success) {
-
-    saveConversationContext(
-      userId,
-      {
-        lastVehicle:
-          sales.data,
-        lastMode: "sales",
-
-        seats:
-          sales.entities?.seats,
-
-        type:
-          sales.entities?.type,
-
-        budget:
-          sales.entities?.budget,
-      }
+  const isSales =
+    salesKeywords.some((k) =>
+      text.includes(k)
     );
 
+  if (isSales) {
+
+    const sales =
+      await salesEngine(
+        message,
+        results,
+        context
+      );
+
+    // SAVE CONTEXT
+
+    if (sales.entities) {
+
+      saveConversationContext(
+        userId,
+        sales.entities
+      );
+    }
+
+    if (sales.success) {
+
+      saveConversationContext(
+        userId,
+        {
+          lastVehicle:
+            sales.data,
+          lastMode: "sales",
+        }
+      );
+
+      return {
+        mode: "sales",
+        data: sales.data,
+      };
+    }
+
     return {
-      mode: "sales",
-      data: sales.data,
+      mode: "fallback",
+      reply:
+        sales.askBack ||
+        "Anh/chị cần xe gì ạ?",
     };
   }
 
-  // ================= SAVE PARTIAL CONTEXT =================
-
+  // =====================================================
+  // DEFAULT
+  // =====================================================
 
   return {
     mode: "fallback",
     reply:
-      sales.askBack ||
-      "Anh/chị cần xe gì ạ?",
+      "Anh/chị cần hỗ trợ mua xe hay kiểm tra lỗi xe ạ?",
   };
 };
