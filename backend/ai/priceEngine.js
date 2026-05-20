@@ -5,25 +5,22 @@ export const priceEngine = async (
 
   let variants =
     results.filter(
-      (r) => r.type === "variant"
+      (r) =>
+        r.type === "variant"
     );
 
-  // ======================
-  // USE LAST VEHICLE
-  // ======================
+  // dùng context xe trước đó
 
-  if (
-    context?.lastVehicle?.name
-  ) {
+  if (context.lastVehicle) {
 
-    variants = variants.filter(
-      (v) =>
+    variants =
+      variants.filter((v) =>
         v.payload.variantName
           ?.toLowerCase()
           .includes(
             context.lastVehicle.name.toLowerCase()
           )
-    );
+      );
   }
 
   return variants
@@ -31,6 +28,7 @@ export const priceEngine = async (
     .map((v) => ({
       variantName:
         v.payload.variantName,
+
       basePrice:
         v.payload.basePrice,
     }));

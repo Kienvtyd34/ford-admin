@@ -1,24 +1,23 @@
-const memoryStore = new Map();
+const sessions = new Map();
 
 export const saveConversationContext = (
   userId,
   data
 ) => {
-
   const old =
-    memoryStore.get(userId) || {};
+    sessions.get(userId) || {};
 
-  memoryStore.set(userId, {
+  sessions.set(userId, {
     ...old,
     ...data,
+    updatedAt: Date.now(),
   });
 };
 
 export const getConversationContext = (
   userId
 ) => {
-
   return (
-    memoryStore.get(userId) || {}
+    sessions.get(userId) || {}
   );
 };

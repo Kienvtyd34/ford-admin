@@ -2,6 +2,7 @@ import { searchBrain } from "./brain/brainSearch.js";
 import { salesEngine } from "./salesEngine.js";
 import { problemEngine } from "./problemEngine.js";
 import { priceEngine } from "./priceEngine.js";
+
 import {
   saveConversationContext,
   getConversationContext,
@@ -14,42 +15,36 @@ export const chatRouter = async (
 
   const lower = message.toLowerCase();
 
-  // =========================
-  // LOAD CONTEXT
-  // =========================
+  // ================= CONTEXT =================
 
   const context =
     getConversationContext(userId);
 
-  // =========================
-  // SEARCH BRAIN
-  // =========================
+  // ================= SEARCH =================
 
-  const results = await searchBrain(
-    message,
-    20
-  );
+  const results =
+    await searchBrain(
+      message,
+      20
+    );
 
-  // =========================
-  // PROBLEM PRIORITY
-  // =========================
+  // ================= PROBLEM =================
 
   const problemKeywords = [
     "rung",
     "giật",
     "lỗi",
     "hỏng",
-    "nóng",
-    "không nổ",
-    "không lạnh",
-    "vào số",
     "máy",
     "động cơ",
+    "vào số",
+    "không lạnh",
   ];
 
-  const isProblem = problemKeywords.some(
-    (k) => lower.includes(k)
-  );
+  const isProblem =
+    problemKeywords.some((k) =>
+      lower.includes(k)
+    );
 
   if (isProblem) {
 
@@ -75,14 +70,12 @@ export const chatRouter = async (
     }
   }
 
-  // =========================
-  // PRICE MODE
-  // =========================
+  // ================= PRICE =================
 
   if (
     lower.includes("giá") ||
-    lower.includes("bao nhiêu") ||
-    lower.includes("báo giá")
+    lower.includes("báo giá") ||
+    lower.includes("bao nhiêu")
   ) {
 
     const prices =
@@ -97,47 +90,34 @@ export const chatRouter = async (
     };
   }
 
-  // =========================
-  // SALES MODE
-  // =========================
+  // ================= SALES =================
 
   const sales =
-  await salesEngine(
-    message,
-    results,
-    context
-  );
-
-// =========================
-// SAVE ENTITIES CONTEXT
-// =========================
-
-if (sales.entities) {
-
-  saveConversationContext(
-    userId,
-    {
-      entities: {
-        ...(context.entities || {}),
-        ...sales.entities,
-      },
-    }
-  );
-}
+    await salesEngine(
+      message,
+      results,
+      context
+    );
 
   if (sales.success) {
 
-   saveConversationContext(
-  userId,
-  {
-    lastVehicle: sales.data,
-    lastMode: "sales",
-    entities: {
-      ...(context.entities || {}),
-      ...(sales.entities || {}),
-    },
-  }
-);
+    saveConversationContext(
+      userId,
+      {
+        lastVehicle:
+          sales.data,
+        lastMode: "sales",
+
+        seats:
+          sales.entities?.seats,
+
+        type:
+          sales.entities?.type,
+
+        budget:
+          sales.entities?.budget,
+      }
+    );
 
     return {
       mode: "sales",
@@ -145,10 +125,20 @@ if (sales.entities) {
     };
   }
 
+  // ================= SAVE PARTIAL CONTEXT =================
+
+  if (sales.entities) {
+
+    saveConversationContext(
+      userId,
+      sales.entities
+    );
+  }
+
   return {
     mode: "fallback",
     reply:
       sales.askBack ||
-      "Anh/chị cần xe gia đình hay bán tải ạ?",
+      "Anh/chị cần xe gì ạ?",
   };
 };

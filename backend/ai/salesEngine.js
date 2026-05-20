@@ -7,106 +7,106 @@ export const salesEngine = async (
   context = {}
 ) => {
 
-  // =========================
-  // EXTRACT CURRENT ENTITIES
-  // =========================
+  // ================= EXTRACT =================
 
-  const current =
+  const entities =
     extractEntities(message);
 
-  // =========================
-  // MERGE OLD CONTEXT
-  // =========================
+  // ================= MERGE CONTEXT =================
 
-  const entities = {
-    ...(context.entities || {}),
-    ...current,
+  const merged = {
+    seats:
+      entities.seats ||
+      context.seats,
+
+    type:
+      entities.type ||
+      context.type,
+
+    budget:
+      entities.budget ||
+      context.budget,
+
+    usage:
+      entities.usage ||
+      context.usage,
   };
 
-  // =========================
-  // VEHICLES
-  // =========================
+  // ================= VEHICLES =================
 
   const vehicles =
     results.filter(
-      (r) => r.type === "vehicle"
+      (r) =>
+        r.type === "vehicle"
     );
 
-  // =========================
-  // NO VEHICLES
-  // =========================
+  // ================= ASK FLOW =================
 
-  if (!vehicles.length) {
-
+  if (!merged.type) {
     return {
       success: false,
+      entities: merged,
       askBack:
         "Anh/chị thích SUV, sedan hay bán tải ạ?",
-      entities,
     };
   }
 
-  // =========================
-  // RANK
-  // =========================
+  if (!merged.seats) {
+    return {
+      success: false,
+      entities: merged,
+      askBack:
+        "Anh/chị cần xe 5 hay 7 chỗ ạ?",
+    };
+  }
+
+  // ================= FILTER =================
+
+  let filtered = vehicles;
+
+  if (merged.type) {
+    filtered =
+      filtered.filter(
+        (v) =>
+          v.payload.type
+            ?.toLowerCase()
+            .includes(
+              merged.type.toLowerCase()
+            )
+      );
+  }
+
+  if (merged.seats) {
+    filtered =
+      filtered.filter(
+        (v) =>
+          Number(v.payload.seats) ===
+          Number(merged.seats)
+      );
+  }
+
+  // ================= RANK =================
 
   const ranked =
     rankVehicles(
-      vehicles,
-      entities
+      filtered,
+      merged
     );
 
   const best = ranked[0];
 
-  // =========================
-  // SCORE TOO LOW
-  // =========================
-
-  if (
-    !best ||
-    best.finalScore < 2
-  ) {
-
-    // ASK TYPE
-
-    if (!entities.type) {
-
-      return {
-        success: false,
-        askBack:
-          "Anh/chị thích SUV, sedan hay bán tải ạ?",
-        entities,
-      };
-    }
-
-    // ASK SEATS
-
-    if (!entities.seats) {
-
-      return {
-        success: false,
-        askBack:
-          "Anh/chị cần xe 5 hay 7 chỗ ạ?",
-        entities,
-      };
-    }
-
-    // ASK BUDGET
-
-    if (!entities.budget) {
-
-      return {
-        success: false,
-        askBack:
-          "Ngân sách khoảng bao nhiêu ạ?",
-        entities,
-      };
-    }
+  if (!best) {
+    return {
+      success: false,
+      entities: merged,
+      askBack:
+        "Hiện chưa tìm thấy mẫu phù hợp",
+    };
   }
 
   return {
     success: true,
     data: best.payload,
-    entities,
+    entities: merged,
   };
 };
