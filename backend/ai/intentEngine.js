@@ -1,18 +1,40 @@
 import { embedText } from "./embedding.js";
 
 const INTENTS = {
-  recommend: ["xe nào tốt", "tư vấn xe", "mua xe gì"],
-  price: ["giá bao nhiêu", "bảng giá", "cost"],
-  news: ["tin mới", "khuyến mãi"],
-  problem: ["xe lỗi", "hỏng xe"],
+  recommend: [
+    "xe nào phù hợp cho gia đình",
+    "tư vấn xe ford",
+    "nên mua xe gì",
+    "chọn suv 7 chỗ",
+    "xe đi đường dài tốt"
+  ],
+
+  price: [
+    "giá xe bao nhiêu",
+    "bảng giá ford",
+    "xe này giá bao nhiêu",
+    "cost bao nhiêu"
+  ],
+
+  news: [
+    "tin tức ford",
+    "khuyến mãi",
+    "xe mới ra mắt",
+    "ưu đãi ford"
+  ],
+
+  problem: [
+    "xe bị lỗi",
+    "xe hỏng",
+    "sửa xe",
+    "lỗi thường gặp"
+  ],
 };
 
 const intentVec = {};
 
 const cosine = (a, b) => {
-  let dot = 0,
-    na = 0,
-    nb = 0;
+  let dot = 0, na = 0, nb = 0;
 
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
@@ -23,7 +45,6 @@ const cosine = (a, b) => {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 };
 
-// INIT
 export const initIntents = async () => {
   for (const key in INTENTS) {
     intentVec[key] = await Promise.all(
@@ -32,7 +53,6 @@ export const initIntents = async () => {
   }
 };
 
-// 👉 IMPORTANT: EXPORT detectIntent đúng cách
 export const detectIntent = async (text) => {
   const qVec = await embedText(text);
 

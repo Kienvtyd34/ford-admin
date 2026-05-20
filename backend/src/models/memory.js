@@ -20,14 +20,24 @@ export default Memory;
 // =====================
 // SAVE MEMORY
 // =====================
+import { embedText } from "../../ai/embedding.js";
+
 export const saveMemory = async (userId, role, text, intent = null) => {
   try {
+    const vector = await embedText(text);
+
     await Memory.updateOne(
       { userId },
       {
         $push: {
-          messages: { role, text, intent, time: new Date() }
-        }
+          messages: {
+            role,
+            text,
+            intent,
+            vector, // 🔥 quan trọng
+            time: new Date(),
+          },
+        },
       },
       { upsert: true }
     );

@@ -1,18 +1,13 @@
 import Memory from "../src/models/memory.js";
 
-/**
- * Lấy context gần nhất (ChatGPT-style short-term memory)
- */
-export const getRecentContext = async (userId, limit = 10) => {
+export const getRecentContext = async (userId, limit = 5) => {
   const memory = await Memory.findOne({ userId });
 
   if (!memory) return [];
 
-  return memory.messages
-    .slice(-limit)
-    .map((m) => ({
-      role: m.role,
-      text: m.text,
-      intent: m.intent,
-    }));
+  return memory.messages.slice(-limit).map((m) => ({
+    role: m.role,
+    text: m.text,
+    intent: m.intent,
+  }));
 };

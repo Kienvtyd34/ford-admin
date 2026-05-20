@@ -1,9 +1,14 @@
 import { index, idMap } from "./vectorStore.js";
 import { embedText } from "./embedding.js";
 
+const normalize = (v) => {
+  const norm = Math.sqrt(v.reduce((a, b) => a + b * b, 0));
+  return v.map((x) => x / (norm || 1));
+};
+
 const keywordBoost = (q) => {
-  let score = 0;
   const t = q.toLowerCase();
+  let score = 0;
 
   if (t.includes("ford")) score += 0.05;
   if (t.includes("suv")) score += 0.05;
@@ -13,7 +18,7 @@ const keywordBoost = (q) => {
 };
 
 export const search = async (query, k = 5) => {
-  const vec = await embedText(query);
+  const vec = normalize(await embedText(query));
 
   const result = index.search(Float32Array.from(vec), k);
 
@@ -23,7 +28,7 @@ export const search = async (query, k = 5) => {
 
       return {
         ...idMap[i],
-        score: result.distances[idx] + keywordBoost(query),
+        score: (result.distances[idx] || 0) + keywordBoost(query),
       };
     })
     .filter(Boolean)
