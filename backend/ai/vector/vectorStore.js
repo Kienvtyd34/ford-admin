@@ -7,22 +7,20 @@ export const brainIndex =
 export const brainMap = [];
 
 // ===============================
-// NORMALIZE VECTOR
+// NORMALIZE
 // ===============================
 
-const normalizeVector = (
-  vector
-) => {
+const normalize = (vec) => {
 
   const norm =
     Math.sqrt(
-      vector.reduce(
+      vec.reduce(
         (s, v) => s + v * v,
         0
       )
     ) || 1;
 
-  return vector.map(
+  return vec.map(
     (v) => v / norm
   );
 };
@@ -60,18 +58,13 @@ export const addBrainItem = (
 
     // NORMALIZE
     const normalized =
-      normalizeVector(vector);
+      normalize(vector);
 
     // IMPORTANT FIX
-    const flat =
-      Float32Array.from(
-        normalized
-      );
+    // MUST BE NORMAL JS ARRAY
+    brainIndex.add(normalized);
 
-    // FAISS ADD
-    brainIndex.add(flat, 1);
-
-    // SAVE MAP
+    // SAVE
     brainMap.push(payload);
 
   } catch (err) {

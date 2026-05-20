@@ -21,12 +21,11 @@ export const searchBrain = async (
     const vec =
       await embedText(query);
 
-    const queryVector =
-      Float32Array.from(vec);
-
+    // IMPORTANT:
+    // MUST BE JS ARRAY
     const result =
       brainIndex.search(
-        queryVector,
+        vec,
         Math.min(
           k,
           brainMap.length
