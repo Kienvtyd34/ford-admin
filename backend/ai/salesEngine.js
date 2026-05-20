@@ -87,21 +87,54 @@ export const salesEngine = async (
   if (merged.type) {
 
     const wantedType =
-      normalize(merged.type);
+  normalize(merged.type);
 
-    filtered = filtered.filter((v) => {
+filtered = filtered.filter((v) => {
 
-      const vehicleType =
-        normalize(
-          v.payload.type
-        );
+  const vehicleType =
+    normalize(
+      v.payload.type
+    );
 
-      return (
-        vehicleType.includes(
-          wantedType
-        )
-      );
-    });
+  // ================= SUV =================
+
+  if (wantedType === "suv") {
+
+    return (
+      vehicleType.includes("suv") ||
+      vehicleType.includes("cuv") ||
+      vehicleType.includes("crossover") ||
+      vehicleType.includes("sport utility")
+    );
+  }
+
+  // ================= SEDAN =================
+
+  if (wantedType === "sedan") {
+
+    return (
+      vehicleType.includes("sedan")
+    );
+  }
+
+  // ================= PICKUP =================
+
+  if (
+    wantedType === "ban tai" ||
+    wantedType === "pickup"
+  ) {
+
+    return (
+      vehicleType.includes("pickup") ||
+      vehicleType.includes("ban tai") ||
+      vehicleType.includes("truck")
+    );
+  }
+
+  return vehicleType.includes(
+    wantedType
+  );
+});
 
     console.log(
       "🚙 AFTER TYPE:",
