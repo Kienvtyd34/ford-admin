@@ -27,8 +27,8 @@ export const buildBrain = async () => {
 
     const text = `
       ${v.name}
-      ${v.type}
-      ${v.seats} chỗ
+      ${String(v.type)}
+      ${Number(v.seats)} chỗ
       ${v.description || ""}
       ${v.brand || "Ford"}
     `;

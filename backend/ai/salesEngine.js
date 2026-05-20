@@ -1,18 +1,29 @@
 import { extractEntities } from "./brain/entityExtractor.js";
 import { rankVehicles } from "./brain/ranker.js";
 
+// ================= NORMALIZE =================
+
+const normalize = (text = "") => {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+};
+
 export const salesEngine = async (
   message,
   results,
   context = {}
 ) => {
 
-  // ================= EXTRACT =================
+  // ================= ENTITIES =================
 
   const entities =
     extractEntities(message);
 
-  // ================= MERGE CONTEXT =================
+  // ================= MERGE =================
 
   const merged = {
     seats:
@@ -40,6 +51,13 @@ export const salesEngine = async (
         r.type === "vehicle"
     );
 
+  // DEBUG
+
+  console.log(
+    "🚗 VEHICLES:",
+    vehicles.length
+  );
+
   // ================= ASK FLOW =================
 
   if (!merged.type) {
@@ -62,27 +80,70 @@ export const salesEngine = async (
 
   // ================= FILTER =================
 
-  let filtered = vehicles;
+  let filtered = [...vehicles];
+
+  // ===== TYPE =====
 
   if (merged.type) {
-    filtered =
-      filtered.filter(
-        (v) =>
+
+    const wantedType =
+      normalize(merged.type);
+
+    filtered = filtered.filter((v) => {
+
+      const vehicleType =
+        normalize(
           v.payload.type
-            ?.toLowerCase()
-            .includes(
-              merged.type.toLowerCase()
-            )
+        );
+
+      return (
+        vehicleType.includes(
+          wantedType
+        )
       );
+    });
+
+    console.log(
+      "🚙 AFTER TYPE:",
+      filtered.length
+    );
   }
 
+  // ===== SEATS =====
+
   if (merged.seats) {
-    filtered =
-      filtered.filter(
-        (v) =>
-          Number(v.payload.seats) ===
-          Number(merged.seats)
+
+    filtered = filtered.filter((v) => {
+
+      const seats =
+        Number(v.payload.seats);
+
+      return (
+        seats ===
+        Number(merged.seats)
       );
+    });
+
+    console.log(
+      "👥 AFTER SEATS:",
+      filtered.length
+    );
+  }
+
+  // ================= FALLBACK =================
+
+  if (filtered.length === 0) {
+
+    console.log(
+      "❌ NO MATCH VEHICLE"
+    );
+
+    return {
+      success: false,
+      entities: merged,
+      askBack:
+        "Hiện chưa tìm thấy mẫu phù hợp",
+    };
   }
 
   // ================= RANK =================
@@ -100,9 +161,14 @@ export const salesEngine = async (
       success: false,
       entities: merged,
       askBack:
-        "Hiện chưa tìm thấy mẫu phù hợp",
+        "Hiện chưa tìm thấy xe phù hợp",
     };
   }
+
+  console.log(
+    "✅ BEST:",
+    best.payload.name
+  );
 
   return {
     success: true,
