@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 dotenv.config();
-
 import express from "express";
 import cors from "cors";
 import connectDB from "./src/config/db.js";
@@ -12,63 +11,68 @@ import contactRoutes from "./src/routes/contactRoutes.js";
 import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
-
 import { initIntents } from "./ai/intentEngine.js";
 import { buildBrain } from "./ai/brainLayer.js";
 import { loadBrainToIndex } from "./ai/brainStore.js";
 
-import { handleSepayWebhook } from "./src/controllers/paymentController.js";
-import { autoCancelExpiredBookings } from "./src/controllers/bookingController.js";
+// Controllers
+import { handleSepayWebhook } from "./src/controllers/paymentController.js"; 
+import { autoCancelExpiredBookings } from './src/controllers/bookingController.js';
 
 const app = express();
 
-// ===================== DB =====================
-await connectDB();
-
-// ===================== AI BOOTSTRAP (QUAN TRỌNG NHẤT) =====================
-await initIntents();
-
-console.log("🧠 Building AI Brain... (this may take a few seconds)");
-
-const brain = await buildBrain();
-loadBrainToIndex(brain);
-
-console.log("🧠 AI Brain loaded:", brain.length);
-
-// ===================== MIDDLEWARE =====================
+// Middlewares
 app.use(cors({
     origin: [
-        'https://ford-admin-mu.vercel.app',
+        'https://ford-admin-mu.vercel.app', 
         'http://localhost:3000',
         'http://localhost:8081',
-        /\.vercel\.app$/
+        /\.vercel\.app$/ 
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type', 'Authorization', 'Bypass-Tunnel-Reminder'],
+    credentials: true 
 }));
-
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// ===================== WEBHOOK =====================
+// --- WEBHOOK SEPAY ---
 app.post("/api/sepay-webhook", handleSepayWebhook);
 
-// ===================== ROUTES =====================
+// --- CÁC API ROUTES ---
 app.use("/api/vehicles", vehicleRoutes);
 app.use("/api/users", authRoutes);
 app.use("/api/contacts", contactRoutes);
-app.use("/api/bookings", bookingRoutes);
-app.use("/api/news", newsRoutes);
-app.use("/api/ai", chatRoutes);
+app.use("/api/bookings", bookingRoutes); 
+app.use('/api/news', newsRoutes);
+app.use('/api/ai', chatRoutes);
 
-// ===================== AUTO JOB =====================
+// --- TỰ ĐỘNG HÓA ---
 setInterval(autoCancelExpiredBookings, 60 * 60 * 1000);
 
-// ===================== START SERVER =====================
-const PORT = process.env.PORT || 5000;
+// --- KHỞI ĐỘNG HỆ THỐNG AN TOÀN ---
+const startServer = async () => {
+    try {
+        // 1. Kết nối Database
+        await connectDB();
+        console.log("📦 Database connected successfully!");
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running: http://localhost:${PORT}`);
-    console.log(`🤖 AI Chat: /api/ai/chat`);
-});
+        // 2. Khởi tạo Engine AI
+        await initIntents();
+        console.log("🤖 AI Intent Engine initialized!");
+
+        // 3. Lắng nghe Port
+        const PORT = process.env.PORT || 5000;
+        app.listen(PORT, () => {
+            console.log(`🚀 Server is running at http://localhost:${PORT}`);
+            console.log(`🤖 AI Chat API: http://localhost:${PORT}/api/ai`);
+        });
+
+    } catch (error) {
+        console.error("💥 Failed to start server:", error);
+        process.exit(1); // Thoát nếu có lỗi nghiêm trọng
+    }
+};
+
+// Gọi hàm chạy hệ thống
+startServer();
