@@ -8,14 +8,20 @@ export const problemEngine = async (
   const text =
     normalizeText(message);
 
+  // ================= PROBLEMS =================
+
   const problems =
     results.filter(
-      (r) => r.type === "problem"
+      (r) =>
+        r.type === "problem"
     );
 
-  if (!problems.length) {
-    return null;
-  }
+  console.log(
+    "🔧 PROBLEMS:",
+    problems.length
+  );
+
+  // ================= SCORE MATCH =================
 
   let best = null;
   let bestScore = 0;
@@ -24,35 +30,56 @@ export const problemEngine = async (
 
     let score = 0;
 
-    const symptoms =
-      p.payload.symptoms || [];
+    // symptoms
 
-    const causes =
-      p.payload.causes || [];
+    for (const symptom of (
+      p.payload.symptoms || []
+    )) {
 
-    for (const s of symptoms) {
+      const s =
+        normalizeText(symptom);
 
-      const symptom =
-        normalizeText(s);
+      // exact
 
-      if (
-        text.includes(symptom)
-      ) {
-        score += 2;
+      if (text.includes(s)) {
+        score += 3;
+      }
+
+      // partial words
+
+      const words =
+        s.split(" ");
+
+      for (const w of words) {
+
+        if (
+          w.length > 2 &&
+          text.includes(w)
+        ) {
+          score += 1;
+        }
       }
     }
 
-    for (const c of causes) {
+    // title
 
-      const cause =
-        normalizeText(c);
+    const title =
+      normalizeText(
+        p.payload.title || ""
+      );
 
-      if (
-        text.includes(cause)
-      ) {
-        score += 1;
-      }
+    if (
+      title &&
+      text.includes(title)
+    ) {
+      score += 5;
     }
+
+    console.log(
+      "🧠",
+      p.payload.title,
+      score
+    );
 
     if (score > bestScore) {
       bestScore = score;
@@ -60,9 +87,24 @@ export const problemEngine = async (
     }
   }
 
-  if (bestScore === 0) {
-    return null;
+  // ================= RESULT =================
+
+  if (
+    best &&
+    bestScore >= 2
+  ) {
+
+    console.log(
+      "✅ PROBLEM FOUND:",
+      best.title
+    );
+
+    return best;
   }
 
-  return best;
+  console.log(
+    "❌ NO PROBLEM MATCH"
+  );
+
+  return null;
 };

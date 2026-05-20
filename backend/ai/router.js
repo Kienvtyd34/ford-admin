@@ -68,6 +68,13 @@ export const chatRouter = async (
         data: problem,
       };
     }
+    if (isProblem && !problem) {
+  return {
+    mode: "fallback",
+    reply:
+      "Anh/chị có thể mô tả rõ lỗi xe hơn được không ạ?",
+  };
+}
   }
 
   // ================= PRICE =================
