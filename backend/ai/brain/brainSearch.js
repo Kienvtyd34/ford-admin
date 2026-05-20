@@ -1,4 +1,5 @@
 import { embedText } from "../vector/embedding.js";
+
 import {
   brainIndex,
   brainMap,
@@ -16,16 +17,22 @@ export const searchBrain = async (
   const vec =
     await embedText(query);
 
-  const queryVector =
-    new Float32Array(vec);
-
+  // IMPORTANT:
+  // faiss-node search()
+  // NEEDS ARRAY
   const result =
     brainIndex.search(
-      queryVector,
+      [vec],
       Math.min(k, brainMap.length)
     );
 
-  return result.labels
+  const labels =
+    result.labels[0];
+
+  const distances =
+    result.distances[0];
+
+  return labels
     .map((id, idx) => {
 
       if (
@@ -37,8 +44,7 @@ export const searchBrain = async (
 
       return {
         ...brainMap[id],
-        score:
-          result.distances[idx],
+        score: distances[idx],
       };
     })
     .filter(Boolean)

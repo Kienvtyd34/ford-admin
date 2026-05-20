@@ -1,12 +1,30 @@
 import faiss from "faiss-node";
 import { EMBED_DIM } from "./embedding.js";
 
-export const brainIndex = new faiss.IndexFlatIP(EMBED_DIM);
+export const brainIndex =
+  new faiss.IndexFlatIP(EMBED_DIM);
 
 export const brainMap = [];
 
 // ===============================
-// ADD VECTOR TO INDEX
+// NORMALIZE VECTOR
+// ===============================
+
+const normalize = (vec) => {
+
+  const norm =
+    Math.sqrt(
+      vec.reduce(
+        (s, v) => s + v * v,
+        0
+      )
+    ) || 1;
+
+  return vec.map((v) => v / norm);
+};
+
+// ===============================
+// ADD TO INDEX
 // ===============================
 
 export const addBrainItem = (
@@ -27,26 +45,15 @@ export const addBrainItem = (
     }
 
     // NORMALIZE
-    const norm =
-      Math.sqrt(
-        vector.reduce(
-          (s, v) => s + v * v,
-          0
-        )
-      ) || 1;
-
-    const normalized = vector.map(
-      (v) => v / norm
-    );
+    const normalized =
+      normalize(vector);
 
     // IMPORTANT:
-    // FAISS NEEDS FLAT MATRIX
-    const flat =
-      new Float32Array(EMBED_DIM);
-
-    flat.set(normalized);
-
-    brainIndex.add(flat);
+    // faiss-node NEEDS:
+    // Array<Array<number>>
+    brainIndex.add([
+      normalized
+    ]);
 
     brainMap.push(payload);
 
