@@ -1,137 +1,120 @@
-import VehicleModel from "../src/models/VehicleModel.js";
-import Variant from "../src/models/Variant.js";
-import CarProblem from "../src/models/CarProblem.js";
-import News from "../src/models/News.js";
-
-import { saveMemory } from "../src/models/memory.js";
 import { search } from "./search.js";
-import { detectIntent } from "./intent.js";
+import { detectIntent } from "./intentEngine.js";
+import { getRecentContext } from "./memoryContext.js";
+import { searchMemory } from "./memorySearch.js";
 
-// =====================
-// CLASSIFY
-// =====================
-const classifyIntent = (msg, results = []) => {
-  const text = msg.toLowerCase();
+// ======================
+// DECISION ENGINE (ChatGPT style)
+// ======================
+const route = (intentScores) => {
+  const top = intentScores[0];
+  const top2 = intentScores[1];
 
-  const topScore = results?.[0]?.score ?? 999;
+  // 1. HIGH CONFIDENCE → direct intent
+  if (top.score >= 0.80) {
+    return {
+      type: "DIRECT",
+      intent: top.intent,
+    };
+  }
 
-  if (/(giá|bao nhiêu)/.test(text)) return "price";
-  if (/(tin)/.test(text)) return "news";
-  if (/(lỗi|hỏng)/.test(text)) return "problem";
+  // 2. MULTI INTENT → hybrid reasoning
+  if (top.score >= 0.55 && top2.score >= 0.45) {
+    return {
+      type: "HYBRID",
+      intents: [top, top2],
+    };
+  }
 
-  if (topScore < 0.4) return "recommend";
+  // 3. LOW CONFIDENCE → RAG fallback
+  if (top.score < 0.45) {
+    return {
+      type: "RAG",
+    };
+  }
 
-  return detectIntent(text);
+  // 4. UNCERTAIN → clarify
+  return {
+    type: "CLARIFY",
+  };
 };
 
-// =====================
-// MAIN AI
-// =====================
-export const semanticAI = async (userId, message) => {
+// ======================
+// MAIN CHATGPT-STYLE ROUTER
+// ======================
+export const chatRouter = async (message, { userId }) => {
   try {
-    const msg = message.toLowerCase();
+    // ======================
+    // 1. INTENT SCORING
+    // ======================
+    const intentScores = await detectIntent(message);
 
-    // VECTOR SEARCH
-    const semanticResults = search(message, 5);
+    const decision = route(intentScores);
 
-    // INTENT
-    const intent = classifyIntent(msg, semanticResults);
+    // ======================
+    // 2. MEMORY (IMPORTANT UPGRADE)
+    // ======================
+    const recentMemory = await getRecentContext(userId, 5);
+    const semanticMemory = await searchMemory(userId, message);
 
-    await saveMemory(userId, "user", message, intent);
+    // ======================
+    // 3. SEMANTIC SEARCH (MAIN RAG DATA)
+    // ======================
+    const ragResults = await search(message, 5);
 
-    // =====================
-    // RECOMMEND
-    // =====================
-    if (intent === "recommend") {
-      const variants = await Variant.find().populate("modelId").lean();
+    // ======================
+    // 4. ROUTING LOGIC
+    // ======================
 
-      const ranked = variants
-        .map(v => {
-          const match = semanticResults.find(r =>
-            r?.name === v?.modelId?.name
-          );
-
-          return {
-            ...v,
-            score: match?.score ?? 999
-          };
-        })
-        .sort((a, b) => a.score - b.score)
-        .slice(0, 5);
-
+    // ======================
+    // DIRECT MODE
+    // ======================
+    if (decision.type === "DIRECT") {
       return {
-        message:
-          "🚗 Gợi ý xe phù hợp:\n\n" +
-          ranked.map(v =>
-            `• ${v.modelId.name} (${v.modelId.seats} chỗ) - ${Number(v.basePrice).toLocaleString()} VNĐ`
-          ).join("\n")
+        mode: "direct",
+        intent: decision.intent,
+        memory: recentMemory,
       };
     }
 
-    // =====================
-    // PRICE
-    // =====================
-    if (intent === "price") {
-  const models = await VehicleModel.find().lean();
-
-  return {
-    message:
-      "💰 Giá xe Ford:\n\n" +
-      models.map(m =>
-        `• ${m.name} - ${Number(m.basePrice || m.price || 0).toLocaleString()} VNĐ`
-      ).join("\n")
-  };
-}
-
-    // =====================
-    // NEWS
-    // =====================
-    if (intent === "news") {
-      const news = await News.find().limit(5).lean();
-
+    // ======================
+    // HYBRID MODE (ChatGPT-style reasoning)
+    // ======================
+    if (decision.type === "HYBRID") {
       return {
-        message:
-          "📰 Tin tức Ford:\n\n" +
-          news.map(n => `• ${n.title}`).join("\n")
+        mode: "hybrid",
+        intents: decision.intents,
+        data: ragResults,
+        memory: semanticMemory,
       };
     }
 
-    // =====================
-    // PROBLEM
-    // =====================
-    if (intent === "problem") {
-      const problems = await CarProblem.find().lean();
-
+    // ======================
+    // RAG MODE (search + memory fusion)
+    // ======================
+    if (decision.type === "RAG") {
       return {
-        message:
-          "⚠️ Lỗi thường gặp:\n\n" +
-          problems.map(p => `• ${p.title}`).join("\n")
+        mode: "rag",
+        data: ragResults,
+        memory: semanticMemory,
       };
     }
 
-    // =====================
-    // FALLBACK
-    // =====================
-    if (semanticResults.length > 0) {
-      return {
-        message:
-          "🔎 Tôi hiểu bạn đang quan tâm:\n\n" +
-          semanticResults.slice(0, 5)
-            .map(r => `• ${r.name || r.title}`)
-            .join("\n")
-      };
-    }
-
+    // ======================
+    // CLARIFY MODE (ChatGPT behavior)
+    // ======================
     return {
+      mode: "clarify",
       message:
-        "🚗 Tôi có thể giúp bạn chọn xe Ford (gia đình, SUV, bán tải, giá xe)."
+        "Bạn muốn tìm xe, giá xe, hay tư vấn chọn xe Ford?",
+      memory: recentMemory,
     };
-
   } catch (err) {
-    console.error("AI ERROR:", err);
+    console.error("ROUTER ERROR:", err);
 
     return {
-      message: "❌ Hệ thống tạm gián đoạn, vui lòng thử lại"
+      mode: "error",
+      message: "Hệ thống đang gặp lỗi",
     };
   }
 };
