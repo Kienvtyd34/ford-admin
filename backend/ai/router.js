@@ -11,7 +11,7 @@ const route = (scores) => {
     return { type: "DIRECT", intent: top.intent };
   }
 
-  if (top.score >= 0.48 && top2.score >= 0.42) {
+  if (top.score >= 0.48 && top2?.score >= 0.42) {
     return { type: "HYBRID", intents: [top, top2] };
   }
 
@@ -35,6 +35,7 @@ export const chatRouter = async (message, { userId }) => {
       return {
         mode: "direct",
         intent: decision.intent,
+        data: ragResults,
         memory: recentMemory,
       };
     }
@@ -59,8 +60,7 @@ export const chatRouter = async (message, { userId }) => {
     return {
       mode: "clarify",
       message:
-        "Mình có thể giúp bạn:\n" +
-        "• Tư vấn xe Ford\n• Giá xe\n• Khuyến mãi\n• Lỗi xe",
+        "Mình có thể giúp bạn:\n• Tư vấn xe Ford\n• Giá xe\n• Xe gia đình\n• Khuyến mãi",
       memory: recentMemory,
     };
   } catch (err) {

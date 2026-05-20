@@ -1,24 +1,20 @@
 import { index, idMap } from "./vectorStore.js";
 import { embedText } from "./embedding.js";
 
-const normalize = (v) => {
-  const norm = Math.sqrt(v.reduce((a, b) => a + b * b, 0));
-  return v.map((x) => x / (norm || 1));
-};
-
-const keywordBoost = (q) => {
-  const t = q.toLowerCase();
+const keywordBoost = (text) => {
   let score = 0;
+  const t = text.toLowerCase();
 
   if (t.includes("ford")) score += 0.05;
   if (t.includes("suv")) score += 0.05;
-  if (t.includes("7 chỗ")) score += 0.07;
+  if (t.includes("7 chỗ")) score += 0.1;
+  if (t.includes("gia đình")) score += 0.1;
 
   return score;
 };
 
 export const search = async (query, k = 5) => {
-  const vec = normalize(await embedText(query));
+  const vec = await embedText(query);
 
   const result = index.search(Float32Array.from(vec), k);
 

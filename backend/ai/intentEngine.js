@@ -2,32 +2,31 @@ import { embedText } from "./embedding.js";
 
 const INTENTS = {
   recommend: [
-    "xe nào phù hợp cho gia đình",
+    "xe gia đình",
+    "xe 7 chỗ",
     "tư vấn xe ford",
-    "nên mua xe gì",
-    "chọn suv 7 chỗ",
-    "xe đi đường dài tốt"
+    "mua xe gì",
+    "xe suv",
+    "xe đi gia đình",
   ],
 
   price: [
-    "giá xe bao nhiêu",
-    "bảng giá ford",
-    "xe này giá bao nhiêu",
-    "cost bao nhiêu"
+    "giá xe",
+    "bảng giá",
+    "xe bao nhiêu tiền",
+    "cost",
   ],
 
   news: [
-    "tin tức ford",
+    "tin tức",
     "khuyến mãi",
-    "xe mới ra mắt",
-    "ưu đãi ford"
+    "xe mới",
   ],
 
   problem: [
-    "xe bị lỗi",
-    "xe hỏng",
+    "xe lỗi",
+    "hỏng xe",
     "sửa xe",
-    "lỗi thường gặp"
   ],
 };
 
@@ -38,8 +37,8 @@ const cosine = (a, b) => {
 
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
+    na += a[i] ** 2;
+    nb += b[i] ** 2;
   }
 
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
@@ -48,7 +47,7 @@ const cosine = (a, b) => {
 export const initIntents = async () => {
   for (const key in INTENTS) {
     intentVec[key] = await Promise.all(
-      INTENTS[key].map((t) => embedText(t))
+      INTENTS[key].map(embedText)
     );
   }
 };

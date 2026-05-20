@@ -1,12 +1,12 @@
 import { chatRouter } from "../../ai/router.js";
-import { saveMemory } from "../../src/models/memory.js";
+import { saveMemory } from "../../ai/memoryService.js";
 
 export const chatController = async (req, res) => {
   try {
     const { message, userId } = req.body;
 
     if (!message?.trim()) {
-      return res.status(400).json({
+      return res.json({
         success: false,
         reply: "Tin nhắn không hợp lệ",
       });
@@ -14,27 +14,27 @@ export const chatController = async (req, res) => {
 
     const result = await chatRouter(message, { userId });
 
-    // ======================
-    // SAVE MEMORY (IMPORTANT)
-    // ======================
     await saveMemory(userId, "user", message, result.intent || null);
 
-    // ======================
-    // RESPONSE BUILD
-    // ======================
-
-    if (result.mode === "clarify") {
-      return res.json({
-        success: true,
-        reply: result.message,
-      });
-    }
-
-    if (result.mode === "rag" || result.mode === "hybrid") {
+    // DIRECT
+    if (result.mode === "direct") {
       return res.json({
         success: true,
         reply:
-          "🔎 Tôi tìm thấy thông tin liên quan:\n\n" +
+          "🚗 Gợi ý xe phù hợp:\n\n" +
+          (result.data || [])
+            .slice(0, 5)
+            .map((v) => `• ${v.modelId?.name || v.name}`)
+            .join("\n"),
+      });
+    }
+
+    // HYBRID
+    if (result.mode === "hybrid") {
+      return res.json({
+        success: true,
+        reply:
+          "🔎 Tôi hiểu bạn đang quan tâm:\n\n" +
           result.data
             .slice(0, 5)
             .map((r) => `• ${r.modelId?.name || r.name}`)
@@ -42,21 +42,28 @@ export const chatController = async (req, res) => {
       });
     }
 
-    if (result.mode === "direct") {
+    // RAG
+    if (result.mode === "rag") {
       return res.json({
         success: true,
-        reply: `👉 Intent: ${result.intent}`,
+        reply:
+          "🔎 Gợi ý liên quan:\n\n" +
+          result.data
+            .slice(0, 5)
+            .map((r) => `• ${r.name || r.title}`)
+            .join("\n"),
       });
     }
 
+    // CLARIFY
     return res.json({
       success: true,
-      reply: "🚗 Tôi có thể giúp bạn chọn xe Ford",
+      reply: result.message,
     });
+
   } catch (err) {
     console.error(err);
-
-    return res.status(500).json({
+    return res.json({
       success: false,
       reply: "Server lỗi",
     });

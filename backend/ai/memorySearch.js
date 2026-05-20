@@ -6,8 +6,8 @@ const cosine = (a, b) => {
 
   for (let i = 0; i < a.length; i++) {
     dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
+    na += a[i] ** 2;
+    nb += b[i] ** 2;
   }
 
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
@@ -15,18 +15,18 @@ const cosine = (a, b) => {
 
 export const searchMemory = async (userId, query) => {
   const memory = await Memory.findOne({ userId });
-
   if (!memory) return [];
 
-  const queryVec = await embedText(query);
+  const qVec = await embedText(query);
 
   return memory.messages
     .map((m) => {
-      if (!m.vector) return null;
+      const vec = m.vector || null;
+      if (!vec) return null;
 
       return {
-        ...m,
-        score: cosine(queryVec, m.vector),
+        ...m.toObject(),
+        score: cosine(qVec, vec),
       };
     })
     .filter(Boolean)

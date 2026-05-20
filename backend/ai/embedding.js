@@ -1,10 +1,9 @@
 import { pipeline } from "@xenova/transformers";
 
 let model = null;
-
 export const EMBED_DIM = 384;
 
-const load = async () => {
+const loadModel = async () => {
   if (!model) {
     model = await pipeline(
       "feature-extraction",
@@ -15,7 +14,7 @@ const load = async () => {
 };
 
 export const embedText = async (text) => {
-  const m = await load();
+  const m = await loadModel();
 
   const output = await m(text, {
     pooling: "mean",
