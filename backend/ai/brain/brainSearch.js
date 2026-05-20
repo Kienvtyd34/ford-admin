@@ -1,10 +1,13 @@
-import { brainIndex, brainMap } from "./brainStore.js";
-import { embedText } from "./embedding.js";
+import { embedText } from "../vector/embedding.js";
+import { brainIndex, brainMap } from "../vector/vectorStore.js";
 
-export const searchBrain = async (query, k = 8) => {
+export const searchBrain = async (query, k = 10) => {
   const vec = await embedText(query);
 
-  const result = brainIndex.search(Float32Array.from(vec), k);
+  const result = brainIndex.search(
+    Float32Array.from(vec),
+    k
+  );
 
   return result.labels
     .map((i, idx) => {

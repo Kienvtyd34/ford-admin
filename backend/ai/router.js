@@ -1,68 +1,62 @@
-import { searchBrain } from "./brainSearch.js";
-import { salesReasoning } from "./salesEngine.js";
-import { getRecentContext } from "./memoryContext.js";
-import { searchMemory } from "./memorySearch.js";
+import { searchBrain } from "./brain/brainSearch.js";
+import { salesEngine } from "./salesEngine.js";
+import { problemEngine } from "./problemEngine.js";
+import { priceEngine } from "./priceEngine.js";
 
-export const chatRouter = async (message, { userId }) => {
-  try {
-    const brainResults = await searchBrain(message, 10);
+export const chatRouter = async (
+  message
+) => {
+  const results = await searchBrain(
+    message,
+    20
+  );
 
-    const memory = await getRecentContext(userId, 5);
-    const semanticMemory = await searchMemory(userId, message);
+  // ================= PROBLEM =================
 
-    const { recommendation, results } = salesReasoning(
+  const problem =
+    await problemEngine(
       message,
-      brainResults
+      results
     );
 
-    const isAskingPrice =
-      message.includes("giá") || message.includes("bao nhiêu");
-
-    const isProblem = brainResults.find(r => r.type === "problem");
-
-    // =========================
-    // SALES MODE (MAIN LOGIC)
-    // =========================
-    if (recommendation) {
-      return {
-        mode: "sales",
-        data: recommendation,
-        results,
-        memory: semanticMemory,
-      };
-    }
-
-    // =========================
-    // PROBLEM MODE
-    // =========================
-    if (isProblem) {
-      return {
-        mode: "problem",
-        data: isProblem.raw,
-      };
-    }
-
-    // =========================
-    // PRICE MODE
-    // =========================
-    if (isAskingPrice) {
-      return {
-        mode: "price",
-        data: brainResults.filter(r => r.type === "variant"),
-      };
-    }
-
+  if (problem) {
     return {
-      mode: "general",
-      data: results,
-      memory,
-    };
-  } catch (err) {
-    console.error("BRAIN ERROR:", err);
-
-    return {
-      mode: "error",
-      message: "AI Brain đang tự phục hồi...",
+      mode: "problem",
+      data: problem,
     };
   }
+
+  // ================= PRICE =================
+
+  if (
+    message.includes("giá") ||
+    message.includes("bao nhiêu")
+  ) {
+    return {
+      mode: "price",
+      data: await priceEngine(results),
+    };
+  }
+
+  // ================= SALES =================
+
+  const sales =
+    await salesEngine(
+      message,
+      results
+    );
+
+  if (sales.success) {
+    return {
+      mode: "sales",
+      data: sales.data,
+    };
+  }
+
+  return {
+    mode: "fallback",
+    reply:
+      sales.askBack ||
+      "Anh/chị cần xe gia đình hay bán tải ạ?",
+  };
 };
