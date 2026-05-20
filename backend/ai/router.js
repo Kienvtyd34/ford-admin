@@ -2,51 +2,122 @@ import { searchBrain } from "./brain/brainSearch.js";
 import { salesEngine } from "./salesEngine.js";
 import { problemEngine } from "./problemEngine.js";
 import { priceEngine } from "./priceEngine.js";
+import {
+  saveConversationContext,
+  getConversationContext,
+} from "./memory/sessionMemory.js";
 
 export const chatRouter = async (
-  message
+  message,
+  userId = "guest"
 ) => {
+
+  const lower = message.toLowerCase();
+
+  // =========================
+  // LOAD CONTEXT
+  // =========================
+
+  const context =
+    getConversationContext(userId);
+
+  // =========================
+  // SEARCH BRAIN
+  // =========================
+
   const results = await searchBrain(
     message,
     20
   );
 
-  // ================= PROBLEM =================
+  // =========================
+  // PROBLEM PRIORITY
+  // =========================
 
-  const problem =
-    await problemEngine(
-      message,
-      results
-    );
+  const problemKeywords = [
+    "rung",
+    "giật",
+    "lỗi",
+    "hỏng",
+    "nóng",
+    "không nổ",
+    "không lạnh",
+    "vào số",
+    "máy",
+    "động cơ",
+  ];
 
-  if (problem) {
-    return {
-      mode: "problem",
-      data: problem,
-    };
+  const isProblem = problemKeywords.some(
+    (k) => lower.includes(k)
+  );
+
+  if (isProblem) {
+
+    const problem =
+      await problemEngine(
+        message,
+        results
+      );
+
+    if (problem) {
+
+      saveConversationContext(
+        userId,
+        {
+          lastMode: "problem",
+        }
+      );
+
+      return {
+        mode: "problem",
+        data: problem,
+      };
+    }
   }
 
-  // ================= PRICE =================
+  // =========================
+  // PRICE MODE
+  // =========================
 
   if (
-    message.includes("giá") ||
-    message.includes("bao nhiêu")
+    lower.includes("giá") ||
+    lower.includes("bao nhiêu") ||
+    lower.includes("báo giá")
   ) {
+
+    const prices =
+      await priceEngine(
+        results,
+        context
+      );
+
     return {
       mode: "price",
-      data: await priceEngine(results),
+      data: prices,
     };
   }
 
-  // ================= SALES =================
+  // =========================
+  // SALES MODE
+  // =========================
 
   const sales =
     await salesEngine(
       message,
-      results
+      results,
+      context
     );
 
   if (sales.success) {
+
+    saveConversationContext(
+      userId,
+      {
+        lastVehicle: sales.data,
+        lastMode: "sales",
+      }
+    );
+
     return {
       mode: "sales",
       data: sales.data,

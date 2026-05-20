@@ -3,40 +3,61 @@ import { rankVehicles } from "./brain/ranker.js";
 
 export const salesEngine = async (
   message,
-  results
+  results,
+  context = {}
 ) => {
-  const entities = extractEntities(message);
 
-  const vehicles = results.filter(
-    (r) => r.type === "vehicle"
-  );
+  const entities =
+    extractEntities(message);
 
-  // ================= ASK BACK =================
+  const vehicles =
+    results.filter(
+      (r) => r.type === "vehicle"
+    );
+
+  // =====================
+  // USE CONTEXT MEMORY
+  // =====================
 
   if (
-    vehicles.length === 0 &&
-    !entities.seats &&
-    !entities.budget
+    context?.lastVehicle &&
+    !entities.seats
   ) {
+    entities.seats =
+      context.lastVehicle.seats;
+  }
+
+  // =====================
+  // NO VEHICLE FOUND
+  // =====================
+
+  if (vehicles.length === 0) {
+
     return {
       success: false,
       askBack:
-        "Anh/chị cần xe 5 hay 7 chỗ và ngân sách khoảng bao nhiêu ạ?",
+        "Anh/chị thích SUV, bán tải hay sedan ạ?",
     };
   }
 
-  const ranked = rankVehicles(
-    vehicles,
-    entities
-  );
+  // =====================
+  // RANK
+  // =====================
+
+  const ranked =
+    rankVehicles(
+      vehicles,
+      entities
+    );
 
   const best = ranked[0];
 
   if (!best) {
+
     return {
       success: false,
       askBack:
-        "Anh/chị thích SUV hay bán tải ạ?",
+        "Anh/chị muốn xe 5 hay 7 chỗ ạ?",
     };
   }
 

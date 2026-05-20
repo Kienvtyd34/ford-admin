@@ -2,42 +2,77 @@ export const rankVehicles = (
   vehicles,
   entities
 ) => {
+
   return vehicles
     .map((v) => {
-      let score = v.score || 0;
 
-      // seats
-      if (entities.seats) {
-        if (v.payload.seats === entities.seats) {
-          score += 0.5;
+      let score =
+        v.score || 0;
+
+      // =================
+      // SEATS
+      // =================
+
+      if (
+        entities.seats
+      ) {
+
+        if (
+          v.payload.seats ===
+          entities.seats
+        ) {
+          score += 3;
         }
       }
 
-      // type
-      if (entities.type) {
+      // =================
+      // TYPE
+      // =================
+
+      if (
+        entities.type
+      ) {
+
         if (
           v.payload.type
-            ?.toLowerCase()
-            .includes(
-              entities.type.toLowerCase()
-            )
+            ?.toLowerCase() ===
+          entities.type.toLowerCase()
         ) {
-          score += 0.4;
+          score += 2;
         }
       }
 
-      // family
-      if (
-        entities.usage === "family"
-      ) {
-        if (
-          v.payload.type === "SUV"
-        ) {
-          score += 0.3;
-        }
+      // =================
+      // FAMILY
+      // =================
 
-        if (v.payload.seats >= 5) {
-          score += 0.3;
+      if (
+        entities.usage ===
+        "family"
+      ) {
+
+        if (
+          v.payload.type ===
+          "SUV"
+        ) {
+          score += 2;
+        }
+      }
+
+      // =================
+      // BUDGET
+      // =================
+
+      if (
+        entities.budget &&
+        v.payload.startPrice
+      ) {
+
+        if (
+          v.payload.startPrice <=
+          entities.budget
+        ) {
+          score += 3;
         }
       }
 
@@ -48,6 +83,7 @@ export const rankVehicles = (
     })
     .sort(
       (a, b) =>
-        b.finalScore - a.finalScore
+        b.finalScore -
+        a.finalScore
     );
 };
