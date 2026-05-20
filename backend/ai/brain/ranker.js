@@ -6,45 +6,41 @@ export const rankVehicles = (
   return vehicles
     .map((v) => {
 
-      let score =
-        v.score || 0;
+      let score = 0;
 
-      // =================
-      // SEATS
-      // =================
-
-      if (
-        entities.seats
-      ) {
-
-        if (
-          v.payload.seats ===
-          entities.seats
-        ) {
-          score += 3;
-        }
-      }
-
-      // =================
-      // TYPE
-      // =================
+      // =====================
+      // SUV
+      // =====================
 
       if (
-        entities.type
+        entities.type &&
+        v.payload.type
       ) {
 
         if (
           v.payload.type
-            ?.toLowerCase() ===
+            .toLowerCase() ===
           entities.type.toLowerCase()
         ) {
-          score += 2;
+          score += 4;
         }
       }
 
-      // =================
+      // =====================
+      // SEATS
+      // =====================
+
+      if (
+        entities.seats &&
+        v.payload.seats ===
+          entities.seats
+      ) {
+        score += 3;
+      }
+
+      // =====================
       // FAMILY
-      // =================
+      // =====================
 
       if (
         entities.usage ===
@@ -59,9 +55,9 @@ export const rankVehicles = (
         }
       }
 
-      // =================
+      // =====================
       // BUDGET
-      // =================
+      // =====================
 
       if (
         entities.budget &&

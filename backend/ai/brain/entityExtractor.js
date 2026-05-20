@@ -7,28 +7,7 @@ export const extractEntities = (
   const text =
     normalizeText(message);
 
-  const entities = {
-    seats: null,
-    budget: null,
-    type: null,
-    usage: null,
-  };
-
-  // =================
-  // SEATS
-  // =================
-
-  if (
-    text.includes("7 cho")
-  ) {
-    entities.seats = 7;
-  }
-
-  if (
-    text.includes("5 cho")
-  ) {
-    entities.seats = 5;
-  }
+  const entities = {};
 
   // =================
   // TYPE
@@ -41,9 +20,31 @@ export const extractEntities = (
   }
 
   if (
+    text.includes("sedan")
+  ) {
+    entities.type = "Sedan";
+  }
+
+  if (
     text.includes("ban tai")
   ) {
     entities.type = "Pickup";
+  }
+
+  // =================
+  // SEATS
+  // =================
+
+  if (
+    text.includes("5 cho")
+  ) {
+    entities.seats = 5;
+  }
+
+  if (
+    text.includes("7 cho")
+  ) {
+    entities.seats = 7;
   }
 
   // =================
@@ -60,27 +61,27 @@ export const extractEntities = (
   // BUDGET
   // =================
 
-  const billion =
+  const ty =
     text.match(
       /(\d+)\s*ty/
     );
 
-  if (billion) {
+  if (ty) {
 
     entities.budget =
-      Number(billion[1]) *
+      Number(ty[1]) *
       1000000000;
   }
 
-  const million =
+  const trieu =
     text.match(
       /(\d+)\s*trieu/
     );
 
-  if (million) {
+  if (trieu) {
 
     entities.budget =
-      Number(million[1]) *
+      Number(trieu[1]) *
       1000000;
   }
 

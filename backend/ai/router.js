@@ -102,21 +102,42 @@ export const chatRouter = async (
   // =========================
 
   const sales =
-    await salesEngine(
-      message,
-      results,
-      context
-    );
+  await salesEngine(
+    message,
+    results,
+    context
+  );
+
+// =========================
+// SAVE ENTITIES CONTEXT
+// =========================
+
+if (sales.entities) {
+
+  saveConversationContext(
+    userId,
+    {
+      entities: {
+        ...(context.entities || {}),
+        ...sales.entities,
+      },
+    }
+  );
+}
 
   if (sales.success) {
 
-    saveConversationContext(
-      userId,
-      {
-        lastVehicle: sales.data,
-        lastMode: "sales",
-      }
-    );
+   saveConversationContext(
+  userId,
+  {
+    lastVehicle: sales.data,
+    lastMode: "sales",
+    entities: {
+      ...(context.entities || {}),
+      ...(sales.entities || {}),
+    },
+  }
+);
 
     return {
       mode: "sales",

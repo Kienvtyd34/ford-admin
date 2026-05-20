@@ -7,42 +7,48 @@ export const salesEngine = async (
   context = {}
 ) => {
 
-  const entities =
+  // =========================
+  // EXTRACT CURRENT ENTITIES
+  // =========================
+
+  const current =
     extractEntities(message);
+
+  // =========================
+  // MERGE OLD CONTEXT
+  // =========================
+
+  const entities = {
+    ...(context.entities || {}),
+    ...current,
+  };
+
+  // =========================
+  // VEHICLES
+  // =========================
 
   const vehicles =
     results.filter(
       (r) => r.type === "vehicle"
     );
 
-  // =====================
-  // USE CONTEXT MEMORY
-  // =====================
+  // =========================
+  // NO VEHICLES
+  // =========================
 
-  if (
-    context?.lastVehicle &&
-    !entities.seats
-  ) {
-    entities.seats =
-      context.lastVehicle.seats;
-  }
-
-  // =====================
-  // NO VEHICLE FOUND
-  // =====================
-
-  if (vehicles.length === 0) {
+  if (!vehicles.length) {
 
     return {
       success: false,
       askBack:
-        "Anh/chị thích SUV, bán tải hay sedan ạ?",
+        "Anh/chị thích SUV, sedan hay bán tải ạ?",
+      entities,
     };
   }
 
-  // =====================
+  // =========================
   // RANK
-  // =====================
+  // =========================
 
   const ranked =
     rankVehicles(
@@ -52,17 +58,55 @@ export const salesEngine = async (
 
   const best = ranked[0];
 
-  if (!best) {
+  // =========================
+  // SCORE TOO LOW
+  // =========================
 
-    return {
-      success: false,
-      askBack:
-        "Anh/chị muốn xe 5 hay 7 chỗ ạ?",
-    };
+  if (
+    !best ||
+    best.finalScore < 2
+  ) {
+
+    // ASK TYPE
+
+    if (!entities.type) {
+
+      return {
+        success: false,
+        askBack:
+          "Anh/chị thích SUV, sedan hay bán tải ạ?",
+        entities,
+      };
+    }
+
+    // ASK SEATS
+
+    if (!entities.seats) {
+
+      return {
+        success: false,
+        askBack:
+          "Anh/chị cần xe 5 hay 7 chỗ ạ?",
+        entities,
+      };
+    }
+
+    // ASK BUDGET
+
+    if (!entities.budget) {
+
+      return {
+        success: false,
+        askBack:
+          "Ngân sách khoảng bao nhiêu ạ?",
+        entities,
+      };
+    }
   }
 
   return {
     success: true,
     data: best.payload,
+    entities,
   };
 };
