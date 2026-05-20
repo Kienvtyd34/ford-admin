@@ -1,58 +1,52 @@
-import { search } from "./search.js";
-import { detectIntent } from "./intentEngine.js";
+import { embedText } from "./embedding.js";
 
-const route = (intents) => {
-  const top = intents[0];
-  const top2 = intents[1];
-
-  if (top.score > 0.8) {
-    return { type: "DIRECT", intent: top.intent };
-  }
-
-  if (top.score > 0.55 && top2.score > 0.45) {
-    return { type: "HYBRID", intents: [top, top2] };
-  }
-
-  if (top.score < 0.45) {
-    return { type: "RAG" };
-  }
-
-  return { type: "CLARIFY" };
+const INTENTS = {
+  recommend: ["xe nào tốt", "tư vấn xe", "mua xe gì"],
+  price: ["giá bao nhiêu", "bảng giá", "cost"],
+  news: ["tin mới", "khuyến mãi"],
+  problem: ["xe lỗi", "hỏng xe"],
 };
 
-export const chatRouter = async (message, context = {}) => {
-  const intents = await detectIntent(message);
-  const decision = route(intents);
+const intentVec = {};
 
-  if (decision.type === "DIRECT") {
-    return {
-      mode: "direct",
-      intent: decision.intent,
-    };
+const cosine = (a, b) => {
+  let dot = 0,
+    na = 0,
+    nb = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
   }
 
-  if (decision.type === "HYBRID") {
-    const data = await search(message, 5);
+  return dot / (Math.sqrt(na) * Math.sqrt(nb));
+};
 
-    return {
-      mode: "hybrid",
-      data,
-      intents: decision.intents,
-    };
+// INIT
+export const initIntents = async () => {
+  for (const key in INTENTS) {
+    intentVec[key] = await Promise.all(
+      INTENTS[key].map((t) => embedText(t))
+    );
+  }
+};
+
+// 👉 IMPORTANT: EXPORT detectIntent đúng cách
+export const detectIntent = async (text) => {
+  const qVec = await embedText(text);
+
+  const scores = [];
+
+  for (const key in intentVec) {
+    let best = 0;
+
+    for (const v of intentVec[key]) {
+      best = Math.max(best, cosine(qVec, v));
+    }
+
+    scores.push({ intent: key, score: best });
   }
 
-  if (decision.type === "RAG") {
-    const data = await search(message, 5);
-
-    return {
-      mode: "rag",
-      data,
-    };
-  }
-
-  return {
-    mode: "clarify",
-    message:
-      "Bạn muốn hỏi giá xe, tư vấn xe hay thông tin kỹ thuật?",
-  };
+  return scores.sort((a, b) => b.score - a.score);
 };
