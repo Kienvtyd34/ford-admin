@@ -10,51 +10,68 @@ export const brainMap = [];
 // NORMALIZE VECTOR
 // ===============================
 
-const normalize = (vec) => {
+const normalizeVector = (
+  vector
+) => {
 
   const norm =
     Math.sqrt(
-      vec.reduce(
+      vector.reduce(
         (s, v) => s + v * v,
         0
       )
     ) || 1;
 
-  return vec.map((v) => v / norm);
+  return vector.map(
+    (v) => v / norm
+  );
 };
 
 // ===============================
-// ADD TO INDEX
+// ADD VECTOR
 // ===============================
 
 export const addBrainItem = (
   vector,
   payload
 ) => {
+
   try {
 
     // VALIDATE
     if (
-      !Array.isArray(vector) ||
+      !Array.isArray(vector)
+    ) {
+      console.log(
+        "❌ vector not array"
+      );
+      return;
+    }
+
+    if (
       vector.length !== EMBED_DIM
     ) {
       console.log(
-        "❌ Invalid vector"
+        "❌ invalid dim:",
+        vector.length
       );
       return;
     }
 
     // NORMALIZE
     const normalized =
-      normalize(vector);
+      normalizeVector(vector);
 
-    // IMPORTANT:
-    // faiss-node NEEDS:
-    // Array<Array<number>>
-    brainIndex.add([
-      normalized
-    ]);
+    // IMPORTANT FIX
+    const flat =
+      Float32Array.from(
+        normalized
+      );
 
+    // FAISS ADD
+    brainIndex.add(flat, 1);
+
+    // SAVE MAP
     brainMap.push(payload);
 
   } catch (err) {
