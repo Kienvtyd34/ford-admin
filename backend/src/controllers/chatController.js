@@ -5,10 +5,10 @@ export const chatController = async (req, res) => {
   try {
     const { message, userId } = req.body;
 
-    if (!message) {
+    if (!message?.trim()) {
       return res.json({
         success: false,
-        reply: "Vui lòng nhập nội dung",
+        reply: "Bạn chưa nhập nội dung",
       });
     }
 
@@ -16,52 +16,68 @@ export const chatController = async (req, res) => {
 
     await saveMemory(userId, "user", message, result.mode);
 
-    // ================= SALES RESPONSE =================
-    if (result.mode === "sales") {
+    // =========================
+    // 🧠 SALES MODE (SMART)
+    // =========================
+    if (result.mode === "sales" && result.data) {
       const v = result.data;
 
       return res.json({
         success: true,
         reply:
-          `🚗 Gợi ý phù hợp cho bạn:\n` +
+          `🚗 Xe phù hợp nhất cho bạn:\n\n` +
           `👉 ${v.name}\n` +
-          `👥 ${v.seats} chỗ - ${v.type}\n` +
-          `💡 ${v.description?.slice(0, 120) || ""}`,
+          `👥 ${v.seats} chỗ (${v.type})\n` +
+          `📝 ${v.description?.slice(0, 120) || "Xe Ford chính hãng"}\n\n` +
+          `💡 Bạn muốn:\n` +
+          `• Báo giá\n• Trả góp\n• Lái thử?`,
       });
     }
 
-    // ================= PROBLEM =================
+    // =========================
+    // 🔧 CAR PROBLEM MODE
+    // =========================
     if (result.mode === "problem") {
+      const p = result.data;
+
       return res.json({
         success: true,
         reply:
-          `🔧 Vấn đề: ${result.data.title}\n` +
-          `👉 Giải pháp: ${result.data.solutions.join(", ")}`,
+          `🔧 Vấn đề: ${p.title}\n\n` +
+          `👉 Nguyên nhân:\n- ${p.causes.join("\n- ")}\n\n` +
+          `💡 Giải pháp:\n- ${p.solutions.join("\n- ")}`,
       });
     }
 
-    // ================= PRICE =================
+    // =========================
+    // 💰 PRICE MODE
+    // =========================
     if (result.mode === "price") {
       return res.json({
         success: true,
         reply:
-          "💰 Các phiên bản & giá:\n" +
+          "💰 Các phiên bản:\n\n" +
           result.data
-            .map(v => `• ${v.variantName}: ${v.basePrice}`)
+            .map(v => `• ${v.variantName}: ${Number(v.basePrice).toLocaleString()} VNĐ`)
             .join("\n"),
       });
     }
 
+    // =========================
+    // 🧠 FALLBACK (SMART)
+    // =========================
     return res.json({
       success: true,
-      reply: "🚗 Tôi có thể giúp bạn chọn xe Ford phù hợp",
+      reply:
+        "🚗 Bạn đang cần xe cho gia đình, đi công việc hay chở nhiều người?",
     });
   } catch (err) {
-    console.error(err);
+    console.error("CHAT ERROR:", err);
 
     return res.json({
       success: true,
-      reply: "⚠️ AI đang tự khôi phục, vui lòng thử lại",
+      reply:
+        "⚠️ Hệ thống đang tự khôi phục. Bạn muốn mình gợi ý xe 5 chỗ hay 7 chỗ?",
     });
   }
 };
