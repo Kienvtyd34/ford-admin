@@ -1,4 +1,4 @@
-import Memory from "../src/models/memory.model.js";
+import Memory from "../src/models/memory.js";
 import { embedText } from "./embedding.js";
 
 // ===================== SAVE MEMORY =====================
