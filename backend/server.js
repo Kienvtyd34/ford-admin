@@ -11,7 +11,6 @@ import contactRoutes from "./src/routes/contactRoutes.js";
 import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import chatRoutes from "./src/routes/chatRoutes.js";
-import { initIntents } from "./ai/intentEngine.js";
 import { buildBrain } from "./ai/brainLayer.js";
 import { loadBrainToIndex } from "./ai/brainStore.js";
 
@@ -57,9 +56,6 @@ const startServer = async () => {
         await connectDB();
         console.log("📦 Database connected successfully!");
 
-        // 2. Khởi tạo Engine AI
-        await initIntents();
-        console.log("🤖 AI Intent Engine initialized!");
 
         // 3. Lắng nghe Port
         const PORT = process.env.PORT || 5000;
