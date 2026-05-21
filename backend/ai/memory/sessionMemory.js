@@ -1,24 +1,10 @@
 const sessions = new Map();
 
-export const saveConversationContext = (
-  userId,
-  data
-) => {
-
-  const current =
-    sessions.get(userId) || {};
-
-  sessions.set(userId, {
-    ...current,
-    ...data,
-  });
+export const getConversationContext = (userId) => {
+  return sessions.get(userId) || {};
 };
 
-export const getConversationContext = (
-  userId
-) => {
-
-  return (
-    sessions.get(userId) || {}
-  );
+export const saveConversationContext = (userId, data) => {
+  const old = sessions.get(userId) || {};
+  sessions.set(userId, { ...old, ...data });
 };

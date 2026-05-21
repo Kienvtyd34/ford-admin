@@ -1,140 +1,16 @@
-import { normalizeText } from "./normalizeData.js";
+export const extractEntities = (text = "") => {
+  text = text.toLowerCase();
 
-export const extractEntities = (
-  message
-) => {
+  const e = {};
 
-  const text =
-    normalizeText(message);
+  if (text.includes("suv")) e.type = "SUV";
+  if (text.includes("sedan")) e.type = "Sedan";
 
-  const entities = {};
+  if (/7\s*chỗ/.test(text)) e.seats = 7;
+  if (/5\s*chỗ/.test(text)) e.seats = 5;
 
-  // =================
-  // TYPE
-  // =================
+  const budget = text.match(/(\d+)\s*triệu/);
+  if (budget) e.budget = Number(budget[1]) * 1_000_000;
 
-  // SUV
-
-  if (
-    text.includes("suv") ||
-    text.includes("cuv") ||
-    text.includes("crossover")
-  ) {
-    entities.type = "SUV";
-  }
-
-  // SEDAN
-
-  if (
-    text.includes("sedan")
-  ) {
-    entities.type = "Sedan";
-  }
-
-  // PICKUP
-
-  if (
-    text.includes("ban tai") ||
-    text.includes("pickup") ||
-    text.includes("truck")
-  ) {
-    entities.type = "Pickup";
-  }
-
-  // =================
-  // SEATS
-  // =================
-
-  if (
-    text.includes("5 cho") ||
-    text.includes("5cho") ||
-    text.includes("5 seat")
-  ) {
-    entities.seats = 5;
-  }
-
-  if (
-    text.includes("7 cho") ||
-    text.includes("7cho") ||
-    text.includes("7 seat")
-  ) {
-    entities.seats = 7;
-  }
-
-  // =================
-  // FAMILY
-  // =================
-
-  if (
-    text.includes("gia dinh") ||
-    text.includes("family")
-  ) {
-    entities.usage = "family";
-  }
-
-  // =================
-  // BUDGET TY
-  // =================
-
-  const ty =
-    text.match(
-      /(\d+(\.\d+)?)\s*ty/
-    );
-
-  if (ty) {
-
-    entities.budget =
-      Number(ty[1]) *
-      1000000000;
-  }
-
-  // =================
-  // BUDGET TRIEU
-  // =================
-
-  const trieu =
-    text.match(
-      /(\d+)\s*trieu/
-    );
-
-  if (trieu) {
-
-    entities.budget =
-      Number(trieu[1]) *
-      1000000;
-  }
-
-  // =================
-  // UNDER BUDGET
-  // =================
-
-  if (
-    text.includes("duoi 1 ty")
-  ) {
-    entities.budget =
-      1000000000;
-  }
-
-  // =================
-  // INSTALLMENT
-  // =================
-
-  if (
-    text.includes("tra gop")
-  ) {
-    entities.installment = true;
-  }
-
-  // =================
-  // TEST DRIVE
-  // =================
-
-  if (
-    text.includes("lai thu") ||
-    text.includes("test drive")
-  ) {
-    entities.testDrive = true;
-  }
-
-  return entities;
+  return e;
 };

@@ -12,7 +12,7 @@ import vehicleRoutes from "./src/routes/vehicleRoutes.js";
 import contactRoutes from "./src/routes/contactRoutes.js";
 import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
-import chatRoutes from "./src/routes/chatRoutes.js";
+import { chatRouter } from "./ai/router.js";
 
 // AI
 import { buildBrain } from "./ai/brain/buildBrain.js";
@@ -69,7 +69,7 @@ app.use("/api/users", authRoutes);
 app.use("/api/contacts", contactRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/news", newsRoutes);
-app.use("/api/ai", chatRoutes);
+app.use("/api/ai", chatRouter);
 
 // ================= AUTO JOB =================
 
