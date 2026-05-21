@@ -1,27 +1,47 @@
 import { agentCore } from "../core/agentCore.js";
 
-export const chatRouter = async (req, res) => {
+export const chatRouter = async (
+  req,
+  res
+) => {
+
   try {
-    const { message, userId } = req.body;
 
-    const result = await agentCore(
-      userId || "guest",
-      message
-    );
+    const {
+      message,
+      userId,
+    } = req.body;
 
-    res.json({
+    // validate
+    if (!message) {
+      return res.status(400).json({
+        reply: "Thiếu message"
+      });
+    }
+
+    // AI RESPONSE
+    const reply =
+      await agentCore(
+        userId || "guest",
+        message
+      );
+
+    // RETURN
+    return res.json({
       success: true,
-      reply: result.message,
-      data: result.data || null,
+      reply,
     });
 
   } catch (err) {
 
-    console.error("CHAT ERROR:", err);
+    console.error(
+      "CHAT ERROR:",
+      err
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      reply: "Lỗi AI server",
+      reply: "AI server error",
       error: err.message,
     });
   }
