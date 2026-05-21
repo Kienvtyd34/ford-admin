@@ -82,16 +82,6 @@ const startServer = async () => {
 
     console.log("📦 MongoDB connected");
 
-    // LOAD AI MODEL
-    await loadEmbeddingModel();
-
-    console.log("🧠 Embedding model loaded");
-
-    // BUILD AI BRAIN
-    await buildBrain();
-
-    console.log("🧠 AI Brain ready");
-
     // START SERVER
     const PORT = process.env.PORT || 5000;
 
