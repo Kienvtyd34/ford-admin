@@ -94,3 +94,29 @@ ${
 }
 `;
 };
+// ================= INVENTORY RESPONSE =================
+
+export const buildInventoryResponse = (
+  inventory,
+  color
+) => {
+  if (!inventory) {
+    return "Không có xe trong kho";
+  }
+
+  return `
+🚘 Xe có sẵn
+
+🎨 Màu:
+${color?.name || "Không rõ"}
+
+💰 Giá nhập:
+${inventory.importPrice?.toLocaleString("vi-VN")} VNĐ
+
+📦 Trạng thái:
+${inventory.status}
+
+🏷️ Loại:
+${inventory.category}
+`;
+};
