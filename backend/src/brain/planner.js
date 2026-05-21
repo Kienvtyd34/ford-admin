@@ -43,10 +43,7 @@ Chỉ trả JSON.
       err
     );
 
-    return {
-      tool: "none",
-      args: {}
-    };
+    throw err;
 
   }
 

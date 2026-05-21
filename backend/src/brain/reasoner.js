@@ -32,7 +32,14 @@ Trả lời tự nhiên bằng tiếng Việt.
       err
     );
 
-    return "AI đang bận.";
+    return `
+REASONER ERROR:
+
+${err.message}
+
+STACK:
+${err.stack}
+`;
 
   }
 
