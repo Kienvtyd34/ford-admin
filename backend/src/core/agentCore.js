@@ -1,7 +1,7 @@
 import { planner } from "../brain/planner.js";
 import { reasoner } from "../brain/reasoner.js";
 import { extractEntities } from "../brain/entityExtractor.js";
-import { toolRouter } from "../tools/toolRouter.js";
+import { toolRouter } from "../tool/toolRouter.js";
 import {
   getConversationContext,
   saveConversationContext
