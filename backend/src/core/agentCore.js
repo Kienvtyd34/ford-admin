@@ -98,7 +98,14 @@ export const agentCore = async (
       err
     );
 
-    return "Hệ thống AI đang bận, vui lòng thử lại.";
+    return `
+AGENT ERROR:
+
+${err.message}
+
+STACK:
+${err.stack}
+`;
 
   }
 
