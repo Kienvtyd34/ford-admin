@@ -1,5 +1,5 @@
 import VehicleModel from "../models/VehicleModel.js";
-import VehicleVariant from "../models/VehicleVariant.js";
+import VehicleVariant from "../models/Variant.js";
 
 export const getVehicleTool = async (entities = {}) => {
   try {
