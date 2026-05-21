@@ -1,5 +1,5 @@
 import VehicleModel from "../models/VehicleModel.js";
-import VehicleVariant from "../models/VehicleVariant.js";
+import VehicleVariant from "../models/Variant.js";
 import Inventory from "../models/Inventory.js";
 import TechnicalIssue from "../models/TechnicalIssue.js";
 
