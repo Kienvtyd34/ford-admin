@@ -1,30 +1,39 @@
-import { openai } from "../core/openaiClient.js";
+import { geminiModel }
+from "../core/geminiClient.js";
 
-export const reasoner = async ({ message, toolResult }) => {
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      {
-        role: "system",
-        content: `
-Bạn là AI tư vấn xe hơi.
+export const reasoner = async ({
+  message,
+  toolResult
+}) => {
 
-QUY TẮC:
-- Chỉ dùng dữ liệu được cung cấp
-- Không bịa thông tin
-- Thiếu dữ liệu → nói "Không có thông tin phù hợp"
-- Trả lời ngắn gọn, rõ ràng
-`
-      },
-      {
-        role: "user",
-        content: JSON.stringify({
-          question: message,
-          data: toolResult
-        })
-      }
-    ]
-  });
+  try {
 
-  return res.choices[0].message.content;
+    const prompt = `
+Câu hỏi:
+${message}
+
+Dữ liệu:
+${JSON.stringify(toolResult)}
+
+Trả lời tự nhiên bằng tiếng Việt.
+`;
+
+    const result =
+      await geminiModel.generateContent(
+        prompt
+      );
+
+    return result.response.text();
+
+  } catch (err) {
+
+    console.error(
+      "REASONER ERROR:",
+      err
+    );
+
+    return "AI đang bận.";
+
+  }
+
 };
