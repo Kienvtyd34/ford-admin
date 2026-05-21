@@ -14,10 +14,6 @@ import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import { chatRouter } from "./ai/router.js";
 
-// AI
-import { buildBrain } from "./ai/brain/buildBrain.js";
-import { loadEmbeddingModel } from "./ai/vector/embedding.js";
-
 // Controllers
 import { handleSepayWebhook } from "./src/controllers/paymentController.js";
 import { autoCancelExpiredBookings } from "./src/controllers/bookingController.js";
