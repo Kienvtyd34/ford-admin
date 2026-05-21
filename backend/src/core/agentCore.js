@@ -1,27 +1,22 @@
-import { classifyIntent } from "../brain/intentClassifier.js";
+import { planner } from "../brain/planner.js";
+import { reasoner } from "../brain/reasoner.js";
 import { extractEntities } from "../brain/entityExtractor.js";
-
-import { planner } from "./planner.js";
-import { toolRouter } from "./toolRouter.js";
-import { reasoner } from "./reasoner.js";
-
+import { toolRouter } from "../tools/toolRouter.js";
 import {
   getConversationContext,
   saveConversationContext
 } from "../memory/sessionMemory.js";
 
-export const agentCore = async (userId, message) => {
+export const agentCore = async (userId, message, deps) => {
 
-  const context = getConversationContext(userId);
+  const context = await getConversationContext(deps.redis, userId);
 
-  const intent = classifyIntent(message);
   const entities = extractEntities(message);
 
   const plan = await planner({
     message,
-    intent,
-    entities,
-    context
+    context,
+    entities
   });
 
   const toolResult = await toolRouter(plan, {
@@ -32,13 +27,14 @@ export const agentCore = async (userId, message) => {
 
   const answer = await reasoner({
     message,
-    toolResult
+    toolResult,
+    context
   });
 
-  saveConversationContext(userId, {
+  await saveConversationContext(deps.redis, userId, {
     message,
-    intent,
     entities,
+    plan,
     toolResult
   });
 
