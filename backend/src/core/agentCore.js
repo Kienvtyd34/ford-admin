@@ -1,112 +1,142 @@
-import { planner } from "../brain/planner.js";
-import { reasoner } from "../brain/reasoner.js";
-import { extractEntities } from "../brain/entityExtractor.js";
-import { toolRouter } from "../tool/toolRouter.js";
+import VehicleModel from "../models/VehicleModel.js";
+import VehicleVariant from "../models/VehicleVariant.js";
+import Inventory from "../models/Inventory.js";
+import TechnicalIssue from "../models/TechnicalIssue.js";
 
-import {
-  getConversationContext,
-  saveConversationContext
-} from "../memory/sessionMemory.js";
+import { detectIntent } from "../ai/intentEngine.js";
+import { extractEntities } from "../ai/entityExtractor.js";
+import { recommendVehicles } from "../ai/recommendationEngine.js";
+import { buildVehicleResponse } from "../ai/responseBuilder.js";
+import { saveMemory } from "../ai/memoryEngine.js";
+import { salesAdvisor } from "../ai/salesAdvisor.js";
 
 export const agentCore = async (
   userId,
-  message,
-  deps = {}
+  message
 ) => {
+  const [
+    models,
+    variants,
+    inventories,
+    issues,
+  ] = await Promise.all([
+    VehicleModel.find(),
+    VehicleVariant.find(),
+    Inventory.find(),
+    TechnicalIssue.find(),
+  ]);
 
-  try {
+  const intent =
+    detectIntent(message);
 
-    // ================= SAFE REDIS =================
-
-    const redis = deps?.redis || null;
-
-    // ================= MEMORY =================
-
-    let context = {};
-
-    if (redis) {
-
-      context = await getConversationContext(
-        redis,
-        userId
-      );
-
-    }
-
-    // ================= ENTITY =================
-
-    const entities =
-      extractEntities(message);
-
-    // ================= PLAN =================
-
-    const plan = await planner({
+  const entities =
+    extractEntities(
       message,
-      context,
-      entities
-    });
+      models,
+      variants
+    );
 
-    console.log("PLAN:", plan);
+  saveMemory(userId, entities);
 
-    // ================= TOOL =================
-
-    const toolResult = await toolRouter(
-      plan,
-      {
-        message,
+  // recommendation
+  if (
+    intent === "RECOMMEND"
+  ) {
+    const recs =
+      recommendVehicles({
         entities,
-        context
-      }
-    );
+        models,
+        variants,
+      });
 
-    console.log(
-      "TOOL RESULT:",
-      toolResult
-    );
+    return recs
+      .map((car) => {
+        const variant =
+          variants.find(
+            (v) =>
+              String(v.modelId) ===
+              String(car._id)
+          );
 
-    // ================= REASON =================
-
-    const answer = await reasoner({
-      message,
-      toolResult,
-      context
-    });
-
-    // ================= SAVE MEMORY =================
-
-    if (redis) {
-
-      await saveConversationContext(
-        redis,
-        userId,
-        {
-          message,
-          entities,
-          plan,
-          toolResult
-        }
-      );
-
-    }
-
-    return answer;
-
-  } catch (err) {
-
-    console.error(
-      "AGENT CORE ERROR:",
-      err
-    );
-
-    return `
-AGENT ERROR:
-
-${err.message}
-
-STACK:
-${err.stack}
-`;
-
+        return (
+          buildVehicleResponse(
+            car,
+            variant
+          ) +
+          salesAdvisor(entities)
+        );
+      })
+      .join("\n");
   }
 
+  // model
+  if (entities.models.length) {
+    const car =
+      entities.models[0];
+
+    const variant =
+      variants.find(
+        (v) =>
+          String(v.modelId) ===
+          String(car._id)
+      );
+
+    return buildVehicleResponse(
+      car,
+      variant
+    );
+  }
+
+  // variant
+  if (
+    entities.variants.length
+  ) {
+    const v =
+      entities.variants[0];
+
+    return `
+🚘 ${v.variantName}
+
+💰 ${v.basePrice.toLocaleString(
+      "vi-VN"
+    )} VNĐ
+`;
+  }
+
+  // technical
+  if (
+    intent === "TECHNICAL"
+  ) {
+    const found = issues.find(
+      (i) =>
+        message
+          .toLowerCase()
+          .includes(
+            i.title.toLowerCase()
+          )
+    );
+
+    if (found) {
+      return `
+⚠️ ${found.title}
+
+🔍 Triệu chứng:
+${found.symptoms.join(", ")}
+
+🛠️ Giải pháp:
+${found.solutions.join(", ")}
+`;
+    }
+  }
+
+  return `
+Tôi có thể hỗ trợ:
+- giá xe
+- phiên bản
+- SUV 7 chỗ
+- xe gia đình
+- xe offroad
+- lỗi kỹ thuật
+- xe lái thử
+`;
 };
