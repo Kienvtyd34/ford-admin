@@ -1,28 +1,31 @@
+// src/ai/salesAdvisor.js
+
 export const salesAdvisor = (
   entities
 ) => {
+
   if (
-    entities.usage === "family"
+    entities.seats === 7
   ) {
     return `
-👉 Tôi khuyên bạn nên chọn Ford Everest vì:
-- rộng rãi
-- 7 chỗ
-- đi gia đình tốt
-- an toàn cao
+📌 Gợi ý:
+Dòng SUV 7 chỗ phù hợp gia đình và đi xa.
 `;
   }
 
   if (
-    entities.usage === "offroad"
+    entities.offroad
   ) {
     return `
-👉 Ranger Raptor phù hợp:
-- offroad mạnh
-- gầm cao
-- địa hình tốt
+📌 Gợi ý:
+Xe bán tải phù hợp offroad và chở hàng.
 `;
   }
 
-  return "";
+  return `
+📌 Bạn có thể yêu cầu:
+- so sánh xe
+- xe gia đình
+- xe tiết kiệm nhiên liệu
+`;
 };

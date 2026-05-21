@@ -1,35 +1,63 @@
-import { normalize } from "./normalize.js";
+// src/ai/intentEngine.js
 
-export const detectIntent = (message) => {
-  const q = normalize(message);
+export const detectIntent = (
+  message = ""
+) => {
 
-  if (q.includes("gia"))
-    return "PRICE_QUERY";
+  const msg =
+    message.toLowerCase();
+
+  // ================= COMPARE =================
 
   if (
-    q.includes("so sanh") ||
-    q.includes("vs")
-  )
+    msg.includes("vs") ||
+    msg.includes("so sánh")
+  ) {
     return "COMPARE";
+  }
+
+  // ================= TEST DRIVE =================
 
   if (
-    q.includes("lai thu") ||
-    q.includes("demo")
-  )
-    return "DEMO";
+    msg.includes("lái thử") ||
+    msg.includes("test drive")
+  ) {
+    return "TEST_DRIVE";
+  }
+
+  // ================= TECHNICAL =================
 
   if (
-    q.includes("loi") ||
-    q.includes("abs") ||
-    q.includes("giat so")
-  )
+    msg.includes("lỗi") ||
+    msg.includes("abs") ||
+    msg.includes("check engine") ||
+    msg.includes("triệu chứng") ||
+    msg.includes("đèn báo")
+  ) {
     return "TECHNICAL";
+  }
+
+  // ================= RECOMMEND =================
 
   if (
-    q.includes("tu van") ||
-    q.includes("goi y")
-  )
+    msg.includes("suv") ||
+    msg.includes("7 chỗ") ||
+    msg.includes("gia đình") ||
+    msg.includes("offroad") ||
+    msg.includes("tiết kiệm") ||
+    msg.includes("bán tải") ||
+    msg.includes("gợi ý")
+  ) {
     return "RECOMMEND";
+  }
+
+  // ================= PRICE =================
+
+  if (
+    msg.includes("giá")
+  ) {
+    return "PRICE";
+  }
 
   return "GENERAL";
 };

@@ -1,48 +1,48 @@
+// src/ai/recommendationEngine.js
+
 export const recommendVehicles = ({
   entities,
   models,
-  variants,
 }) => {
-  let filtered = [...models];
 
-  if (entities.type) {
-    filtered = filtered.filter(
-      (m) => m.type === entities.type
+  let results = [...models];
+
+  // ================= TYPE =================
+
+  if (
+    entities.type
+  ) {
+
+    results = results.filter(
+      (v) =>
+        v.type?.toLowerCase() ===
+        entities.type.toLowerCase()
     );
   }
 
-  if (entities.seats) {
-    filtered = filtered.filter(
-      (m) => m.seats >= entities.seats
+  // ================= SEATS =================
+
+  if (
+    entities.seats
+  ) {
+
+    results = results.filter(
+      (v) =>
+        v.seats >= entities.seats
     );
   }
 
-  // gia đình
-  if (entities.usage === "family") {
-    filtered = filtered.filter(
-      (m) =>
-        m.type === "SUV" &&
-        m.seats >= 7
+  // ================= OFFROAD =================
+
+  if (
+    entities.offroad
+  ) {
+
+    results = results.filter(
+      (v) =>
+        v.type === "Pick-up"
     );
   }
 
-  // offroad
-  if (entities.usage === "offroad") {
-    filtered = filtered.filter(
-      (m) =>
-        m.name.includes("Ranger") ||
-        m.name.includes("Raptor") ||
-        m.name.includes("Everest")
-    );
-  }
-
-  // tiết kiệm
-  if (entities.usage === "economy") {
-    filtered = filtered.filter(
-      (m) =>
-        !m.name.includes("Mustang")
-    );
-  }
-
-  return filtered;
+  return results.slice(0, 5);
 };

@@ -1,57 +1,44 @@
+// src/core/agentCore.js
+
 import VehicleModel from "../models/VehicleModel.js";
 import VehicleVariant from "../models/Variant.js";
 import Inventory from "../models/Inventory.js";
-import TechnicalIssue from "../models/TechnicalIssue.js";
+import CarProblem from "../models/CarProblem.js";
 
-import { detectIntent }
-from "../ai/intentEngine.js";
-
-import { extractEntities }
-from "../ai/entityExtractor.js";
-
-import { recommendVehicles }
-from "../ai/recommendationEngine.js";
+import { detectIntent } from "../ai/intentEngine.js";
+import { extractEntities } from "../ai/entityExtractor.js";
+import { recommendVehicles } from "../ai/recommendationEngine.js";
 
 import {
   buildVehicleResponse,
   buildCompareResponse,
-  buildTechnicalResponse,
   buildInventoryResponse,
-}
-from "../ai/responseBuilder.js";
+  buildTechnicalResponse,
+} from "../ai/responseBuilder.js";
 
-import { saveMemory }
-from "../ai/memoryEngine.js";
-
-import { salesAdvisor }
-from "../ai/salesAdvisor.js";
-
-import {
-  semanticVehicleSearch,
-  semanticTechnicalSearch,
-}
-from "../ai/semanticSearch.js";
+import { saveMemory } from "../ai/memoryEngine.js";
+import { salesAdvisor } from "../ai/salesAdvisor.js";
 
 export const agentCore = async (
   userId,
   message
 ) => {
 
-  // ================= LOAD DATABASE =================
+  // ================= LOAD DATA =================
 
   const [
     models,
     variants,
     inventories,
-    issues,
+    problems,
   ] = await Promise.all([
     VehicleModel.find(),
     VehicleVariant.find(),
     Inventory.find(),
-    TechnicalIssue.find(),
+    CarProblem.find(),
   ]);
 
-  // ================= NLP =================
+  // ================= AI =================
 
   const intent =
     detectIntent(message);
@@ -65,14 +52,9 @@ export const agentCore = async (
 
   // ================= MEMORY =================
 
-  await saveMemory(
+  saveMemory(
     userId,
-    {
-      message,
-      intent,
-      entities,
-      time: new Date(),
-    }
+    entities
   );
 
   // ================= COMPARE =================
@@ -81,22 +63,43 @@ export const agentCore = async (
     intent === "COMPARE"
   ) {
 
-    const compareCars =
-      semanticVehicleSearch(
-        message,
-        models
-      );
-
     if (
-      compareCars.length >= 2
+      entities.models.length >= 2
     ) {
 
+      const car1 =
+        entities.models[0];
+
+      const car2 =
+        entities.models[1];
+
+      const variant1 =
+        variants.find(
+          (v) =>
+            String(v.modelId) ===
+            String(car1._id)
+        );
+
+      const variant2 =
+        variants.find(
+          (v) =>
+            String(v.modelId) ===
+            String(car2._id)
+        );
+
       return buildCompareResponse(
-        compareCars[0],
-        compareCars[1],
-        variants
+        car1,
+        car2,
+        variant1,
+        variant2
       );
     }
+
+    return `
+Hãy nhập dạng:
+
+Everest vs Ranger
+`;
   }
 
   // ================= RECOMMEND =================
@@ -114,7 +117,7 @@ export const agentCore = async (
 
     if (!recs.length) {
       return `
-Không tìm thấy xe phù hợp.
+Không có dữ liệu phù hợp
 `;
     }
 
@@ -133,8 +136,8 @@ Không tìm thấy xe phù hợp.
             car,
             variant
           ) +
+          "\n" +
           salesAdvisor(
-            car,
             entities
           )
         );
@@ -145,50 +148,48 @@ Không tìm thấy xe phù hợp.
   // ================= INVENTORY =================
 
   if (
-    intent === "INVENTORY"
+    intent === "TEST_DRIVE"
   ) {
 
-    const demoCars =
+    const available =
       inventories.filter(
         (i) =>
-          i.status ===
-          "Đang lái thử"
+          i.isTestDrive === true
       );
 
-    if (!demoCars.length) {
+    if (!available.length) {
       return `
 Hiện chưa có xe lái thử
 `;
     }
 
-    return buildInventoryResponse(
-      demoCars,
-      variants,
-      models
-    );
+    return available
+      .map((i) =>
+        buildInventoryResponse(i)
+      )
+      .join("\n\n");
   }
 
-  // ================= TECHNICAL =================
+  // ================= MODEL =================
 
   if (
-    intent === "TECHNICAL"
+    entities.models.length
   ) {
 
-    const found =
-      semanticTechnicalSearch(
-        message,
-        issues
+    const car =
+      entities.models[0];
+
+    const variant =
+      variants.find(
+        (v) =>
+          String(v.modelId) ===
+          String(car._id)
       );
 
-    if (found) {
-      return buildTechnicalResponse(
-        found
-      );
-    }
-
-    return `
-Không tìm thấy lỗi kỹ thuật phù hợp
-`;
+    return buildVehicleResponse(
+      car,
+      variant
+    );
   }
 
   // ================= VARIANT =================
@@ -203,46 +204,63 @@ Không tìm thấy lỗi kỹ thuật phù hợp
     return `
 🚘 ${v.variantName}
 
-💰 ${v.basePrice.toLocaleString(
-      "vi-VN"
-    )} VNĐ
+💰 Giá:
+${v.basePrice.toLocaleString(
+  "vi-VN"
+)} VNĐ
 
-⚙️ ${v.transmission}
+⚙️ Hộp số:
+${v.transmission}
 
-🛞 ${v.driveTrain}
+🛞 Dẫn động:
+${v.driveTrain}
 
-⛽ ${v.fuelType}
+⛽ Nhiên liệu:
+${v.fuelType}
 `;
   }
 
-  // ================= VEHICLE =================
-
-  const foundCars =
-    semanticVehicleSearch(
-      message,
-      models
-    );
+  // ================= TECHNICAL =================
 
   if (
-    foundCars.length
+    intent === "TECHNICAL"
   ) {
 
-    return foundCars
-      .map((car) => {
+    const lower =
+      message.toLowerCase();
 
-        const variant =
-          variants.find(
-            (v) =>
-              String(v.modelId) ===
-              String(car._id)
-          );
+    const found =
+      problems.find((p) => {
 
-        return buildVehicleResponse(
-          car,
-          variant
+        // match title
+        if (
+          lower.includes(
+            p.title.toLowerCase()
+          )
+        ) {
+          return true;
+        }
+
+        // match symptoms
+        return p.symptoms.some(
+          (s) =>
+            lower.includes(
+              s.toLowerCase()
+            )
         );
-      })
-      .join("\n\n");
+
+      });
+
+    if (found) {
+
+      return buildTechnicalResponse(
+        found
+      );
+    }
+
+    return `
+Không tìm thấy lỗi kỹ thuật phù hợp
+`;
   }
 
   // ================= FALLBACK =================
@@ -250,15 +268,21 @@ Không tìm thấy lỗi kỹ thuật phù hợp
   return `
 Tôi có thể hỗ trợ:
 
-🚗 Giá xe
-🚗 Phiên bản
-🚗 SUV 7 chỗ
-🚗 Xe gia đình
-🚗 Xe tiết kiệm nhiên liệu
-🚗 Xe offroad
-🚗 Xe lái thử
-🚗 So sánh xe
-🚗 Lỗi kỹ thuật
-🚗 Triệu chứng xe
+• Giá xe
+• Phiên bản xe
+• SUV / bán tải
+• Xe gia đình
+• Xe offroad
+• Xe tiết kiệm nhiên liệu
+• Xe đang lái thử
+• So sánh xe
+• Lỗi kỹ thuật
+• Triệu chứng xe
+
+Ví dụ:
+- Everest vs Ranger
+- SUV 7 chỗ
+- xe offroad
+- xe bị lỗi ABS
 `;
 };

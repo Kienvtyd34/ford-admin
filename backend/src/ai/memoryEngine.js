@@ -1,17 +1,27 @@
+// src/ai/memoryEngine.js
+
 const memoryStore = {};
 
 export const saveMemory = (
   userId,
-  data
+  entities
 ) => {
-  memoryStore[userId] = {
-    ...memoryStore[userId],
-    ...data,
-  };
+
+  if (!memoryStore[userId]) {
+    memoryStore[userId] = [];
+  }
+
+  memoryStore[userId].push({
+    time: Date.now(),
+    entities,
+  });
 };
 
 export const getMemory = (
   userId
 ) => {
-  return memoryStore[userId] || {};
+
+  return (
+    memoryStore[userId] || []
+  );
 };

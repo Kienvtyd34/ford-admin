@@ -1,18 +1,25 @@
-// ================= VEHICLE RESPONSE =================
+// src/ai/responseBuilder.js
+
+// ================= VEHICLE =================
 
 export const buildVehicleResponse = (
   car,
   variant
 ) => {
+
   if (!car) {
-    return "Không tìm thấy xe";
+    return `
+Không tìm thấy xe
+`;
   }
 
   return `
 🚗 ${car.name}
 
 💰 Giá từ:
-${variant?.basePrice?.toLocaleString("vi-VN") || "Liên hệ"} VNĐ
+${variant?.basePrice?.toLocaleString(
+  "vi-VN"
+) || "Liên hệ"} VNĐ
 
 🚘 Phiên bản:
 ${variant?.variantName || "Đang cập nhật"}
@@ -34,7 +41,7 @@ ${car.type}
 `;
 };
 
-// ================= COMPARE RESPONSE =================
+// ================= COMPARE =================
 
 export const buildCompareResponse = (
   car1,
@@ -42,6 +49,7 @@ export const buildCompareResponse = (
   variant1,
   variant2
 ) => {
+
   return `
 ⚔️ So sánh ${car1.name} vs ${car2.name}
 
@@ -50,7 +58,9 @@ export const buildCompareResponse = (
 🚗 ${car1.name}
 
 💰 Giá:
-${variant1?.basePrice?.toLocaleString("vi-VN") || "?"} VNĐ
+${variant1?.basePrice?.toLocaleString(
+  "vi-VN"
+) || "?"} VNĐ
 
 👥 Số chỗ:
 ${car1.seats}
@@ -66,7 +76,9 @@ ${variant1?.driveTrain || "?"}
 🚗 ${car2.name}
 
 💰 Giá:
-${variant2?.basePrice?.toLocaleString("vi-VN") || "?"} VNĐ
+${variant2?.basePrice?.toLocaleString(
+  "vi-VN"
+) || "?"} VNĐ
 
 👥 Số chỗ:
 ${car2.seats}
@@ -82,41 +94,61 @@ ${variant2?.driveTrain || "?"}
 📌 Gợi ý:
 
 ${
-  car1.type === "SUV" && car1.seats >= 7
+  car1.type === "SUV" &&
+  car1.seats >= 7
     ? `• ${car1.name} phù hợp gia đình`
     : ""
 }
 
 ${
   car2.type === "Pick-up"
-    ? `• ${car2.name} phù hợp offroad / chở hàng`
+    ? `• ${car2.name} phù hợp offroad`
     : ""
 }
 `;
 };
-// ================= INVENTORY RESPONSE =================
+
+// ================= INVENTORY =================
 
 export const buildInventoryResponse = (
-  inventory,
-  color
+  item
 ) => {
-  if (!inventory) {
-    return "Không có xe trong kho";
-  }
 
   return `
-🚘 Xe có sẵn
+🚗 ${item.vehicleName}
+
+🎯 Có sẵn lái thử
+
+📍 Showroom:
+${item.location || "Đang cập nhật"}
 
 🎨 Màu:
-${color?.name || "Không rõ"}
+${item.color || "Đang cập nhật"}
+`;
+};
 
-💰 Giá nhập:
-${inventory.importPrice?.toLocaleString("vi-VN")} VNĐ
+// ================= TECHNICAL =================
 
-📦 Trạng thái:
-${inventory.status}
+export const buildTechnicalResponse = (
+  problem
+) => {
 
-🏷️ Loại:
-${inventory.category}
+  return `
+⚠️ ${problem.title}
+
+🚨 Mức độ:
+${problem.severity}
+
+🔍 Triệu chứng:
+${problem.symptoms.join(", ")}
+
+🛠️ Nguyên nhân:
+${problem.causes.join(", ")}
+
+✅ Giải pháp:
+${problem.solutions.join(", ")}
+
+🚗 Xe liên quan:
+${problem.relatedVehicles.join(", ")}
 `;
 };
