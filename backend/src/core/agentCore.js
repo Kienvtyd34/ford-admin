@@ -2,41 +2,104 @@ import { planner } from "../brain/planner.js";
 import { reasoner } from "../brain/reasoner.js";
 import { extractEntities } from "../brain/entityExtractor.js";
 import { toolRouter } from "../tool/toolRouter.js";
+
 import {
   getConversationContext,
   saveConversationContext
 } from "../memory/sessionMemory.js";
 
-export const agentCore = async (userId, message, deps) => {
+export const agentCore = async (
+  userId,
+  message,
+  deps = {}
+) => {
 
-  const context = await getConversationContext(deps.redis, userId);
+  try {
 
-  const entities = extractEntities(message);
+    // ================= SAFE REDIS =================
 
-  const plan = await planner({
-    message,
-    context,
-    entities
-  });
+    const redis = deps?.redis || null;
 
-  const toolResult = await toolRouter(plan, {
-    message,
-    entities,
-    context
-  });
+    // ================= MEMORY =================
 
-  const answer = await reasoner({
-    message,
-    toolResult,
-    context
-  });
+    let context = {};
 
-  await saveConversationContext(deps.redis, userId, {
-    message,
-    entities,
-    plan,
-    toolResult
-  });
+    if (redis) {
 
-  return answer;
+      context = await getConversationContext(
+        redis,
+        userId
+      );
+
+    }
+
+    // ================= ENTITY =================
+
+    const entities =
+      extractEntities(message);
+
+    // ================= PLAN =================
+
+    const plan = await planner({
+      message,
+      context,
+      entities
+    });
+
+    console.log("PLAN:", plan);
+
+    // ================= TOOL =================
+
+    const toolResult = await toolRouter(
+      plan,
+      {
+        message,
+        entities,
+        context
+      }
+    );
+
+    console.log(
+      "TOOL RESULT:",
+      toolResult
+    );
+
+    // ================= REASON =================
+
+    const answer = await reasoner({
+      message,
+      toolResult,
+      context
+    });
+
+    // ================= SAVE MEMORY =================
+
+    if (redis) {
+
+      await saveConversationContext(
+        redis,
+        userId,
+        {
+          message,
+          entities,
+          plan,
+          toolResult
+        }
+      );
+
+    }
+
+    return answer;
+
+  } catch (err) {
+
+    console.error(
+      "AGENT CORE ERROR:",
+      err
+    );
+
+    return "Hệ thống AI đang bận, vui lòng thử lại.";
+
+  }
+
 };
