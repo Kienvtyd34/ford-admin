@@ -1,34 +1,33 @@
-import { salesEngine } from "../engines/salesEngine.js";
-import { compareEngine } from "../engines/compareEngine.js";
-import { installmentEngine } from "../engines/installmentEngine.js";
+import { getVehicleTool } from "./getVehicleTool.js";
 
-export const toolRouter = async (plan, input) => {
+export const toolRouter = async (
+  plan,
+  { message, entities, context }
+) => {
+
   try {
-    if (!plan?.tool || plan.tool === "none") return null;
 
-    switch (plan.tool) {
+    // hỏi về xe
+    if (
+      plan.intent === "vehicle_search" ||
+      plan.intent === "vehicle_info"
+    ) {
 
-      case "salesEngine":
-        return await salesEngine(input.entities);
-
-      case "compareEngine":
-        if (!plan.args?.a || !plan.args?.b) return null;
-        return await compareEngine(plan.args.a, plan.args.b);
-
-      case "installmentEngine":
-        if (!plan.args?.price) return null;
-        return installmentEngine(
-          plan.args.price,
-          plan.args.percent ?? 0.2,
-          plan.args.months ?? 84
-        );
-
-      default:
-        return null;
+      return await getVehicleTool(entities);
     }
 
+    return {
+      success: true,
+      message: "Không cần dùng tool"
+    };
+
   } catch (err) {
-    console.error("toolRouter error:", err);
-    return null;
+
+    console.log("TOOL ROUTER ERROR:", err);
+
+    return {
+      success: false,
+      message: "Tool router lỗi"
+    };
   }
 };

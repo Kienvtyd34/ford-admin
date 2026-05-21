@@ -1,28 +1,24 @@
-import { geminiModel }
-from "../core/geminiClient.js";
+export const planner = async ({
+  message,
+  context,
+  entities
+}) => {
 
-export const planner = async (input) => {
+  const text = message.toLowerCase();
 
-  try {
+  // hỏi xe
+  if (
+    text.includes("xe") ||
+    text.includes("ford") ||
+    entities.vehicle
+  ) {
 
-    const result =
-      await geminiModel.generateContent(`
-${JSON.stringify(input)}
-`);
-
-    const text =
-      result.response.text();
-
-    return JSON.parse(text);
-
-  } catch (err) {
-
-    console.log("PLANNER ERROR:", err.message);
-
-    // fallback
     return {
-      tool: "salesEngine",
-      args: {}
+      intent: "vehicle_info"
     };
   }
+
+  return {
+    intent: "chat"
+  };
 };

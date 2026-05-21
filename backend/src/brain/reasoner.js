@@ -1,36 +1,63 @@
 export const reasoner = async ({
   message,
-  toolResult
+  toolResult,
+  context
 }) => {
 
   try {
 
-    const result =
-      await geminiModel.generateContent(`
-User: ${message}
+    // lỗi
+    if (!toolResult?.success) {
+      return {
+        message:
+          toolResult?.message ||
+          "Không thể xử lý yêu cầu"
+      };
+    }
 
-Data:
-${JSON.stringify(toolResult)}
+    // vehicle response
+    if (toolResult.vehicle) {
 
-Trả lời tự nhiên.
-`);
+      const car = toolResult.vehicle;
 
-    return result.response.text();
+      return {
+        message: `
+🚗 ${car.name}
+
+💰 Giá từ:
+${Number(car.price).toLocaleString("vi-VN")} VNĐ
+
+🚘 Phiên bản:
+${car.variantName}
+
+⚙️ Hộp số:
+${car.transmission}
+
+🛞 Dẫn động:
+${car.driveTrain}
+
+⛽ Nhiên liệu:
+${car.fuelType}
+
+👥 Số chỗ:
+${car.seats}
+
+🔥 Dòng xe:
+${car.type}
+`
+      };
+    }
+
+    return {
+      message: "Không có dữ liệu phù hợp"
+    };
 
   } catch (err) {
 
-    console.log(err.message);
+    console.log("REASONER ERROR:", err);
 
-    // fallback local
-    if (Array.isArray(toolResult)) {
-
-      return toolResult
-        .map(v =>
-          `${v.name} - ${v.price?.toLocaleString()} VNĐ`
-        )
-        .join("\n");
-    }
-
-    return "Hiện AI đang bận.";
+    return {
+      message: "AI reasoning lỗi"
+    };
   }
 };
