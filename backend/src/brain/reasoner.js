@@ -1,6 +1,3 @@
-import { geminiModel }
-from "../core/geminiClient.js";
-
 export const reasoner = async ({
   message,
   toolResult
@@ -8,39 +5,32 @@ export const reasoner = async ({
 
   try {
 
-    const prompt = `
-Câu hỏi:
-${message}
+    const result =
+      await geminiModel.generateContent(`
+User: ${message}
 
-Dữ liệu:
+Data:
 ${JSON.stringify(toolResult)}
 
-Trả lời tự nhiên bằng tiếng Việt.
-`;
-
-    const result =
-      await geminiModel.generateContent(
-        prompt
-      );
+Trả lời tự nhiên.
+`);
 
     return result.response.text();
 
   } catch (err) {
 
-    console.error(
-      "REASONER ERROR:",
-      err
-    );
+    console.log(err.message);
 
-    return `
-REASONER ERROR:
+    // fallback local
+    if (Array.isArray(toolResult)) {
 
-${err.message}
+      return toolResult
+        .map(v =>
+          `${v.name} - ${v.price?.toLocaleString()} VNĐ`
+        )
+        .join("\n");
+    }
 
-STACK:
-${err.stack}
-`;
-
+    return "Hiện AI đang bận.";
   }
-
 };

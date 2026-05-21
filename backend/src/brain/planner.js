@@ -5,46 +5,24 @@ export const planner = async (input) => {
 
   try {
 
-    const prompt = `
-Chọn tool:
-
-salesEngine
-compareEngine
-installmentEngine
-none
-
-Input:
-${JSON.stringify(input)}
-
-Chỉ trả JSON.
-`;
-
     const result =
-      await geminiModel.generateContent(
-        prompt
-      );
+      await geminiModel.generateContent(`
+${JSON.stringify(input)}
+`);
 
     const text =
       result.response.text();
 
-    console.log("RAW:", text);
-
-    const cleaned = text
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-    return JSON.parse(cleaned);
+    return JSON.parse(text);
 
   } catch (err) {
 
-    console.error(
-      "PLANNER ERROR:",
-      err
-    );
+    console.log("PLANNER ERROR:", err.message);
 
-    throw err;
-
+    // fallback
+    return {
+      tool: "salesEngine",
+      args: {}
+    };
   }
-
 };
