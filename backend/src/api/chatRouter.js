@@ -1,24 +1,42 @@
-import { agentCore } from "../core/agentCore.js";
+import { agentCore }
+from "../core/agentCore.js";
 
 export const chatRouter = async (req, res) => {
+
   try {
+
     const { message, userId } = req.body;
 
-    const reply = await agentCore(userId || "guest", message, {
-      redis: req.redis
+    console.log("REQUEST:", {
+      userId,
+      message
     });
 
-    res.json({
+    const reply = await agentCore(
+      userId || "guest",
+      message
+    );
+
+    console.log("REPLY:", reply);
+
+    return res.json({
       success: true,
       reply
     });
 
   } catch (err) {
-    console.error(err);
 
-    res.status(500).json({
+    console.error(
+      "CHAT ERROR FULL:",
+      err
+    );
+
+    return res.status(500).json({
       success: false,
-      reply: "Hệ thống đang lỗi, vui lòng thử lại."
+      reply: err.message,
+      stack: err.stack
     });
+
   }
+
 };
