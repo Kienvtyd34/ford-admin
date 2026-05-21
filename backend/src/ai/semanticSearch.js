@@ -1,32 +1,130 @@
-import { normalize } from "./normalize.js";
-
-export const semanticSearch = (
-  message,
-  models = []
+const normalize = (
+  text = ""
 ) => {
-  const q = normalize(message);
 
-  return models.filter((m) => {
-    const name = normalize(m.name);
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    );
+};
 
-    if (q.includes(name))
-      return true;
+// ================= VEHICLE =================
 
-    if (
-      q.includes("gia dinh") &&
-      m.seats >= 7
-    )
-      return true;
+export const semanticVehicleSearch =
+(
+  message,
+  models
+) => {
 
-    if (
-      q.includes("offroad") &&
-      (
-        name.includes("ranger") ||
-        name.includes("raptor")
-      )
-    )
-      return true;
+  const msg =
+    normalize(message);
 
-    return false;
-  });
+  return models.filter(
+    (m) => {
+
+      const name =
+        normalize(m.name);
+
+      const type =
+        normalize(m.type);
+
+      // tên xe
+      if (
+        msg.includes(name)
+      ) return true;
+
+      // SUV
+      if (
+        msg.includes("suv") &&
+        type.includes("suv")
+      ) return true;
+
+      // bán tải
+      if (
+        (
+          msg.includes("ban tai") ||
+          msg.includes("pickup") ||
+          msg.includes("pick-up")
+        ) &&
+        (
+          type.includes("pick") ||
+          type.includes("pickup")
+        )
+      ) return true;
+
+      // 7 chỗ
+      if (
+        msg.includes("7 cho") &&
+        m.seats >= 7
+      ) return true;
+
+      // gia đình
+      if (
+        msg.includes(
+          "gia dinh"
+        ) &&
+        m.seats >= 7
+      ) return true;
+
+      // offroad
+      if (
+        (
+          msg.includes(
+            "offroad"
+          ) ||
+          msg.includes("dia hinh")
+        ) &&
+        (
+          name.includes(
+            "raptor"
+          ) ||
+          name.includes(
+            "ranger"
+          ) ||
+          name.includes(
+            "everest"
+          )
+        )
+      ) return true;
+
+      return false;
+    }
+  );
+};
+
+// ================= TECHNICAL =================
+
+export const semanticTechnicalSearch =
+(
+  message,
+  issues
+) => {
+
+  const msg =
+    normalize(message);
+
+  return issues.find(
+    (issue) => {
+
+      if (
+        msg.includes(
+          normalize(
+            issue.title
+          )
+        )
+      ) {
+        return true;
+      }
+
+      return issue.symptoms.some(
+        (s) =>
+          msg.includes(
+            normalize(s)
+          )
+      );
+    }
+  );
 };

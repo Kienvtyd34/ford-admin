@@ -3,17 +3,42 @@ import VehicleVariant from "../models/Variant.js";
 import Inventory from "../models/Inventory.js";
 import TechnicalIssue from "../models/TechnicalIssue.js";
 
-import { detectIntent } from "../ai/intentEngine.js";
-import { extractEntities } from "../ai/entityExtractor.js";
-import { recommendVehicles } from "../ai/recommendationEngine.js";
-import { buildVehicleResponse } from "../ai/responseBuilder.js";
-import { saveMemory } from "../ai/memoryEngine.js";
-import { salesAdvisor } from "../ai/salesAdvisor.js";
+import { detectIntent }
+from "../ai/intentEngine.js";
+
+import { extractEntities }
+from "../ai/entityExtractor.js";
+
+import { recommendVehicles }
+from "../ai/recommendationEngine.js";
+
+import {
+  buildVehicleResponse,
+  buildCompareResponse,
+  buildTechnicalResponse,
+  buildInventoryResponse,
+}
+from "../ai/responseBuilder.js";
+
+import { saveMemory }
+from "../ai/memoryEngine.js";
+
+import { salesAdvisor }
+from "../ai/salesAdvisor.js";
+
+import {
+  semanticVehicleSearch,
+  semanticTechnicalSearch,
+}
+from "../ai/semanticSearch.js";
 
 export const agentCore = async (
   userId,
   message
 ) => {
+
+  // ================= LOAD DATABASE =================
+
   const [
     models,
     variants,
@@ -26,6 +51,8 @@ export const agentCore = async (
     TechnicalIssue.find(),
   ]);
 
+  // ================= NLP =================
+
   const intent =
     detectIntent(message);
 
@@ -36,12 +63,48 @@ export const agentCore = async (
       variants
     );
 
-  saveMemory(userId, entities);
+  // ================= MEMORY =================
 
-  // recommendation
+  await saveMemory(
+    userId,
+    {
+      message,
+      intent,
+      entities,
+      time: new Date(),
+    }
+  );
+
+  // ================= COMPARE =================
+
+  if (
+    intent === "COMPARE"
+  ) {
+
+    const compareCars =
+      semanticVehicleSearch(
+        message,
+        models
+      );
+
+    if (
+      compareCars.length >= 2
+    ) {
+
+      return buildCompareResponse(
+        compareCars[0],
+        compareCars[1],
+        variants
+      );
+    }
+  }
+
+  // ================= RECOMMEND =================
+
   if (
     intent === "RECOMMEND"
   ) {
+
     const recs =
       recommendVehicles({
         entities,
@@ -49,8 +112,15 @@ export const agentCore = async (
         variants,
       });
 
+    if (!recs.length) {
+      return `
+Không tìm thấy xe phù hợp.
+`;
+    }
+
     return recs
       .map((car) => {
+
         const variant =
           variants.find(
             (v) =>
@@ -63,34 +133,70 @@ export const agentCore = async (
             car,
             variant
           ) +
-          salesAdvisor(entities)
+          salesAdvisor(
+            car,
+            entities
+          )
         );
       })
-      .join("\n");
+      .join("\n\n");
   }
 
-  // model
-  if (entities.models.length) {
-    const car =
-      entities.models[0];
+  // ================= INVENTORY =================
 
-    const variant =
-      variants.find(
-        (v) =>
-          String(v.modelId) ===
-          String(car._id)
+  if (
+    intent === "INVENTORY"
+  ) {
+
+    const demoCars =
+      inventories.filter(
+        (i) =>
+          i.status ===
+          "Đang lái thử"
       );
 
-    return buildVehicleResponse(
-      car,
-      variant
+    if (!demoCars.length) {
+      return `
+Hiện chưa có xe lái thử
+`;
+    }
+
+    return buildInventoryResponse(
+      demoCars,
+      variants,
+      models
     );
   }
 
-  // variant
+  // ================= TECHNICAL =================
+
+  if (
+    intent === "TECHNICAL"
+  ) {
+
+    const found =
+      semanticTechnicalSearch(
+        message,
+        issues
+      );
+
+    if (found) {
+      return buildTechnicalResponse(
+        found
+      );
+    }
+
+    return `
+Không tìm thấy lỗi kỹ thuật phù hợp
+`;
+  }
+
+  // ================= VARIANT =================
+
   if (
     entities.variants.length
   ) {
+
     const v =
       entities.variants[0];
 
@@ -100,43 +206,59 @@ export const agentCore = async (
 💰 ${v.basePrice.toLocaleString(
       "vi-VN"
     )} VNĐ
+
+⚙️ ${v.transmission}
+
+🛞 ${v.driveTrain}
+
+⛽ ${v.fuelType}
 `;
   }
 
-  // technical
-  if (
-    intent === "TECHNICAL"
-  ) {
-    const found = issues.find(
-      (i) =>
-        message
-          .toLowerCase()
-          .includes(
-            i.title.toLowerCase()
-          )
+  // ================= VEHICLE =================
+
+  const foundCars =
+    semanticVehicleSearch(
+      message,
+      models
     );
 
-    if (found) {
-      return `
-⚠️ ${found.title}
+  if (
+    foundCars.length
+  ) {
 
-🔍 Triệu chứng:
-${found.symptoms.join(", ")}
+    return foundCars
+      .map((car) => {
 
-🛠️ Giải pháp:
-${found.solutions.join(", ")}
-`;
-    }
+        const variant =
+          variants.find(
+            (v) =>
+              String(v.modelId) ===
+              String(car._id)
+          );
+
+        return buildVehicleResponse(
+          car,
+          variant
+        );
+      })
+      .join("\n\n");
   }
+
+  // ================= FALLBACK =================
 
   return `
 Tôi có thể hỗ trợ:
-- giá xe
-- phiên bản
-- SUV 7 chỗ
-- xe gia đình
-- xe offroad
-- lỗi kỹ thuật
-- xe lái thử
+
+🚗 Giá xe
+🚗 Phiên bản
+🚗 SUV 7 chỗ
+🚗 Xe gia đình
+🚗 Xe tiết kiệm nhiên liệu
+🚗 Xe offroad
+🚗 Xe lái thử
+🚗 So sánh xe
+🚗 Lỗi kỹ thuật
+🚗 Triệu chứng xe
 `;
 };
