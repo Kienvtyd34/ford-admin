@@ -1,5 +1,3 @@
-// src/core/agentCore.js
-
 import VehicleModel from "../models/VehicleModel.js";
 import VehicleVariant from "../models/Variant.js";
 import Inventory from "../models/Inventory.js";
@@ -19,13 +17,21 @@ import {
 import { saveMemory } from "../ai/memoryEngine.js";
 import { salesAdvisor } from "../ai/salesAdvisor.js";
 
+// ================= NORMALIZE =================
+
+const normalize = (text = "") => {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+};
+
+// ================= AGENT CORE =================
+
 export const agentCore = async (
   userId,
   message
 ) => {
-
-  // ================= LOAD DATA =================
-
   const [
     models,
     variants,
@@ -38,7 +44,8 @@ export const agentCore = async (
     CarProblem.find(),
   ]);
 
-  // ================= AI =================
+  const normalizedMessage =
+    normalize(message);
 
   const intent =
     detectIntent(message);
@@ -50,56 +57,40 @@ export const agentCore = async (
       variants
     );
 
-  // ================= MEMORY =================
-
-  saveMemory(
-    userId,
-    entities
-  );
+  saveMemory(userId, entities);
 
   // ================= COMPARE =================
 
   if (
-    intent === "COMPARE"
+    intent === "COMPARE" &&
+    entities.models.length >= 2
   ) {
+    const car1 =
+      entities.models[0];
 
-    if (
-      entities.models.length >= 2
-    ) {
+    const car2 =
+      entities.models[1];
 
-      const car1 =
-        entities.models[0];
-
-      const car2 =
-        entities.models[1];
-
-      const variant1 =
-        variants.find(
-          (v) =>
-            String(v.modelId) ===
-            String(car1._id)
-        );
-
-      const variant2 =
-        variants.find(
-          (v) =>
-            String(v.modelId) ===
-            String(car2._id)
-        );
-
-      return buildCompareResponse(
-        car1,
-        car2,
-        variant1,
-        variant2
+    const variant1 =
+      variants.find(
+        (v) =>
+          String(v.modelId) ===
+          String(car1._id)
       );
-    }
 
-    return `
-Hãy nhập dạng:
+    const variant2 =
+      variants.find(
+        (v) =>
+          String(v.modelId) ===
+          String(car2._id)
+      );
 
-Everest vs Ranger
-`;
+    return buildCompareResponse(
+      car1,
+      car2,
+      variant1,
+      variant2
+    );
   }
 
   // ================= RECOMMEND =================
@@ -107,7 +98,6 @@ Everest vs Ranger
   if (
     intent === "RECOMMEND"
   ) {
-
     const recs =
       recommendVehicles({
         entities,
@@ -116,14 +106,11 @@ Everest vs Ranger
       });
 
     if (!recs.length) {
-      return `
-Không có dữ liệu phù hợp
-`;
+      return "Không tìm thấy xe phù hợp";
     }
 
     return recs
       .map((car) => {
-
         const variant =
           variants.find(
             (v) =>
@@ -137,36 +124,9 @@ Không có dữ liệu phù hợp
             variant
           ) +
           "\n" +
-          salesAdvisor(
-            entities
-          )
+          salesAdvisor(entities)
         );
       })
-      .join("\n\n");
-  }
-
-  // ================= INVENTORY =================
-
-  if (
-    intent === "TEST_DRIVE"
-  ) {
-
-    const available =
-      inventories.filter(
-        (i) =>
-          i.isTestDrive === true
-      );
-
-    if (!available.length) {
-      return `
-Hiện chưa có xe lái thử
-`;
-    }
-
-    return available
-      .map((i) =>
-        buildInventoryResponse(i)
-      )
       .join("\n\n");
   }
 
@@ -175,7 +135,6 @@ Hiện chưa có xe lái thử
   if (
     entities.models.length
   ) {
-
     const car =
       entities.models[0];
 
@@ -197,27 +156,39 @@ Hiện chưa có xe lái thử
   if (
     entities.variants.length
   ) {
-
     const v =
       entities.variants[0];
 
     return `
 🚘 ${v.variantName}
 
-💰 Giá:
-${v.basePrice.toLocaleString(
-  "vi-VN"
-)} VNĐ
+💰 ${v.basePrice.toLocaleString(
+      "vi-VN"
+    )} VNĐ
 
-⚙️ Hộp số:
-${v.transmission}
+⚙️ ${v.transmission}
 
-🛞 Dẫn động:
-${v.driveTrain}
-
-⛽ Nhiên liệu:
-${v.fuelType}
+🛞 ${v.driveTrain}
 `;
+  }
+
+  // ================= INVENTORY =================
+
+  if (
+    intent === "TEST_DRIVE"
+  ) {
+    const available =
+      inventories.filter(
+        (i) => i.testDriveAvailable
+      );
+
+    if (!available.length) {
+      return "Hiện chưa có xe lái thử";
+    }
+
+    return buildInventoryResponse(
+      available
+    );
   }
 
   // ================= TECHNICAL =================
@@ -225,45 +196,64 @@ ${v.fuelType}
   if (
     intent === "TECHNICAL"
   ) {
+    let found = null;
 
-    const lower =
-      message.toLowerCase();
+    for (const p of problems) {
+      // title
+      if (
+        normalizedMessage.includes(
+          normalize(p.title)
+        )
+      ) {
+        found = p;
+        break;
+      }
 
-    const found =
-      problems.find((p) => {
-
-        // match title
-        if (
-          lower.includes(
-            p.title.toLowerCase()
+      // symptoms
+      const symptomMatched =
+        p.symptoms.some((s) =>
+          normalizedMessage.includes(
+            normalize(s)
           )
-        ) {
-          return true;
-        }
-
-        // match symptoms
-        return p.symptoms.some(
-          (s) =>
-            lower.includes(
-              s.toLowerCase()
-            )
         );
 
-      });
+      if (symptomMatched) {
+        found = p;
+        break;
+      }
+
+      // causes
+      const causeMatched =
+        p.causes.some((c) =>
+          normalizedMessage.includes(
+            normalize(c)
+          )
+        );
+
+      if (causeMatched) {
+        found = p;
+        break;
+      }
+    }
 
     if (found) {
-
       return buildTechnicalResponse(
         found
       );
     }
 
     return `
-Không tìm thấy lỗi kỹ thuật phù hợp
+⚠️ Tôi chưa nhận diện được lỗi.
+
+Ví dụ:
+- xe rung khi sang số
+- điều hòa không mát
+- đèn ABS sáng
+- lỗi U3000
 `;
   }
 
-  // ================= FALLBACK =================
+  // ================= DEFAULT =================
 
   return `
 Tôi có thể hỗ trợ:
