@@ -8,19 +8,18 @@ export const normalize = (t = "") =>
 export const enrichText = (text = "") => {
   const synonyms = {
     rung: ["giat", "khung", "lac"],
-    dieuhoa: ["may lanh", "ac", "ac quang"],
+    dieuhoa: ["may lanh", "ac", "lanh yeu"],
     offroad: ["dia hinh", "bun", "dat"],
   };
 
   let t = normalize(text);
+  let extra = "";
 
   for (const k in synonyms) {
     if (t.includes(k)) {
-      for (const s of synonyms[k]) {
-        t += " " + normalize(s);
-      }
+      extra += " " + synonyms[k].join(" ");
     }
   }
 
-  return t;
+  return (t + " " + normalize(extra)).trim();
 };
