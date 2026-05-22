@@ -1,13 +1,19 @@
+// core/agentCore.js
+
 import { getVehicleRAG } from "../services/vehicleRag.service.js";
 import CarProblem from "../models/CarProblem.js";
 
 import { extractEntities } from "../ai/entityEngine.js";
 import { detectIntent } from "../ai/intentEngine.js";
 
-import { rankVehicles } from "../ai/vehicleRanker.js";
-import { getBestVariant } from "../utils/getBestVariant.js";
+import { matchIssue } from "../ai/technicalRag.js";
+import { matchVehicles } from "../ai/vehicleRag.js";
 
-import { buildVehicleResponse } from "../ai/responseBuilder.js";
+import {
+  buildVehicleResponse,
+  buildCompareResponse,
+  buildTechnicalResponse,
+} from "../ai/responseBuilder.js";
 
 export const agentCore = async (userId, message) => {
   const [vehicles, problems] = await Promise.all([
@@ -15,32 +21,49 @@ export const agentCore = async (userId, message) => {
     CarProblem.find().lean(),
   ]);
 
-  const intent = detectIntent(message);
   const entities = extractEntities(message, vehicles);
+  const intent = detectIntent(message, entities);
 
-  // ================= TECH =================
+  // ================= TECHNICAL =================
   if (intent === "TECHNICAL") {
+    const match = matchIssue(message, problems);
+
+    if (match) {
+      return {
+        type: "TECHNICAL",
+        confidence: match.confidence,
+        reply: buildTechnicalResponse(match.issue),
+      };
+    }
+
     return {
       type: "TECHNICAL",
-      reply: "⚠️ Mô tả rõ hơn giúp mình nhé",
+      reply: "Mô tả rõ hơn giúp mình nhé",
     };
   }
 
-  // ================= VEHICLE RANKING =================
-  const ranked = rankVehicles(message, vehicles);
+  // ================= VEHICLE =================
+  const matched = matchVehicles(message, vehicles);
 
-  if (ranked.length > 0) {
+  if (matched.length) {
     return {
-      type: "VEHICLE",
-      reply: ranked.map((v) =>
-        buildVehicleResponse(v, getBestVariant(v))
-      ),
+      type: intent,
+      reply:
+        intent === "COMPARE"
+          ? buildCompareResponse(
+              matched[0],
+              matched[1] || matched[0],
+              matched[0].bestVariant,
+              matched[1]?.bestVariant
+            )
+          : matched.map((v) =>
+              buildVehicleResponse(v, v.bestVariant)
+            ),
     };
   }
 
-  // ================= FALLBACK =================
   return {
     type: "GENERAL",
-    reply: "Bạn muốn tìm xe gia đình, offroad hay 7 chỗ?",
+    reply: "Bạn muốn tìm xe, lỗi hay so sánh?",
   };
 };
