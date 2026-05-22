@@ -1,15 +1,8 @@
-export const safeString = (v, fallback = "Không rõ") => {
-  if (!v) return fallback;
-  return String(v);
-};
+export const safeString = (v, fallback = "Không rõ") =>
+  v ? String(v) : fallback;
 
-export const safeNumber = (v, fallback = null) => {
-  if (typeof v === "number") return v;
-  if (!isNaN(Number(v))) return Number(v);
-  return fallback;
-};
+export const safeNumber = (v, fallback = null) =>
+  isNaN(Number(v)) ? fallback : Number(v);
 
-export const safeArray = (v) => {
-  if (!Array.isArray(v)) return [];
-  return v;
-};
+export const safeArray = (v) =>
+  Array.isArray(v) ? v : [];

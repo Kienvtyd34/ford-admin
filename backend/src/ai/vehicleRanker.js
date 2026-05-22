@@ -8,5 +8,5 @@ export const rankVehicles = (msg, vehicles) => {
     }))
     .filter((v) => v.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3); // 🔥 CHỈ LẤY TOP 3
+    .slice(0, 3);
 };

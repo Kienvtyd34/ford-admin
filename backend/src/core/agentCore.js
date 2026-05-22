@@ -7,7 +7,12 @@ import { detectIntent } from "../ai/intentEngine.js";
 import { rankVehicles } from "../ai/vehicleRanker.js";
 import { getBestVariant } from "../utils/getBestVariant.js";
 
-import { buildVehicleResponse } from "../ai/responseBuilder.js";
+import {
+  buildVehicleResponse,
+  buildTechnicalResponse,
+} from "../ai/responseBuilder.js";
+
+import { matchIssue } from "../ai/technicalRag.js";
 
 export const agentCore = async (userId, message) => {
   const [vehicles, problems] = await Promise.all([
@@ -15,18 +20,27 @@ export const agentCore = async (userId, message) => {
     CarProblem.find().lean(),
   ]);
 
-  const intent = detectIntent(message);
   const entities = extractEntities(message, vehicles);
+  const intent = detectIntent(message, entities);
 
   // ================= TECH =================
   if (intent === "TECHNICAL") {
+    const match = matchIssue(message, problems);
+
+    if (match) {
+      return {
+        type: "TECHNICAL",
+        reply: buildTechnicalResponse(match.issue),
+      };
+    }
+
     return {
       type: "TECHNICAL",
-      reply: "⚠️ Mô tả rõ hơn giúp mình nhé",
+      reply: "Hãy mô tả rõ hơn (rung, giật, điều hòa...)",
     };
   }
 
-  // ================= VEHICLE RANKING =================
+  // ================= VEHICLE =================
   const ranked = rankVehicles(message, vehicles);
 
   if (ranked.length > 0) {
@@ -38,9 +52,8 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= FALLBACK =================
   return {
     type: "GENERAL",
-    reply: "Bạn muốn tìm xe gia đình, offroad hay 7 chỗ?",
+    reply: "Bạn muốn xe gia đình, offroad hay 7 chỗ?",
   };
 };

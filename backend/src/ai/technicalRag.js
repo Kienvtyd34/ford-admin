@@ -1,38 +1,27 @@
-// ai/technicalRag.js
-
-import { enrichText, normalize } from "./textEngine.js";
-
-const similarity = (a, b) => {
-  const A = new Set(a.split(" "));
-  const B = new Set(b.split(" "));
-  let hit = 0;
-  A.forEach((w) => B.has(w) && hit++);
-  return hit / Math.max(A.size, 1);
-};
+import { enrichText } from "./textEngine.js";
 
 export const matchIssue = (msg, issues) => {
   const text = enrichText(msg);
 
-  const ranked = issues.map((i) => {
-    const title = normalize(i.title);
-    const symptoms = (i.symptoms || []).join(" ");
+  let best = null;
+  let bestScore = 0;
 
-    return {
-      issue: i,
-      score:
-        similarity(text, title) * 5 +
-        similarity(text, symptoms) * 3,
-    };
-  });
+  for (const i of issues) {
+    let score = 0;
 
-  ranked.sort((a, b) => b.score - a.score);
+    if (text.includes((i.title || "").toLowerCase())) score += 5;
 
-  const best = ranked[0];
+    for (const s of i.symptoms || []) {
+      if (text.includes(s.toLowerCase())) score += 3;
+    }
 
-  if (!best || best.score < 0.5) return null;
+    if (score > bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  }
 
-  return {
-    issue: best.issue,
-    confidence: Math.min(best.score / 5, 1),
-  };
+  if (bestScore < 3) return null;
+
+  return { issue: best };
 };

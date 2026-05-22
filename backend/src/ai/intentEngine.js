@@ -1,28 +1,11 @@
-export const detectIntent = (msg = "") => {
+export const detectIntent = (msg, entities) => {
   const m = msg.toLowerCase();
 
-  // COLOR
-  if (m.includes("màu") || m.includes("mau")) return "COLOR";
-
-  // FAMILY
+  if (entities.isTechnical) return "TECHNICAL";
+  if (m.includes("so sánh")) return "COMPARE";
   if (m.includes("7 chỗ") || m.includes("gia đình")) return "FAMILY";
-
-  // OFFROAD
-  if (m.includes("offroad") || m.includes("địa hình")) return "OFFROAD";
-
-  // TECHNICAL
-  if (
-    m.includes("rung") ||
-    m.includes("giật") ||
-    m.includes("lỗi") ||
-    m.includes("điều hòa") ||
-    m.includes("không lạnh")
-  ) {
-    return "TECHNICAL";
-  }
-
-  // COMPARE
-  if (m.includes("vs") || m.includes("so sánh")) return "COMPARE";
+  if (m.includes("offroad")) return "OFFROAD";
+  if (m.includes("màu")) return "COLOR";
 
   return "GENERAL";
 };

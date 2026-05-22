@@ -28,23 +28,15 @@ export const getVehicleRAG = async () => {
     },
     {
       $addFields: {
-        variants: {
-          $ifNull: ["$variants", []],
-        },
-
-        colors: {
-          $ifNull: ["$colors", []],
-        },
-
-        inventory: {
-          $ifNull: ["$inventory", []],
-        },
+        variants: { $ifNull: ["$variants", []] },
+        colors: { $ifNull: ["$colors", []] },
+        inventory: { $ifNull: ["$inventory", []] },
 
         bestVariant: {
           $arrayElemAt: [
             {
               $sortArray: {
-                input: { $ifNull: ["$variants", []] },
+                input: "$variants",
                 sortBy: { basePrice: 1 },
               },
             },
