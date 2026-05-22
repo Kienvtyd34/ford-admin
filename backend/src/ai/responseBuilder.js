@@ -1,25 +1,22 @@
 import { safeString, safeNumber } from "../utils/safeGet.js";
 
 export const buildVehicleResponse = (car, variant) => {
-  if (!car) return "Không tìm thấy xe phù hợp";
-
   return `
-🚗 ${safeString(car.name)}
+🚗 ${car?.name || "Không rõ"}
 
-💰 ${safeNumber(variant?.basePrice)
+💰 ${variant?.basePrice
     ? variant.basePrice.toLocaleString("vi-VN") + " VNĐ"
-    : "Liên hệ"}
+    : "Đang cập nhật"}
 
-🚘 ${safeString(variant?.variantName)}
-⚙️ ${safeString(variant?.transmission)}
-🛞 ${safeString(variant?.driveTrain)}
-⛽ ${safeString(variant?.fuelType)}
+🚘 ${variant?.variantName || "Tiêu chuẩn"}
+⚙️ ${variant?.transmission || "AT"}
+🛞 ${variant?.driveTrain || "4x2"}
+⛽ ${variant?.fuelType || "Xăng"}
 
-👥 ${car.seats ?? "?"} chỗ
-🔥 ${safeString(car.type)}
+👥 ${car?.seats || "?"} chỗ
+🔥 ${car?.type || "?"}
 `.trim();
 };
-
 export const buildCompareResponse = (a, b, v1, v2) => {
   if (!a || !b) return "Không đủ dữ liệu để so sánh";
 

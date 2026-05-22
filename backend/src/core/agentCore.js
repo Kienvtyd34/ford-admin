@@ -4,14 +4,10 @@ import CarProblem from "../models/CarProblem.js";
 import { extractEntities } from "../ai/entityEngine.js";
 import { detectIntent } from "../ai/intentEngine.js";
 
-import { matchVehicles } from "../ai/vehicleRag.js";
-import { matchIssue } from "../ai/technicalRag.js";
+import { rankVehicles } from "../ai/vehicleRanker.js";
+import { getBestVariant } from "../utils/getBestVariant.js";
 
-import {
-  buildVehicleResponse,
-  buildCompareResponse,
-  buildTechnicalResponse,
-} from "../ai/responseBuilder.js";
+import { buildVehicleResponse } from "../ai/responseBuilder.js";
 
 export const agentCore = async (userId, message) => {
   const [vehicles, problems] = await Promise.all([
@@ -19,43 +15,32 @@ export const agentCore = async (userId, message) => {
     CarProblem.find().lean(),
   ]);
 
+  const intent = detectIntent(message);
   const entities = extractEntities(message, vehicles);
-  const intent = detectIntent(message, entities);
 
-  // ================= TECHNICAL =================
+  // ================= TECH =================
   if (intent === "TECHNICAL") {
-    const match = matchIssue(message, problems);
-
-    if (match) {
-      return {
-        type: "TECHNICAL",
-        reply: buildTechnicalResponse(match),
-      };
-    }
-
     return {
       type: "TECHNICAL",
-      reply: "Vui lòng mô tả rõ hơn (rung, giật, điều hòa...)",
+      reply: "⚠️ Mô tả rõ hơn giúp mình nhé",
     };
   }
 
-  // ================= VEHICLE =================
-  const matched = matchVehicles(message, vehicles);
+  // ================= VEHICLE RANKING =================
+  const ranked = rankVehicles(message, vehicles);
 
-  if (matched.length > 0) {
+  if (ranked.length > 0) {
     return {
-      type: intent,
-      reply: matched.map((v) =>
-        buildVehicleResponse(
-          v,
-          v.bestVariant || v.variants?.[0] || {}
-        )
+      type: "VEHICLE",
+      reply: ranked.map((v) =>
+        buildVehicleResponse(v, getBestVariant(v))
       ),
     };
   }
 
+  // ================= FALLBACK =================
   return {
     type: "GENERAL",
-    reply: "Bạn muốn tìm xe, lỗi kỹ thuật hay so sánh?",
+    reply: "Bạn muốn tìm xe gia đình, offroad hay 7 chỗ?",
   };
 };
