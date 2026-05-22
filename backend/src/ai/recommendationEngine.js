@@ -1,48 +1,21 @@
-// src/ai/recommendationEngine.js
+import { semanticScore } from "./semanticEngine.js";
 
-export const recommendVehicles = ({
-  entities,
-  models,
-}) => {
+export const recommendVehicles = ({ message, models }) => {
+  return models
+    .map((m) => {
+      let score = 0;
 
-  let results = [...models];
+      score += semanticScore(message, "suv") * (m.type === "SUV" ? 3 : 0);
+      score += semanticScore(message, "pickup") * (m.type === "Pick-up" ? 3 : 0);
+      score += semanticScore(message, "offroad") * (m.type === "Pick-up" ? 2 : 1);
 
-  // ================= TYPE =================
+      if (m.seats >= 7 && message.includes("gia dinh")) {
+        score += 3;
+      }
 
-  if (
-    entities.type
-  ) {
-
-    results = results.filter(
-      (v) =>
-        v.type?.toLowerCase() ===
-        entities.type.toLowerCase()
-    );
-  }
-
-  // ================= SEATS =================
-
-  if (
-    entities.seats
-  ) {
-
-    results = results.filter(
-      (v) =>
-        v.seats >= entities.seats
-    );
-  }
-
-  // ================= OFFROAD =================
-
-  if (
-    entities.offroad
-  ) {
-
-    results = results.filter(
-      (v) =>
-        v.type === "Pick-up"
-    );
-  }
-
-  return results.slice(0, 5);
+      return { ...m, score };
+    })
+    .filter((m) => m.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
 };
