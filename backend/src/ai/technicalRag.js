@@ -1,4 +1,4 @@
-import { enrichText } from "./textEngine.js";
+import { enrichText, normalize } from "./textEngine.js";
 
 export const matchIssue = (msg, issues) => {
   const text = enrichText(msg);
@@ -9,10 +9,12 @@ export const matchIssue = (msg, issues) => {
   for (const i of issues) {
     let score = 0;
 
-    if (text.includes((i.title || "").toLowerCase())) score += 5;
+    const title = normalize(i.title);
+
+    if (text.includes(title)) score += 5;
 
     for (const s of i.symptoms || []) {
-      if (text.includes(s.toLowerCase())) score += 3;
+      if (text.includes(normalize(s))) score += 3;
     }
 
     if (score > bestScore) {
@@ -21,7 +23,5 @@ export const matchIssue = (msg, issues) => {
     }
   }
 
-  if (bestScore < 3) return null;
-
-  return { issue: best };
+  return bestScore >= 3 ? { issue: best } : null;
 };
