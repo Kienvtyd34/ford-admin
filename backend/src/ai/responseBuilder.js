@@ -1,4 +1,4 @@
-import safe from "../utils/getBestVariant.js";
+import safe from "../utils/safeGet.js";
 export const buildVehicleResponse = (car, variant) => {
   return `
 🚗 ${safe.str(car?.name)}
