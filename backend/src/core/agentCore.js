@@ -21,7 +21,7 @@ import { salesAdvisor } from "../ai/salesAdvisor.js";
 const normalize = (text = "") =>
   text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-// ================= AGGREGATION (JOIN MODEL ↔ VARIANT) =================
+// ================= AGGREGATION ENGINE =================
 const getVehicles = async () => {
   return await VehicleModel.aggregate([
     {
@@ -32,8 +32,16 @@ const getVehicles = async () => {
         as: "variants",
       },
     },
+    {
+      $lookup: {
+        from: "inventories",
+        localField: "_id",
+        foreignField: "vehicleId",
+        as: "inventory",
+      },
+    },
 
-    // 👉 chọn variant cao nhất
+    // BEST VARIANT
     {
       $addFields: {
         bestVariant: {
@@ -50,7 +58,7 @@ const getVehicles = async () => {
       },
     },
 
-    // 👉 flatten colors (FIX QUAN TRỌNG)
+    // COLORS FIX (ROBUST)
     {
       $addFields: {
         allColors: {
@@ -60,19 +68,18 @@ const getVehicles = async () => {
                 input: "$variants",
                 as: "v",
                 in: {
-                  $ifNull: ["$$v.colors", []],
+                  $ifNull: ["$$v.colors.exterior", []],
                 },
               },
             },
             initialValue: [],
-            in: {
-              $setUnion: ["$$value", "$$this"],
-            },
+            in: { $setUnion: ["$$value", "$$this"] },
           },
         },
       },
     },
 
+    // CLEAN OUTPUT
     {
       $project: {
         name: 1,
@@ -82,28 +89,38 @@ const getVehicles = async () => {
         variants: 1,
         bestVariant: 1,
         allColors: 1,
+        inventory: 1,
       },
     },
   ]);
 };
 
-// ================= COLOR FIX =================
+// ================= COLOR MERGE =================
 const getColors = (car) => {
-  const fromModel = car.colors?.exterior || [];
-  const fromVariant = car.allColors || [];
-
-  return [...new Set([...fromModel, ...fromVariant])];
+  return [
+    ...new Set([
+      ...(car.colors?.exterior || []),
+      ...(car.allColors || []),
+    ]),
+  ].filter(Boolean);
 };
 
-// ================= AGENT CORE =================
+// ================= BEST VARIANT =================
+const getBestVariant = (car) => {
+  if (car.bestVariant) return car.bestVariant;
+
+  return car.variants?.sort(
+    (a, b) => (b.basePrice || 0) - (a.basePrice || 0)
+  )[0];
+};
+
+// ================= CORE =================
 export const agentCore = async (userId, message) => {
-  const [modelsRaw, inventories, problems] = await Promise.all([
+  const [models, inventories, problems] = await Promise.all([
     getVehicles(),
     Inventory.find().lean(),
     CarProblem.find().lean(),
   ]);
-
-  const models = modelsRaw;
 
   const intent = detectIntent(message);
   const entities = extractEntities(message, models, []);
@@ -139,8 +156,8 @@ export const agentCore = async (userId, message) => {
     return buildCompareResponse(
       car1,
       car2,
-      car1.bestVariant,
-      car2.bestVariant
+      getBestVariant(car1),
+      getBestVariant(car2)
     );
   }
 
@@ -163,11 +180,11 @@ export const agentCore = async (userId, message) => {
 
     return {
       type: "VEHICLE_DETAIL",
-      reply: buildVehicleResponse(car, car.bestVariant),
+      reply: buildVehicleResponse(car, getBestVariant(car)),
     };
   }
 
-  // ================= VARIANT ONLY =================
+  // ================= VARIANT =================
   if (entities.variants?.length) {
     const v = entities.variants[0];
 
@@ -188,12 +205,13 @@ export const agentCore = async (userId, message) => {
 
     return {
       type: "RECOMMEND",
-      reply: recs.map((m) => ({
-        name: m.name,
-        type: m.type,
-        seats: m.seats,
-        price: m.bestVariant?.basePrice,
-        colors: getColors(m),
+      reply: recs.map((car) => ({
+        name: car.name,
+        type: car.type,
+        seats: car.seats,
+        price: getBestVariant(car)?.basePrice,
+        colors: getColors(car),
+        hasInventory: car.inventory?.length > 0,
       })),
     };
   }
