@@ -1,28 +1,35 @@
-// /ai/semanticEngine.js
-const normalize = (t="") =>
-  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const norm = (t = "") =>
+  t.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
-const concepts = {
-  suv: ["suv", "7 cho", "xe gia dinh", "rong rai"],
-  pickup: ["ban tai", "offroad", "ranger", "raptor"],
-  fault: ["loi", "rung", "giat", "khong lanh", "khong no", "abs"],
-  color: ["mau", "son", "ngoai that"],
-};
+const SCORE_RULES = [
+  { key: "everest", weight: 5 },
+  { key: "ranger", weight: 5 },
+  { key: "territory", weight: 4 },
+  { key: "suv", weight: 2 },
+  { key: "pickup", weight: 3 },
+  { key: "7 chỗ", weight: 3 },
+  { key: "gia đình", weight: 3 },
+  { key: "offroad", weight: 4 },
+];
 
-export const semanticScore = (msg, key) => {
-  const text = normalize(msg);
-  return (concepts[key] || []).reduce((acc, w) => {
-    return acc + (text.includes(normalize(w)) ? 1 : 0);
-  }, 0);
-};
+export const rankVehicles = (message, vehicles) => {
+  const msg = norm(message);
 
-export const detectConcept = (msg) => {
-  let best = { key: "general", score: 0 };
+  return vehicles
+    .map((v) => {
+      let score = 0;
 
-  Object.keys(concepts).forEach(k => {
-    const score = semanticScore(msg, k);
-    if (score > best.score) best = { key: k, score };
-  });
+      const name = norm(v.name);
+      const type = norm(v.type);
 
-  return best;
+      if (msg.includes(name)) score += 10;
+      if (msg.includes(type)) score += 3;
+
+      SCORE_RULES.forEach((r) => {
+        if (msg.includes(r.key)) score += r.weight;
+      });
+
+      return { ...v, score };
+    })
+    .sort((a, b) => b.score - a.score);
 };

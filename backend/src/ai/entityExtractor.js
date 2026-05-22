@@ -1,78 +1,25 @@
-// src/ai/entityExtractor.js
-
-export const extractEntities = (
-  message,
-  models,
-  variants
-) => {
-
-  const lower =
-    message.toLowerCase();
+export const extractEntities = (message, models) => {
+  const msg = message.toLowerCase();
 
   const entities = {
-
     models: [],
-    variants: [],
-
     type: null,
     seats: null,
-
-    offroad: false,
+    intentHint: null,
   };
 
-  // ================= MODELS =================
+  // FIX MODEL MATCH (QUAN TRỌNG)
+  entities.models = models.filter((m) => {
+    const name = m.name.toLowerCase();
 
-  entities.models =
-    models.filter((m) =>
-      lower.includes(
-        m.name.toLowerCase()
-      )
-    );
+    return msg.includes(name);
+  });
 
-  // ================= VARIANTS =================
+  if (msg.includes("7 chỗ")) entities.seats = 7;
+  if (msg.includes("5 chỗ")) entities.seats = 5;
 
-  entities.variants =
-    variants.filter((v) =>
-      lower.includes(
-        v.variantName.toLowerCase()
-      )
-    );
-
-  // ================= TYPE =================
-
-  if (
-    lower.includes("suv")
-  ) {
-    entities.type = "SUV";
-  }
-
-  if (
-    lower.includes("bán tải")
-  ) {
-    entities.type = "Pick-up";
-  }
-
-  // ================= SEATS =================
-
-  if (
-    lower.includes("7 chỗ")
-  ) {
-    entities.seats = 7;
-  }
-
-  if (
-    lower.includes("5 chỗ")
-  ) {
-    entities.seats = 5;
-  }
-
-  // ================= OFFROAD =================
-
-  if (
-    lower.includes("offroad")
-  ) {
-    entities.offroad = true;
-  }
+  if (msg.includes("suv")) entities.type = "SUV";
+  if (msg.includes("bán tải")) entities.type = "Pick-up";
 
   return entities;
 };

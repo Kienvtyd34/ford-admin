@@ -1,109 +1,106 @@
-// /core/agentCore.js
-import { getVehicleRAG } from "../rag/vehicleRag.js";
+import { getVehicleGraph } from "../services/getVehicles.js";
+import { rankVehicles } from "../ai/semanticEngine.js";
+import { getColorsByVariant } from "../ai/colorEngine.js";
+
 import Inventory from "../models/Inventory.js";
 import CarProblem from "../models/CarProblem.js";
 
-import { detectConcept } from "../ai/semanticEngine.js";
-import { reason } from "../ai/reasoningEngine.js";
-
-import { mapColors } from "../ai/colorEngine.js";
 import {
   buildVehicleResponse,
   buildCompareResponse,
   buildTechnicalResponse,
 } from "../ai/responseBuilder.js";
 
-const normalize = (t="") =>
-  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+import { salesAdvisor } from "../ai/salesAdvisor.js";
 
-const findCar = (msg, models) =>
-  models.find(m => msg.includes(normalize(m.name)));
+const norm = (t = "") =>
+  t.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
 export const agentCore = async (userId, message) => {
-
   const [models, inventories, problems] = await Promise.all([
-    getVehicleRAG(),
+    getVehicleGraph(),
     Inventory.find().lean(),
     CarProblem.find().lean(),
   ]);
 
-  const msg = normalize(message);
-  const concept = detectConcept(message);
-  const decision = reason(concept, {}, message);
+  const msg = norm(message);
 
-  const car = findCar(msg, models) || models[0];
+  // ================= SMART RANK (FIX BUG CHỌN SAI XE) =================
+  const ranked = rankVehicles(message, models);
+  const best = ranked[0];
 
-  // ================= COLOR (FIXED 100%) =================
-  if (concept.key === "color") {
+  // ================= COLOR =================
+  if (msg.includes("màu") || msg.includes("mau")) {
+    if (!best) return { type: "VEHICLE_COLOR", reply: [] };
+
+    const colors = await getColorsByVariant(best.bestVariant?._id);
+
     return {
       type: "VEHICLE_COLOR",
       reply: {
-        name: car.name,
-        exteriorColors: mapColors(car),
+        name: best.name,
+        exteriorColors: colors,
       },
     };
   }
 
   // ================= TECHNICAL =================
-  if (concept.key === "fault") {
-    const found = problems.find(p =>
-      msg.includes(normalize(p.title)) ||
-      p.symptoms.some(s => msg.includes(normalize(s)))
-    );
+  const problem = problems.find(
+    (p) =>
+      msg.includes(norm(p.title)) ||
+      p.symptoms.some((s) => msg.includes(norm(s)))
+  );
 
-    if (found) {
-      return {
-        type: "TECHNICAL",
-        reply: buildTechnicalResponse(found),
-      };
-    }
+  if (problem) {
+    return {
+      type: "TECHNICAL",
+      reply: buildTechnicalResponse(problem),
+    };
   }
 
   // ================= COMPARE =================
   if (msg.includes("vs")) {
-    const [a, b] = models;
+    const [a, b] = ranked;
 
     return {
       type: "COMPARE",
-      reply: buildCompareResponse(a, b, a.bestVariant, b.bestVariant),
-    };
-  }
-
-  // ================= REASONING ENGINE =================
-  if (decision === "FAMILY_CAR") {
-    return {
-      type: "RECOMMEND",
-      reply: models.filter(m => m.seats >= 7),
-    };
-  }
-
-  if (decision === "OFFROAD_CAR") {
-    return {
-      type: "RECOMMEND",
-      reply: models.filter(m => m.type === "Pick-up"),
+      reply: buildCompareResponse(
+        a,
+        b,
+        a.bestVariant,
+        b.bestVariant
+      ),
     };
   }
 
   // ================= DETAIL =================
-  if (car) {
+  if (best && best.score > 3) {
     return {
       type: "DETAIL",
-      reply: buildVehicleResponse(car, car.bestVariant),
+      reply: buildVehicleResponse(best, best.bestVariant),
     };
   }
 
-  // ================= GENERAL (SMART) =================
+  // ================= RECOMMEND =================
+  if (
+    msg.includes("gia đình") ||
+    msg.includes("offroad") ||
+    msg.includes("7 chỗ")
+  ) {
+    return {
+      type: "RECOMMEND",
+      reply: ranked.slice(0, 5).map((r) => ({
+        name: r.name,
+        type: r.type,
+        seats: r.seats,
+        price: r.bestVariant?.basePrice,
+      })),
+    };
+  }
+
+  // ================= DEFAULT =================
   return {
     type: "GENERAL",
-    reply: {
-      message: "Bạn có thể hỏi theo nhu cầu:",
-      intents: [
-        "xe gia đình",
-        "xe offroad",
-        "so sánh xe",
-        "màu xe",
-        "lỗi kỹ thuật",
-      ],
-    },
+    reply: salesAdvisor({}),
   };
 };
