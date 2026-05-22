@@ -11,4 +11,5 @@ const variantSchema = new mongoose.Schema({
 
 variantSchema.index({ modelId: 1 });
 
-export default mongoose.model("Variant", variantSchema);
+
+export default mongoose.model("Variant", variantSchema, "variants");

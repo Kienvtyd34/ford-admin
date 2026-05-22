@@ -28,4 +28,8 @@ const vehicleModelSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("VehicleModel", vehicleModelSchema);
+export default mongoose.model(
+  "VehicleModel",
+  vehicleModelSchema,
+  "vehiclemodels"
+);

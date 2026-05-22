@@ -1,24 +1,31 @@
-export const scoreVehicle = (msg, v) => {
+export const scoreVehicle = (msg, vehicle) => {
+  if (!vehicle) return 0;
+
+  const text = msg.toLowerCase();
+  const name = (vehicle.name || "").toLowerCase();
+  const type = (vehicle.type || "").toLowerCase();
+
   let score = 0;
-  const t = msg.toLowerCase();
 
-  const name = (v.name || "").toLowerCase();
-  const type = (v.type || "").toLowerCase();
+  if (text.includes(name)) score += 10;
 
-  if (t.includes(name)) score += 10;
+  if (text.includes("7 chỗ") && vehicle.seats >= 7) score += 8;
 
-  if (t.includes("7 chỗ") && v.seats >= 7) score += 8;
-  if (t.includes("gia đình") && v.seats >= 7) score += 7;
+  if (text.includes("gia đình") && vehicle.seats >= 7) score += 7;
+
+  if (text.includes("suv") && type.includes("suv")) score += 6;
 
   if (
-    t.includes("offroad") &&
-    (name.includes("ranger") || name.includes("raptor") || name.includes("everest"))
-  ) {
-    score += 9;
-  }
+    text.includes("bán tải") &&
+    type.includes("pick")
+  ) score += 6;
 
-  if (t.includes("suv") && type.includes("suv")) score += 5;
-  if (t.includes("bán tải") && type.includes("pick")) score += 5;
+  if (
+    text.includes("offroad") &&
+    (name.includes("ranger") ||
+      name.includes("raptor") ||
+      name.includes("everest"))
+  ) score += 9;
 
   return score;
 };

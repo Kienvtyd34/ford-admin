@@ -4,7 +4,7 @@ export const getVehicleRAG = async () => {
   return VehicleModel.aggregate([
     {
       $lookup: {
-        from: "vehiclevariants",
+        from: "variants",
         localField: "_id",
         foreignField: "modelId",
         as: "variants",
@@ -33,16 +33,11 @@ export const getVehicleRAG = async () => {
         inventory: { $ifNull: ["$inventory", []] },
 
         bestVariant: {
-          $let: {
-            vars: {
-              sorted: {
-                $sortArray: {
-                  input: { $ifNull: ["$variants", []] },
-                  sortBy: { basePrice: -1 },
-                },
-              },
+          $first: {
+            $sortArray: {
+              input: { $ifNull: ["$variants", []] },
+              sortBy: { basePrice: 1 },
             },
-            in: { $arrayElemAt: ["$$sorted", 0] },
           },
         },
       },

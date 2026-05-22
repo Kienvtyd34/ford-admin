@@ -1,18 +1,11 @@
 import { getVehicleRAG } from "../services/vehicleRag.service.js";
 import CarProblem from "../models/CarProblem.js";
 
-import { extractEntities } from "../ai/entityEngine.js";
 import { detectIntent } from "../ai/intentEngine.js";
+import { extractEntities } from "../ai/entityEngine.js";
 
-import { rankVehicles } from "../ai/vehicleRanker.js";
-import { getBestVariant } from "../utils/getBestVariant.js";
-
-import {
-  buildVehicleResponse,
-  buildTechnicalResponse,
-} from "../ai/responseBuilder.js";
-
-import { matchIssue } from "../ai/technicalRag.js";
+import { rankVehicles } from "../ai/rankVehicles.js";
+import { buildVehicleResponse, buildTechnicalResponse } from "../ai/responseBuilder.js";
 
 export const agentCore = async (userId, message) => {
   const [vehicles, problems] = await Promise.all([
@@ -20,40 +13,34 @@ export const agentCore = async (userId, message) => {
     CarProblem.find().lean(),
   ]);
 
+  const intent = detectIntent(message);
   const entities = extractEntities(message, vehicles);
-  const intent = detectIntent(message, entities);
 
-  // ================= TECH =================
+  // TECH
   if (intent === "TECHNICAL") {
-    const match = matchIssue(message, problems);
+    const match = problems.find((p) =>
+      message.toLowerCase().includes(p.title.toLowerCase())
+    );
 
-    if (match) {
-      return {
-        type: "TECHNICAL",
-        reply: buildTechnicalResponse(match.issue),
-      };
-    }
+    if (match) return { type: "TECH", reply: buildTechnicalResponse(match) };
 
-    return {
-      type: "TECHNICAL",
-      reply: "Hãy mô tả rõ hơn (rung, giật, điều hòa...)",
-    };
+    return { type: "TECH", reply: "⚠️ Mô tả rõ hơn giúp mình nhé" };
   }
 
-  // ================= VEHICLE =================
+  // RANK VEHICLE
   const ranked = rankVehicles(message, vehicles);
 
-  if (ranked.length > 0) {
+  if (ranked.length) {
     return {
       type: "VEHICLE",
       reply: ranked.map((v) =>
-        buildVehicleResponse(v, getBestVariant(v))
+        buildVehicleResponse(v, v.bestVariant)
       ),
     };
   }
 
   return {
     type: "GENERAL",
-    reply: "Bạn muốn xe gia đình, offroad hay 7 chỗ?",
+    reply: "Bạn muốn xe 7 chỗ, SUV hay offroad?",
   };
 };

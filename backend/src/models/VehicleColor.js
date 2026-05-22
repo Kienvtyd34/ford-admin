@@ -25,4 +25,8 @@ const vehicleColorSchema = new mongoose.Schema({
 
 vehicleColorSchema.index({ variantId: 1 });
 
-export default mongoose.model("VehicleColor", vehicleColorSchema);
+export default mongoose.model(
+  "VehicleColor",
+  vehicleColorSchema,
+  "vehiclecolors"
+);
