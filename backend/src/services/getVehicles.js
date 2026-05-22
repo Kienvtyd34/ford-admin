@@ -1,6 +1,6 @@
 import VehicleModel from "../models/VehicleModel.js";
 
-export const getVehicleGraph = async () => {
+export const getVehicles = async () => {
   return VehicleModel.aggregate([
     {
       $lookup: {
@@ -10,20 +10,27 @@ export const getVehicleGraph = async () => {
         as: "variants",
       },
     },
+
     {
       $lookup: {
         from: "vehiclecolors",
-        let: { variantIds: "$variants._id" },
+        let: { modelId: "$_id", variantIds: "$variants._id" },
         pipeline: [
           {
             $match: {
-              $expr: { $in: ["$variantId", "$$variantIds"] },
+              $expr: {
+                $or: [
+                  { $eq: ["$modelId", "$$modelId"] },
+                  { $in: ["$variantId", "$$variantIds"] },
+                ],
+              },
             },
           },
         ],
         as: "colors",
       },
     },
+
     {
       $lookup: {
         from: "inventories",

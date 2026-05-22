@@ -1,6 +1,6 @@
-import { getVehicleGraph } from "../services/getVehicles.js";
-import { rankVehicles } from "../ai/semanticEngine.js";
-import { getColorsByVariant } from "../ai/colorEngine.js";
+import { getVehicles } from "../services/getVehicles.js";
+import { scoreVehicle } from "../ai/semanticEngine.js";
+import { mapColors } from "../ai/colorEngine.js";
 
 import Inventory from "../models/Inventory.js";
 import CarProblem from "../models/CarProblem.js";
@@ -18,28 +18,30 @@ const norm = (t = "") =>
 
 export const agentCore = async (userId, message) => {
   const [models, inventories, problems] = await Promise.all([
-    getVehicleGraph(),
+    getVehicles(),
     Inventory.find().lean(),
     CarProblem.find().lean(),
   ]);
 
   const msg = norm(message);
 
-  // ================= SMART RANK (FIX BUG CHỌN SAI XE) =================
-  const ranked = rankVehicles(message, models);
+  // ================= RANK =================
+  const ranked = models
+    .map((v) => ({
+      ...v,
+      score: scoreVehicle(message, v),
+    }))
+    .sort((a, b) => b.score - a.score);
+
   const best = ranked[0];
 
   // ================= COLOR =================
   if (msg.includes("màu") || msg.includes("mau")) {
-    if (!best) return { type: "VEHICLE_COLOR", reply: [] };
-
-    const colors = await getColorsByVariant(best.bestVariant?._id);
-
     return {
       type: "VEHICLE_COLOR",
       reply: {
         name: best.name,
-        exteriorColors: colors,
+        exteriorColors: mapColors(best),
       },
     };
   }
@@ -74,7 +76,7 @@ export const agentCore = async (userId, message) => {
   }
 
   // ================= DETAIL =================
-  if (best && best.score > 3) {
+  if (best && best.score > 5) {
     return {
       type: "DETAIL",
       reply: buildVehicleResponse(best, best.bestVariant),
@@ -84,16 +86,15 @@ export const agentCore = async (userId, message) => {
   // ================= RECOMMEND =================
   if (
     msg.includes("gia đình") ||
-    msg.includes("offroad") ||
-    msg.includes("7 chỗ")
+    msg.includes("7 chỗ") ||
+    msg.includes("offroad")
   ) {
     return {
       type: "RECOMMEND",
-      reply: ranked.slice(0, 5).map((r) => ({
-        name: r.name,
-        type: r.type,
-        seats: r.seats,
-        price: r.bestVariant?.basePrice,
+      reply: ranked.slice(0, 5).map((v) => ({
+        name: v.name,
+        type: v.type,
+        seats: v.seats,
       })),
     };
   }

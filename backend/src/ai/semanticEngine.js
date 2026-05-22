@@ -1,35 +1,21 @@
-const norm = (t = "") =>
-  t.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+export const scoreVehicle = (msg, v) => {
+  const m = msg.toLowerCase();
 
-const SCORE_RULES = [
-  { key: "everest", weight: 5 },
-  { key: "ranger", weight: 5 },
-  { key: "territory", weight: 4 },
-  { key: "suv", weight: 2 },
-  { key: "pickup", weight: 3 },
-  { key: "7 chỗ", weight: 3 },
-  { key: "gia đình", weight: 3 },
-  { key: "offroad", weight: 4 },
-];
+  let score = 0;
 
-export const rankVehicles = (message, vehicles) => {
-  const msg = norm(message);
+  if (m.includes(v.name.toLowerCase())) score += 30;
 
-  return vehicles
-    .map((v) => {
-      let score = 0;
+  if (m.includes("offroad")) {
+    if (v.name.includes("Raptor")) score += 40;
+    if (v.name.includes("Ranger")) score += 25;
+    if (v.name.includes("Everest")) score += 10;
+  }
 
-      const name = norm(v.name);
-      const type = norm(v.type);
+  if (m.includes("7 chỗ") && v.seats >= 7) score += 30;
 
-      if (msg.includes(name)) score += 10;
-      if (msg.includes(type)) score += 3;
+  if (m.includes("gia đình") && v.seats >= 7) score += 25;
 
-      SCORE_RULES.forEach((r) => {
-        if (msg.includes(r.key)) score += r.weight;
-      });
+  if (m.includes("suv") && v.type === "SUV") score += 15;
 
-      return { ...v, score };
-    })
-    .sort((a, b) => b.score - a.score);
+  return score;
 };
