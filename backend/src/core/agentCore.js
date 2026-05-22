@@ -1,18 +1,3 @@
-import { getVehicleRAG } from "../services/vehicleRag.service.js";
-import CarProblem from "../models/CarProblem.js";
-
-import { detectIntent } from "../ai/intentEngine.js";
-import { extractEntities } from "../ai/entityEngine.js";
-import { rankVehicles } from "../ai/vehicleRanker.js";
-import { getBestVariant } from "../utils/getBestVariant.js";
-
-import {
-  buildVehicleResponse,
-  buildTechnicalResponse,
-} from "../ai/responseBuilder.js";
-
-import { matchIssue } from "../ai/technicalRag.js";
-
 export const agentCore = async (userId, message) => {
   const [vehicles, problems] = await Promise.all([
     getVehicleRAG(),
@@ -20,9 +5,8 @@ export const agentCore = async (userId, message) => {
   ]);
 
   const intent = detectIntent(message);
-  const entities = extractEntities(message, vehicles);
 
-  // =================🔥 1. TECHNICAL (FIX QUAN TRỌNG NHẤT)
+  // 🔥 1. TECHNICAL FIRST (FIX BUG CHÍNH)
   const techMatch = matchIssue(message, problems);
 
   if (techMatch?.issue) {
@@ -32,7 +16,7 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= 2. VEHICLE RANKING
+  // 2. VEHICLE
   const ranked = rankVehicles(message, vehicles);
 
   if (ranked.length > 0) {
@@ -44,7 +28,6 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= 3. FALLBACK
   return {
     type: "GENERAL",
     reply: "Bạn muốn xe 7 chỗ, SUV hay offroad?",

@@ -22,11 +22,13 @@ export const buildVehicleResponse = (car, variant) => {
 };
 
 export const buildTechnicalResponse = (p) => {
-  return `
-⚠️ ${p.title}
+  if (!p) return "Không tìm thấy lỗi phù hợp";
 
-🔍 ${p.symptoms?.join(", ")}
-🛠 ${p.causes?.join(", ")}
-✅ ${p.solutions?.join(", ")}
+  return `
+⚠️ ${p.title || "Không rõ lỗi"}
+
+🔍 ${(p.symptoms || []).join(", ") || "Không rõ"}
+🛠 ${(p.causes || []).join(", ") || "Không rõ"}
+✅ ${(p.solutions || []).join(", ") || "Không rõ"}
 `.trim();
 };

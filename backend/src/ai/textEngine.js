@@ -1,18 +1,24 @@
 export const normalize = (t = "") =>
-  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  t
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
 
 export const enrichText = (text = "") => {
   const synonyms = {
-    rung: ["giật", "khựng"],
-    offroad: ["địa hình", "bùn"],
-    dieuhoa: ["máy lạnh"],
+    rung: ["giat", "khung", "lac"],
+    dieuhoa: ["may lanh", "ac", "ac quang"],
+    offroad: ["dia hinh", "bun", "dat"],
   };
 
   let t = normalize(text);
 
   for (const k in synonyms) {
     if (t.includes(k)) {
-      synonyms[k].forEach((s) => (t += " " + s));
+      for (const s of synonyms[k]) {
+        t += " " + normalize(s);
+      }
     }
   }
 
