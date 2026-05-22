@@ -18,261 +18,173 @@ import { saveMemory } from "../ai/memoryEngine.js";
 import { salesAdvisor } from "../ai/salesAdvisor.js";
 
 // ================= NORMALIZE =================
+const normalize = (text = "") =>
+  text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-const normalize = (text = "") => {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+// ================= BEST VARIANT SELECTOR =================
+const buildVariantMap = (variants) => {
+  const map = new Map();
+
+  for (const v of variants) {
+    const key = String(v.modelId);
+
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(v);
+  }
+
+  return map;
+};
+
+const getBestVariant = (variantMap, modelId) => {
+  const list = variantMap.get(String(modelId)) || [];
+  if (!list.length) return null;
+
+  return list.sort((a, b) => (b.basePrice || 0) - (a.basePrice || 0))[0];
+};
+
+// ================= ATTRIBUTE HANDLER =================
+const handleColorQuery = (message, model, variants) => {
+  const msg = normalize(message);
+
+  if (!msg.includes("mau") && !msg.includes("màu")) return null;
+
+  const colorsFromVariants = [
+    ...new Set(
+      variants
+        .filter(v => String(v.modelId) === String(model._id))
+        .flatMap(v => v.colors || [])
+    ),
+  ];
+
+  return {
+    type: "VEHICLE_COLOR",
+    reply: {
+      name: model.name,
+      exteriorColors:
+        model.colors?.exterior ||
+        colorsFromVariants ||
+        ["Trắng", "Đen", "Bạc", "Xám"],
+    },
+  };
 };
 
 // ================= AGENT CORE =================
-
-export const agentCore = async (
-  userId,
-  message
-) => {
-  const [
-    models,
-    variants,
-    inventories,
-    problems,
-  ] = await Promise.all([
-    VehicleModel.find(),
-    VehicleVariant.find(),
-    Inventory.find(),
-    CarProblem.find(),
+export const agentCore = async (userId, message) => {
+  const [models, variants, inventories, problems] = await Promise.all([
+    VehicleModel.find().lean(),
+    VehicleVariant.find().lean(),
+    Inventory.find().lean(),
+    CarProblem.find().lean(),
   ]);
 
-  const normalizedMessage =
-    normalize(message);
-
-  const intent =
-    detectIntent(message);
-
-  const entities =
-    extractEntities(
-      message,
-      models,
-      variants
-    );
+  const intent = detectIntent(message);
+  const entities = extractEntities(message, models, variants);
 
   saveMemory(userId, entities);
 
-  // ================= COMPARE =================
+  const variantMap = buildVariantMap(variants);
 
-  if (
-    intent === "COMPARE" &&
-    entities.models.length >= 2
-  ) {
-    const car1 =
-      entities.models[0];
+  // ================= 1. TECHNICAL =================
+  if (intent === "TECHNICAL") {
+    let found = null;
 
-    const car2 =
-      entities.models[1];
+    const msg = normalize(message);
 
-    const variant1 =
-      variants.find(
-        (v) =>
-          String(v.modelId) ===
-          String(car1._id)
-      );
+    for (const p of problems) {
+      if (msg.includes(normalize(p.title))) {
+        found = p;
+        break;
+      }
 
-    const variant2 =
-      variants.find(
-        (v) =>
-          String(v.modelId) ===
-          String(car2._id)
-      );
+      if (p.symptoms?.some(s => msg.includes(normalize(s)))) {
+        found = p;
+        break;
+      }
+    }
+
+    if (found) return buildTechnicalResponse(found);
+  }
+
+  // ================= 2. COMPARE =================
+  if (intent === "COMPARE" && entities.models.length >= 2) {
+    const car1 = entities.models[0];
+    const car2 = entities.models[1];
 
     return buildCompareResponse(
       car1,
       car2,
-      variant1,
-      variant2
+      getBestVariant(variantMap, car1._id),
+      getBestVariant(variantMap, car2._id)
     );
   }
 
-  // ================= RECOMMEND =================
-
-  if (
-    intent === "RECOMMEND"
-  ) {
-    const recs =
-      recommendVehicles({
-        entities,
-        models,
-        variants,
-      });
-
-    if (!recs.length) {
-      return "Không tìm thấy xe phù hợp";
-    }
-
-    return recs
-      .map((car) => {
-        const variant =
-          variants.find(
-            (v) =>
-              String(v.modelId) ===
-              String(car._id)
-          );
-
-        return (
-          buildVehicleResponse(
-            car,
-            variant
-          ) +
-          "\n" +
-          salesAdvisor(entities)
-        );
-      })
-      .join("\n\n");
-  }
-
-  // ================= MODEL =================
-
-  if (
-    entities.models.length
-  ) {
-    const car =
-      entities.models[0];
-
-    const variant =
-      variants.find(
-        (v) =>
-          String(v.modelId) ===
-          String(car._id)
-      );
-
-    return buildVehicleResponse(
-      car,
-      variant
+  // ================= 3. COLOR QUERY (FIX CRITICAL BUG) =================
+  if (entities.models.length) {
+    const colorResult = handleColorQuery(
+      message,
+      entities.models[0],
+      variants
     );
+
+    if (colorResult) return colorResult;
   }
 
-  // ================= VARIANT =================
+  // ================= 4. VEHICLE DETAIL =================
+  if (entities.models.length === 1) {
+    const car = entities.models[0];
 
-  if (
-    entities.variants.length
-  ) {
-    const v =
-      entities.variants[0];
-
-    return `
-🚘 ${v.variantName}
-
-💰 ${v.basePrice.toLocaleString(
-      "vi-VN"
-    )} VNĐ
-
-⚙️ ${v.transmission}
-
-🛞 ${v.driveTrain}
-`;
+    return {
+      type: "VEHICLE_DETAIL",
+      reply: buildVehicleResponse(
+        car,
+        getBestVariant(variantMap, car._id)
+      ),
+    };
   }
 
-  // ================= INVENTORY =================
+  // ================= 5. VARIANT ONLY =================
+  if (entities.variants.length) {
+    const v = entities.variants[0];
 
-  if (
-    intent === "TEST_DRIVE"
-  ) {
-    const available =
-      inventories.filter(
-        (i) => i.testDriveAvailable
-      );
-
-    if (!available.length) {
-      return "Hiện chưa có xe lái thử";
-    }
-
-    return buildInventoryResponse(
-      available
-    );
+    return {
+      type: "VARIANT",
+      reply: {
+        name: v.variantName,
+        price: v.basePrice,
+        transmission: v.transmission,
+        driveTrain: v.driveTrain,
+      },
+    };
   }
 
-  // ================= TECHNICAL =================
+  // ================= 6. RECOMMEND =================
+  if (intent === "RECOMMEND") {
+    const recs = recommendVehicles({ entities, models });
 
-  if (
-    intent === "TECHNICAL"
-  ) {
-    let found = null;
-
-    for (const p of problems) {
-      // title
-      if (
-        normalizedMessage.includes(
-          normalize(p.title)
-        )
-      ) {
-        found = p;
-        break;
-      }
-
-      // symptoms
-      const symptomMatched =
-        p.symptoms.some((s) =>
-          normalizedMessage.includes(
-            normalize(s)
-          )
-        );
-
-      if (symptomMatched) {
-        found = p;
-        break;
-      }
-
-      // causes
-      const causeMatched =
-        p.causes.some((c) =>
-          normalizedMessage.includes(
-            normalize(c)
-          )
-        );
-
-      if (causeMatched) {
-        found = p;
-        break;
-      }
-    }
-
-    if (found) {
-      return buildTechnicalResponse(
-        found
-      );
-    }
-
-    return `
-⚠️ Tôi chưa nhận diện được lỗi.
-
-Ví dụ:
-- xe rung khi sang số
-- điều hòa không mát
-- đèn ABS sáng
-- lỗi U3000
-`;
+    return {
+      type: "RECOMMEND",
+      reply: recs.map(car => ({
+        name: car.name,
+        type: car.type,
+        seats: car.seats,
+        variant: getBestVariant(variantMap, car._id),
+      })),
+    };
   }
 
-  // ================= DEFAULT =================
+  // ================= 7. TEST DRIVE =================
+  if (intent === "TEST_DRIVE") {
+    const list = inventories.filter(i => i.testDriveAvailable);
 
-  return `
-Tôi có thể hỗ trợ:
+    return {
+      type: "TEST_DRIVE",
+      reply: list.map(buildInventoryResponse),
+    };
+  }
 
-• Giá xe
-• Phiên bản xe
-• SUV / bán tải
-• Xe gia đình
-• Xe offroad
-• Xe tiết kiệm nhiên liệu
-• Xe đang lái thử
-• So sánh xe
-• Lỗi kỹ thuật
-• Triệu chứng xe
-
-Ví dụ:
-- Everest vs Ranger
-- SUV 7 chỗ
-- xe offroad
-- xe bị lỗi ABS
-`;
+  // ================= FALLBACK =================
+  return {
+    type: "GENERAL",
+    reply: salesAdvisor(entities),
+  };
 };
