@@ -4,7 +4,7 @@ import CarProblem from "../models/CarProblem.js";
 import { detectIntent } from "../ai/intentEngine.js";
 import { extractEntities } from "../ai/entityEngine.js";
 
-import { rankVehicles } from "../ai/rankVehicles.js";
+import { rankVehicles } from "../ai/vehicleRanker.js";
 import { buildVehicleResponse, buildTechnicalResponse } from "../ai/responseBuilder.js";
 
 export const agentCore = async (userId, message) => {
