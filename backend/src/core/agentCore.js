@@ -21,74 +21,100 @@ import { salesAdvisor } from "../ai/salesAdvisor.js";
 const normalize = (text = "") =>
   text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-// ================= BEST VARIANT SELECTOR =================
-const buildVariantMap = (variants) => {
-  const map = new Map();
-
-  for (const v of variants) {
-    const key = String(v.modelId);
-
-    if (!map.has(key)) map.set(key, []);
-    map.get(key).push(v);
-  }
-
-  return map;
-};
-
-const getBestVariant = (variantMap, modelId) => {
-  const list = variantMap.get(String(modelId)) || [];
-  if (!list.length) return null;
-
-  return list.sort((a, b) => (b.basePrice || 0) - (a.basePrice || 0))[0];
-};
-
-// ================= ATTRIBUTE HANDLER =================
-const handleColorQuery = (message, model, variants) => {
-  const msg = normalize(message);
-
-  if (!msg.includes("mau") && !msg.includes("màu")) return null;
-
-  const colorsFromVariants = [
-    ...new Set(
-      variants
-        .filter(v => String(v.modelId) === String(model._id))
-        .flatMap(v => v.colors || [])
-    ),
-  ];
-
-  return {
-    type: "VEHICLE_COLOR",
-    reply: {
-      name: model.name,
-      exteriorColors:
-        model.colors?.exterior ||
-        colorsFromVariants ||
-        ["Trắng", "Đen", "Bạc", "Xám"],
+// ================= AGGREGATION (JOIN MODEL ↔ VARIANT) =================
+const getVehicles = async () => {
+  return await VehicleModel.aggregate([
+    {
+      $lookup: {
+        from: "vehiclevariants",
+        localField: "_id",
+        foreignField: "modelId",
+        as: "variants",
+      },
     },
-  };
+
+    // 👉 chọn variant cao nhất
+    {
+      $addFields: {
+        bestVariant: {
+          $arrayElemAt: [
+            {
+              $sortArray: {
+                input: "$variants",
+                sortBy: { basePrice: -1 },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    },
+
+    // 👉 flatten colors (FIX QUAN TRỌNG)
+    {
+      $addFields: {
+        allColors: {
+          $reduce: {
+            input: {
+              $map: {
+                input: "$variants",
+                as: "v",
+                in: {
+                  $ifNull: ["$$v.colors", []],
+                },
+              },
+            },
+            initialValue: [],
+            in: {
+              $setUnion: ["$$value", "$$this"],
+            },
+          },
+        },
+      },
+    },
+
+    {
+      $project: {
+        name: 1,
+        type: 1,
+        seats: 1,
+        colors: 1,
+        variants: 1,
+        bestVariant: 1,
+        allColors: 1,
+      },
+    },
+  ]);
+};
+
+// ================= COLOR FIX =================
+const getColors = (car) => {
+  const fromModel = car.colors?.exterior || [];
+  const fromVariant = car.allColors || [];
+
+  return [...new Set([...fromModel, ...fromVariant])];
 };
 
 // ================= AGENT CORE =================
 export const agentCore = async (userId, message) => {
-  const [models, variants, inventories, problems] = await Promise.all([
-    VehicleModel.find().lean(),
-    VehicleVariant.find().lean(),
+  const [modelsRaw, inventories, problems] = await Promise.all([
+    getVehicles(),
     Inventory.find().lean(),
     CarProblem.find().lean(),
   ]);
 
+  const models = modelsRaw;
+
   const intent = detectIntent(message);
-  const entities = extractEntities(message, models, variants);
+  const entities = extractEntities(message, models, []);
 
   saveMemory(userId, entities);
 
-  const variantMap = buildVariantMap(variants);
+  const msg = normalize(message);
 
-  // ================= 1. TECHNICAL =================
+  // ================= TECHNICAL =================
   if (intent === "TECHNICAL") {
     let found = null;
-
-    const msg = normalize(message);
 
     for (const p of problems) {
       if (msg.includes(normalize(p.title))) {
@@ -96,7 +122,7 @@ export const agentCore = async (userId, message) => {
         break;
       }
 
-      if (p.symptoms?.some(s => msg.includes(normalize(s)))) {
+      if (p.symptoms?.some((s) => msg.includes(normalize(s)))) {
         found = p;
         break;
       }
@@ -105,7 +131,7 @@ export const agentCore = async (userId, message) => {
     if (found) return buildTechnicalResponse(found);
   }
 
-  // ================= 2. COMPARE =================
+  // ================= COMPARE =================
   if (intent === "COMPARE" && entities.models.length >= 2) {
     const car1 = entities.models[0];
     const car2 = entities.models[1];
@@ -113,37 +139,36 @@ export const agentCore = async (userId, message) => {
     return buildCompareResponse(
       car1,
       car2,
-      getBestVariant(variantMap, car1._id),
-      getBestVariant(variantMap, car2._id)
+      car1.bestVariant,
+      car2.bestVariant
     );
   }
 
-  // ================= 3. COLOR QUERY (FIX CRITICAL BUG) =================
-  if (entities.models.length) {
-    const colorResult = handleColorQuery(
-      message,
-      entities.models[0],
-      variants
-    );
+  // ================= COLOR =================
+  if (msg.includes("màu") || msg.includes("mau")) {
+    const car = entities.models[0] || models[0];
 
-    if (colorResult) return colorResult;
+    return {
+      type: "VEHICLE_COLOR",
+      reply: {
+        name: car.name,
+        exteriorColors: getColors(car),
+      },
+    };
   }
 
-  // ================= 4. VEHICLE DETAIL =================
+  // ================= VEHICLE DETAIL =================
   if (entities.models.length === 1) {
     const car = entities.models[0];
 
     return {
       type: "VEHICLE_DETAIL",
-      reply: buildVehicleResponse(
-        car,
-        getBestVariant(variantMap, car._id)
-      ),
+      reply: buildVehicleResponse(car, car.bestVariant),
     };
   }
 
-  // ================= 5. VARIANT ONLY =================
-  if (entities.variants.length) {
+  // ================= VARIANT ONLY =================
+  if (entities.variants?.length) {
     const v = entities.variants[0];
 
     return {
@@ -157,24 +182,25 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= 6. RECOMMEND =================
+  // ================= RECOMMEND =================
   if (intent === "RECOMMEND") {
     const recs = recommendVehicles({ entities, models });
 
     return {
       type: "RECOMMEND",
-      reply: recs.map(car => ({
-        name: car.name,
-        type: car.type,
-        seats: car.seats,
-        variant: getBestVariant(variantMap, car._id),
+      reply: recs.map((m) => ({
+        name: m.name,
+        type: m.type,
+        seats: m.seats,
+        price: m.bestVariant?.basePrice,
+        colors: getColors(m),
       })),
     };
   }
 
-  // ================= 7. TEST DRIVE =================
+  // ================= TEST DRIVE =================
   if (intent === "TEST_DRIVE") {
-    const list = inventories.filter(i => i.testDriveAvailable);
+    const list = inventories.filter((i) => i.testDriveAvailable);
 
     return {
       type: "TEST_DRIVE",
@@ -182,7 +208,7 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= FALLBACK =================
+  // ================= DEFAULT =================
   return {
     type: "GENERAL",
     reply: salesAdvisor(entities),
