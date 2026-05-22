@@ -1,33 +1,32 @@
+import safe from "../utils/safeGet.js";
 export const buildVehicleResponse = (car, variant) => {
-  const v = variant || {};
+  if (!car) return "";
 
   return `
-🚗 ${car?.name || "Không rõ"}
+🚗 ${safe.str(car.name)}
 
 💰 ${
-    v.basePrice
-      ? v.basePrice.toLocaleString("vi-VN") + " VNĐ"
+    variant?.basePrice
+      ? variant.basePrice.toLocaleString("vi-VN") + " VNĐ"
       : "Liên hệ"
   }
 
-🚘 ${v.variantName || "Tiêu chuẩn"}
-⚙️ ${v.transmission || "Không rõ"}
-🛞 ${v.driveTrain || "Không rõ"}
-⛽ ${v.fuelType || "Không rõ"}
+🚘 ${safe.str(variant?.variantName)}
+⚙️ ${safe.str(variant?.transmission)}
+🛞 ${safe.str(variant?.driveTrain)}
+⛽ ${safe.str(variant?.fuelType)}
 
-👥 ${car?.seats ?? "?"} chỗ
-🔥 ${car?.type || "?"}
+👥 ${safe.str(car.seats)}
+🔥 ${safe.str(car.type)}
 `.trim();
 };
 
 export const buildTechnicalResponse = (p) => {
-  if (!p) return "Không tìm thấy lỗi";
-
   return `
 ⚠️ ${p.title}
 
-🔍 ${(p.symptoms || []).join(", ")}
-🛠 ${(p.causes || []).join(", ")}
-✅ ${(p.solutions || []).join(", ")}
+🔍 ${p.symptoms?.join(", ")}
+🛠 ${p.causes?.join(", ")}
+✅ ${p.solutions?.join(", ")}
 `.trim();
 };
