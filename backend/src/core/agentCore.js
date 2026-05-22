@@ -16,11 +16,10 @@ import {
 
 import { salesAdvisor } from "../ai/salesAdvisor.js";
 
-// ================= NORMALIZE =================
 const normalize = (t = "") =>
   t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-// ================= CORE =================
+// ================= STRICT PRIORITY ENGINE =================
 export const agentCore = async (userId, message) => {
   const [models, inventories, problems] = await Promise.all([
     getVehicles(),
@@ -32,19 +31,37 @@ export const agentCore = async (userId, message) => {
   const intent = detectIntent(message);
   const entities = extractEntities(message, models);
 
-  // ================= FIND CAR HELPERS =================
-  const findCar = () => {
-    if (entities?.models?.length) return entities.models[0];
+  const findCar = () =>
+    entities?.models?.[0] ||
+    models.find((m) => msg.includes(normalize(m.name))) ||
+    null;
 
-    return (
-      models.find((m) => msg.includes(normalize(m.name))) ||
-      models[0]
+  // ================= 1. TECHNICAL (HIGHEST PRIORITY) =================
+  const technicalMatch =
+    problems.find(
+      (p) =>
+        msg.includes(normalize(p.title)) ||
+        p.symptoms?.some((s) => msg.includes(normalize(s)))
     );
-  };
 
-  // ================= COLOR =================
+  if (technicalMatch) {
+    return {
+      type: "TECHNICAL",
+      reply: buildTechnicalResponse(technicalMatch),
+    };
+  }
+
+  if (intent === "TECHNICAL") {
+    return {
+      type: "TECHNICAL",
+      reply:
+        "⚠️ Bạn mô tả rõ hơn (rung, giật, điều hòa không mát, ABS, máy yếu...)",
+    };
+  }
+
+  // ================= 2. COLOR =================
   if (intent === "COLOR") {
-    const car = findCar();
+    const car = findCar() || models[0];
 
     return {
       type: "VEHICLE_COLOR",
@@ -55,29 +72,7 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= TECHNICAL =================
-  if (intent === "TECHNICAL") {
-    const found = problems.find(
-      (p) =>
-        msg.includes(normalize(p.title)) ||
-        p.symptoms?.some((s) => msg.includes(normalize(s)))
-    );
-
-    if (!found) {
-      return {
-        type: "TECHNICAL",
-        reply:
-          "⚠️ Bạn mô tả rõ hơn giúp mình (rung, giật, điều hòa, ABS, máy yếu...)",
-      };
-    }
-
-    return {
-      type: "TECHNICAL",
-      reply: buildTechnicalResponse(found),
-    };
-  }
-
-  // ================= FAMILY 7 SEATS =================
+  // ================= 3. FAMILY 7 SEATS =================
   if (intent === "FAMILY") {
     const cars = models.filter((m) => m.seats >= 7);
 
@@ -85,20 +80,13 @@ export const agentCore = async (userId, message) => {
       cars.find((c) => c.name.toLowerCase().includes("everest")) ||
       cars[0];
 
-    if (!best) {
-      return {
-        type: "GENERAL",
-        reply: "Không tìm thấy xe phù hợp",
-      };
-    }
-
     return {
       type: "DETAIL",
       reply: buildVehicleResponse(best, best.bestVariant),
     };
   }
 
-  // ================= OFFROAD =================
+  // ================= 4. OFFROAD =================
   if (intent === "OFFROAD") {
     const cars = models.filter(
       (m) =>
@@ -111,20 +99,13 @@ export const agentCore = async (userId, message) => {
       cars.find((c) => c.name.toLowerCase().includes("raptor")) ||
       cars[0];
 
-    if (!best) {
-      return {
-        type: "GENERAL",
-        reply: "Không tìm thấy xe offroad",
-      };
-    }
-
     return {
       type: "DETAIL",
       reply: buildVehicleResponse(best, best.bestVariant),
     };
   }
 
-  // ================= COMPARE =================
+  // ================= 5. COMPARE =================
   if (intent === "COMPARE") {
     const [car1, car2] = models;
 
@@ -139,7 +120,7 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= SINGLE DETAIL =================
+  // ================= 6. SINGLE CAR DETAIL =================
   if (entities.models.length === 1) {
     const car = entities.models[0];
 
@@ -149,7 +130,7 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= SMART RECOMMEND =================
+  // ================= 7. RECOMMEND (ONLY IF NOTHING ELSE MATCH) =================
   const recs = recommendVehicles({ entities, models });
 
   if (recs.length) {
