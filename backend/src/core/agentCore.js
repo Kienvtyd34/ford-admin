@@ -1,4 +1,4 @@
-import { getVehicles } from "./getVehicles.js";
+import { getVehicles } from "../services/getVehicles.js";
 import { bestConceptMatch } from "../ai/semanticEngine.js";
 import { mapColors } from "../ai/colorEngine.js";
 import { recommendVehicles } from "../ai/recommendationEngine.js";
