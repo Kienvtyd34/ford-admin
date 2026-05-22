@@ -1,5 +1,6 @@
 import VehicleModel from "../models/VehicleModel.js";
 import VehicleVariant from "../models/Variant.js";
+import VehicleColor from "../models/VehicleColor.js";
 import Inventory from "../models/Inventory.js";
 import CarProblem from "../models/CarProblem.js";
 
@@ -21,9 +22,10 @@ import { salesAdvisor } from "../ai/salesAdvisor.js";
 const normalize = (text = "") =>
   text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-// ================= AGGREGATION ENGINE =================
+// ================= LOAD FULL GRAPH (MODEL → VARIANT → COLOR) =================
 const getVehicles = async () => {
-  return await VehicleModel.aggregate([
+  const models = await VehicleModel.aggregate([
+    // 1. JOIN VARIANTS
     {
       $lookup: {
         from: "vehiclevariants",
@@ -32,16 +34,46 @@ const getVehicles = async () => {
         as: "variants",
       },
     },
+
+    // 2. JOIN COLORS theo variantId (FIX QUAN TRỌNG)
     {
       $lookup: {
-        from: "inventories",
-        localField: "_id",
-        foreignField: "vehicleId",
-        as: "inventory",
+        from: "vehiclecolors",
+        localField: "variants._id",
+        foreignField: "variantId",
+        as: "colors",
       },
     },
 
-    // BEST VARIANT
+    // 3. ATTACH COLORS vào từng variant
+    {
+      $addFields: {
+        variants: {
+          $map: {
+            input: "$variants",
+            as: "v",
+            in: {
+              $mergeObjects: [
+                "$$v",
+                {
+                  colors: {
+                    $filter: {
+                      input: "$colors",
+                      as: "c",
+                      cond: {
+                        $eq: ["$$c.variantId", "$$v._id"],
+                      },
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    },
+
+    // 4. BEST VARIANT
     {
       $addFields: {
         bestVariant: {
@@ -58,7 +90,7 @@ const getVehicles = async () => {
       },
     },
 
-    // COLORS FIX (ROBUST)
+    // 5. COLORS FLATTEN (ALL VARIANTS)
     {
       $addFields: {
         allColors: {
@@ -67,54 +99,60 @@ const getVehicles = async () => {
               $map: {
                 input: "$variants",
                 as: "v",
-                in: {
-                  $ifNull: ["$$v.colors.exterior", []],
-                },
+                in: "$$v.colors",
               },
             },
             initialValue: [],
-            in: { $setUnion: ["$$value", "$$this"] },
+            in: {
+              $concatArrays: ["$$value", "$$this"],
+            },
           },
         },
       },
     },
 
-    // CLEAN OUTPUT
     {
       $project: {
         name: 1,
         type: 1,
         seats: 1,
-        colors: 1,
         variants: 1,
         bestVariant: 1,
         allColors: 1,
-        inventory: 1,
       },
     },
   ]);
+
+  return models;
 };
 
-// ================= COLOR MERGE =================
+// ================= COLOR EXTRACT =================
 const getColors = (car) => {
+  const colors = car.allColors || [];
+
   return [
-    ...new Set([
-      ...(car.colors?.exterior || []),
-      ...(car.allColors || []),
-    ]),
-  ].filter(Boolean);
+    ...new Map(
+      colors.map((c) => [
+        c?.name,
+        {
+          name: c?.name,
+          hexCode: c?.hexCode,
+        },
+      ])
+    ).values(),
+  ];
 };
 
-// ================= BEST VARIANT =================
+// ================= BEST VARIANT SAFE =================
 const getBestVariant = (car) => {
-  if (car.bestVariant) return car.bestVariant;
+  if (car?.bestVariant) return car.bestVariant;
 
-  return car.variants?.sort(
+  return car?.variants?.sort(
     (a, b) => (b.basePrice || 0) - (a.basePrice || 0)
   )[0];
 };
 
-// ================= CORE =================
+// ================= AGENT CORE =================
 export const agentCore = async (userId, message) => {
   const [models, inventories, problems] = await Promise.all([
     getVehicles(),
@@ -161,7 +199,7 @@ export const agentCore = async (userId, message) => {
     );
   }
 
-  // ================= COLOR =================
+  // ================= COLOR (FIXED) =================
   if (msg.includes("màu") || msg.includes("mau")) {
     const car = entities.models[0] || models[0];
 
@@ -205,13 +243,12 @@ export const agentCore = async (userId, message) => {
 
     return {
       type: "RECOMMEND",
-      reply: recs.map((car) => ({
-        name: car.name,
-        type: car.type,
-        seats: car.seats,
-        price: getBestVariant(car)?.basePrice,
-        colors: getColors(car),
-        hasInventory: car.inventory?.length > 0,
+      reply: recs.map((m) => ({
+        name: m.name,
+        type: m.type,
+        seats: m.seats,
+        price: getBestVariant(m)?.basePrice,
+        colors: getColors(m),
       })),
     };
   }
