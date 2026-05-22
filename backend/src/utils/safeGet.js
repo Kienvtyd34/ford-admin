@@ -12,3 +12,4 @@ export const safe = {
 
   obj: (v) => (v && typeof v === "object" ? v : null),
 };
+export default safe;
