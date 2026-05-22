@@ -10,7 +10,6 @@ export const getVehicles = async () => {
         as: "variants",
       },
     },
-
     {
       $lookup: {
         from: "vehiclecolors",
@@ -25,16 +24,6 @@ export const getVehicles = async () => {
         as: "colors",
       },
     },
-
-    {
-      $lookup: {
-        from: "inventories",
-        localField: "variants._id",
-        foreignField: "variantId",
-        as: "inventory",
-      },
-    },
-
     {
       $addFields: {
         bestVariant: {
@@ -48,21 +37,6 @@ export const getVehicles = async () => {
             0,
           ],
         },
-
-        availableCount: { $size: "$inventory" },
-      },
-    },
-
-    {
-      $project: {
-        name: 1,
-        type: 1,
-        seats: 1,
-        description: 1,
-        variants: 1,
-        colors: 1,
-        bestVariant: 1,
-        availableCount: 1,
       },
     },
   ]);

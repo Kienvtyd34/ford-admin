@@ -2,6 +2,9 @@ import { getVehicles } from "../services/getVehicles.js";
 import Inventory from "../models/Inventory.js";
 import CarProblem from "../models/CarProblem.js";
 
+import { detectIntent } from "../ai/intentEngine.js";
+import { extractEntities } from "../ai/entityExtractor.js";
+
 import { recommendVehicles } from "../ai/recommendationEngine.js";
 import { mapColors } from "../ai/colorEngine.js";
 
@@ -17,35 +20,6 @@ import { salesAdvisor } from "../ai/salesAdvisor.js";
 const normalize = (t = "") =>
   t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-// ================= INTENT ENGINE (FINAL SIMPLE BUT STRONG) =================
-const detectIntent = (msg) => {
-  const m = normalize(msg);
-
-  // COLOR
-  if (m.includes("mau")) return "COLOR";
-
-  // FAMILY
-  if (m.includes("7 cho") || m.includes("gia dinh")) return "FAMILY";
-
-  // OFFROAD
-  if (m.includes("offroad") || m.includes("dia hinh")) return "OFFROAD";
-
-  // TECHNICAL
-  if (
-    m.includes("loi") ||
-    m.includes("rung") ||
-    m.includes("giat") ||
-    m.includes("khong lanh") ||
-    m.includes("dieu hoa")
-  )
-    return "TECHNICAL";
-
-  // COMPARE
-  if (m.includes(" vs ") || m.includes("so sanh")) return "COMPARE";
-
-  return "GENERAL";
-};
-
 // ================= CORE =================
 export const agentCore = async (userId, message) => {
   const [models, inventories, problems] = await Promise.all([
@@ -54,13 +28,23 @@ export const agentCore = async (userId, message) => {
     CarProblem.find().lean(),
   ]);
 
-  const intent = detectIntent(message);
   const msg = normalize(message);
+  const intent = detectIntent(message);
+  const entities = extractEntities(message, models);
+
+  // ================= FIND CAR HELPERS =================
+  const findCar = () => {
+    if (entities?.models?.length) return entities.models[0];
+
+    return (
+      models.find((m) => msg.includes(normalize(m.name))) ||
+      models[0]
+    );
+  };
 
   // ================= COLOR =================
   if (intent === "COLOR") {
-    const car =
-      models.find((m) => msg.includes(normalize(m.name))) || models[0];
+    const car = findCar();
 
     return {
       type: "VEHICLE_COLOR",
@@ -76,35 +60,35 @@ export const agentCore = async (userId, message) => {
     const found = problems.find(
       (p) =>
         msg.includes(normalize(p.title)) ||
-        p.symptoms.some((s) => msg.includes(normalize(s)))
+        p.symptoms?.some((s) => msg.includes(normalize(s)))
     );
 
-    if (found) {
+    if (!found) {
       return {
         type: "TECHNICAL",
-        reply: buildTechnicalResponse(found),
+        reply:
+          "⚠️ Bạn mô tả rõ hơn giúp mình (rung, giật, điều hòa, ABS, máy yếu...)",
       };
     }
 
     return {
       type: "TECHNICAL",
-      reply:
-        "⚠️ Tôi chưa xác định được lỗi. Bạn mô tả rõ hơn (ví dụ: rung, điều hòa không mát, đèn báo...).",
+      reply: buildTechnicalResponse(found),
     };
   }
 
-  // ================= FAMILY (FIX CHÍNH) =================
+  // ================= FAMILY 7 SEATS =================
   if (intent === "FAMILY") {
-    const cars = models
-      .filter((m) => m.seats >= 7)
-      .sort((a, b) => b.seats - a.seats);
+    const cars = models.filter((m) => m.seats >= 7);
 
-    const best = cars[0];
+    const best =
+      cars.find((c) => c.name.toLowerCase().includes("everest")) ||
+      cars[0];
 
     if (!best) {
       return {
         type: "GENERAL",
-        reply: "Không tìm thấy xe phù hợp.",
+        reply: "Không tìm thấy xe phù hợp",
       };
     }
 
@@ -114,7 +98,7 @@ export const agentCore = async (userId, message) => {
     };
   }
 
-  // ================= OFFROAD (FIX CHÍNH) =================
+  // ================= OFFROAD =================
   if (intent === "OFFROAD") {
     const cars = models.filter(
       (m) =>
@@ -123,7 +107,16 @@ export const agentCore = async (userId, message) => {
         m.name.toLowerCase().includes("ranger")
     );
 
-    const best = cars[0];
+    const best =
+      cars.find((c) => c.name.toLowerCase().includes("raptor")) ||
+      cars[0];
+
+    if (!best) {
+      return {
+        type: "GENERAL",
+        reply: "Không tìm thấy xe offroad",
+      };
+    }
 
     return {
       type: "DETAIL",
@@ -147,15 +140,17 @@ export const agentCore = async (userId, message) => {
   }
 
   // ================= SINGLE DETAIL =================
-  if (models.length === 1) {
+  if (entities.models.length === 1) {
+    const car = entities.models[0];
+
     return {
       type: "DETAIL",
-      reply: buildVehicleResponse(models[0], models[0].bestVariant),
+      reply: buildVehicleResponse(car, car.bestVariant),
     };
   }
 
   // ================= SMART RECOMMEND =================
-  const recs = recommendVehicles({ models });
+  const recs = recommendVehicles({ entities, models });
 
   if (recs.length) {
     return {
@@ -164,13 +159,15 @@ export const agentCore = async (userId, message) => {
         name: r.name,
         type: r.type,
         seats: r.seats,
+        price: r.bestVariant?.basePrice,
+        colors: mapColors(r),
       })),
     };
   }
 
-  // ================= FINAL FALLBACK =================
+  // ================= FINAL =================
   return {
     type: "GENERAL",
-    reply: salesAdvisor({}),
+    reply: salesAdvisor(entities),
   };
 };

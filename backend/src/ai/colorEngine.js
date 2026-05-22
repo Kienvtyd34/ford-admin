@@ -1,11 +1,11 @@
 export const mapColors = (car) => {
-  if (!car.colors) return [];
+  if (!car?.colors) return [];
 
-  const map = new Map();
+  const unique = new Map();
 
   car.colors.forEach((c) => {
-    if (!map.has(c.name)) {
-      map.set(c.name, {
+    if (!unique.has(c.name)) {
+      unique.set(c.name, {
         name: c.name,
         hexCode: c.hexCode,
         images: c.images || [],
@@ -13,5 +13,5 @@ export const mapColors = (car) => {
     }
   });
 
-  return [...map.values()];
+  return [...unique.values()];
 };
