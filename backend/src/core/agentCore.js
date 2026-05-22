@@ -1,37 +1,40 @@
-import { getVehicles } from "../services/getVehicles.js";
+// /core/agentCore.js
+import { getVehicleRAG } from "../rag/vehicleRag.js";
 import Inventory from "../models/Inventory.js";
 import CarProblem from "../models/CarProblem.js";
 
-import { bestConceptMatch } from "../ai/semanticEngine.js";
-import { mapColors } from "../ai/colorEngine.js";
+import { detectConcept } from "../ai/semanticEngine.js";
+import { reason } from "../ai/reasoningEngine.js";
 
+import { mapColors } from "../ai/colorEngine.js";
 import {
   buildVehicleResponse,
   buildCompareResponse,
   buildTechnicalResponse,
 } from "../ai/responseBuilder.js";
 
-import { salesAdvisor } from "../ai/salesAdvisor.js";
-
 const normalize = (t="") =>
   t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 
+const findCar = (msg, models) =>
+  models.find(m => msg.includes(normalize(m.name)));
+
 export const agentCore = async (userId, message) => {
+
   const [models, inventories, problems] = await Promise.all([
-    getVehicles(),
+    getVehicleRAG(),
     Inventory.find().lean(),
     CarProblem.find().lean(),
   ]);
 
   const msg = normalize(message);
-  const intent = bestConceptMatch(message);
+  const concept = detectConcept(message);
+  const decision = reason(concept, {}, message);
 
-  // ================= COLOR FIX =================
-  if (intent.key === "color") {
-    const car = models.find(m =>
-      msg.includes(normalize(m.name))
-    ) || models[0];
+  const car = findCar(msg, models) || models[0];
 
+  // ================= COLOR (FIXED 100%) =================
+  if (concept.key === "color") {
     return {
       type: "VEHICLE_COLOR",
       reply: {
@@ -42,7 +45,7 @@ export const agentCore = async (userId, message) => {
   }
 
   // ================= TECHNICAL =================
-  if (intent.key === "fault") {
+  if (concept.key === "fault") {
     const found = problems.find(p =>
       msg.includes(normalize(p.title)) ||
       p.symptoms.some(s => msg.includes(normalize(s)))
@@ -57,57 +60,50 @@ export const agentCore = async (userId, message) => {
   }
 
   // ================= COMPARE =================
-  if (msg.includes(" vs ")) {
+  if (msg.includes("vs")) {
     const [a, b] = models;
 
     return {
       type: "COMPARE",
-      reply: buildCompareResponse(
-        a,
-        b,
-        a.bestVariant,
-        b.bestVariant
-      ),
+      reply: buildCompareResponse(a, b, a.bestVariant, b.bestVariant),
+    };
+  }
+
+  // ================= REASONING ENGINE =================
+  if (decision === "FAMILY_CAR") {
+    return {
+      type: "RECOMMEND",
+      reply: models.filter(m => m.seats >= 7),
+    };
+  }
+
+  if (decision === "OFFROAD_CAR") {
+    return {
+      type: "RECOMMEND",
+      reply: models.filter(m => m.type === "Pick-up"),
     };
   }
 
   // ================= DETAIL =================
-  const matched = models.filter(m =>
-    msg.includes(normalize(m.name))
-  );
-
-  if (matched.length === 1) {
+  if (car) {
     return {
       type: "DETAIL",
-      reply: buildVehicleResponse(
-        matched[0],
-        matched[0].bestVariant
-      ),
+      reply: buildVehicleResponse(car, car.bestVariant),
     };
   }
 
-  // ================= RECOMMEND =================
-  if (intent.key === "suv" || intent.key === "pickup") {
-    return {
-      type: "RECOMMEND",
-      reply: models
-        .filter(m =>
-          intent.key === "suv"
-            ? m.type === "SUV"
-            : m.type === "Pick-up"
-        )
-        .map(m => ({
-          name: m.name,
-          type: m.type,
-          seats: m.seats,
-          price: m.bestVariant?.basePrice,
-          colors: mapColors(m),
-        })),
-    };
-  }
-
+  // ================= GENERAL (SMART) =================
   return {
     type: "GENERAL",
-    reply: salesAdvisor({}),
+    reply: {
+      message: "Bạn có thể hỏi theo nhu cầu:",
+      intents: [
+        "xe gia đình",
+        "xe offroad",
+        "so sánh xe",
+        "màu xe",
+        "lỗi kỹ thuật",
+      ],
+    },
   };
 };

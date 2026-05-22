@@ -1,33 +1,28 @@
-const normalize = (text = "") =>
-  text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+// /ai/semanticEngine.js
+const normalize = (t="") =>
+  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 
-// semantic weight scoring
-export const bestConceptMatch = (message) => {
-  const msg = normalize(message);
+const concepts = {
+  suv: ["suv", "7 cho", "xe gia dinh", "rong rai"],
+  pickup: ["ban tai", "offroad", "ranger", "raptor"],
+  fault: ["loi", "rung", "giat", "khong lanh", "khong no", "abs"],
+  color: ["mau", "son", "ngoai that"],
+};
 
-  const rules = [
-    { key: "suv", words: ["suv", "7 cho", "xe gia dinh"] },
-    { key: "pickup", words: ["ban tai", "pickup", "offroad"] },
-    { key: "fault", words: ["loi", "rung", "giat", "khong lanh", "khong no"] },
-    { key: "color", words: ["mau", "son", "mau sac"] },
-  ];
+export const semanticScore = (msg, key) => {
+  const text = normalize(msg);
+  return (concepts[key] || []).reduce((acc, w) => {
+    return acc + (text.includes(normalize(w)) ? 1 : 0);
+  }, 0);
+};
 
-  let best = { key: null, score: 0 };
+export const detectConcept = (msg) => {
+  let best = { key: "general", score: 0 };
 
-  for (const r of rules) {
-    let score = 0;
-
-    for (const w of r.words) {
-      if (msg.includes(w)) score++;
-    }
-
-    if (score > best.score) {
-      best = { key: r.key, score };
-    }
-  }
+  Object.keys(concepts).forEach(k => {
+    const score = semanticScore(msg, k);
+    if (score > best.score) best = { key: k, score };
+  });
 
   return best;
 };
