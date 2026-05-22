@@ -1,12 +1,10 @@
-// services/vehicleRag.service.js
-
 import VehicleModel from "../models/VehicleModel.js";
 
 export const getVehicleRAG = async () => {
   return VehicleModel.aggregate([
     {
       $lookup: {
-        from: "variants",
+        from: "vehiclevariants",
         localField: "_id",
         foreignField: "modelId",
         as: "variants",
@@ -30,19 +28,29 @@ export const getVehicleRAG = async () => {
     },
     {
       $addFields: {
+        variants: {
+          $ifNull: ["$variants", []],
+        },
+
+        colors: {
+          $ifNull: ["$colors", []],
+        },
+
+        inventory: {
+          $ifNull: ["$inventory", []],
+        },
+
         bestVariant: {
           $arrayElemAt: [
             {
               $sortArray: {
-                input: "$variants",
-                sortBy: { basePrice: -1 },
+                input: { $ifNull: ["$variants", []] },
+                sortBy: { basePrice: 1 },
               },
             },
             0,
           ],
         },
-
-        stock: { $size: "$inventory" },
       },
     },
   ]);

@@ -1,27 +1,47 @@
-// ai/responseBuilder.js
+import { safeString, safeNumber } from "../utils/safeGet.js";
 
-export const buildVehicleResponse = (car, variant) => `
-🚗 ${car.name}
+export const buildVehicleResponse = (car, variant) => {
+  if (!car) return "Không tìm thấy xe phù hợp";
 
-💰 ${variant?.basePrice?.toLocaleString("vi-VN")} VNĐ
-🚘 ${variant?.variantName}
-⚙️ ${variant?.transmission}
-🛞 ${variant?.driveTrain}
-👥 ${car.seats} chỗ
-🔥 ${car.type}
-`;
+  return `
+🚗 ${safeString(car.name)}
 
-export const buildCompareResponse = (a, b, v1, v2) => `
-⚔️ ${a.name} vs ${b.name}
+💰 ${safeNumber(variant?.basePrice)
+    ? variant.basePrice.toLocaleString("vi-VN") + " VNĐ"
+    : "Liên hệ"}
 
-${a.name}: ${v1?.basePrice} VNĐ
-${b.name}: ${v2?.basePrice} VNĐ
-`;
+🚘 ${safeString(variant?.variantName)}
+⚙️ ${safeString(variant?.transmission)}
+🛞 ${safeString(variant?.driveTrain)}
+⛽ ${safeString(variant?.fuelType)}
 
-export const buildTechnicalResponse = (p) => `
-⚠️ ${p.title}
+👥 ${car.seats ?? "?"} chỗ
+🔥 ${safeString(car.type)}
+`.trim();
+};
 
-🔍 ${p.symptoms.join(", ")}
-🛠 ${p.causes.join(", ")}
-✅ ${p.solutions.join(", ")}
-`;
+export const buildCompareResponse = (a, b, v1, v2) => {
+  if (!a || !b) return "Không đủ dữ liệu để so sánh";
+
+  return `
+⚔️ ${safeString(a.name)} vs ${safeString(b.name)}
+
+${safeString(a.name)}:
+💰 ${v1?.basePrice?.toLocaleString("vi-VN") || "?"} VNĐ
+
+${safeString(b.name)}:
+💰 ${v2?.basePrice?.toLocaleString("vi-VN") || "?"} VNĐ
+`.trim();
+};
+
+export const buildTechnicalResponse = (p) => {
+  if (!p) return "Không tìm thấy lỗi phù hợp";
+
+  return `
+⚠️ ${safeString(p.title)}
+
+🔍 ${safeArray(p.symptoms).join(", ") || "Không rõ"}
+🛠 ${safeArray(p.causes).join(", ") || "Không rõ"}
+✅ ${safeArray(p.solutions).join(", ") || "Không rõ"}
+`.trim();
+};

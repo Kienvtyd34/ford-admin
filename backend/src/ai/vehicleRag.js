@@ -12,6 +12,7 @@ export const matchVehicles = (msg, models) => {
     if (text.includes(name)) return true;
     if (text.includes("suv") && type.includes("suv")) return true;
     if (text.includes("7 cho") && m.seats >= 7) return true;
+    if (text.includes("gia đình") && (m.seats || 0) >= 7) return true;
 
     if (
       (text.includes("pickup") || text.includes("ban tai")) &&

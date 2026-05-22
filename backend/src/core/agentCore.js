@@ -1,13 +1,11 @@
-// core/agentCore.js
-
 import { getVehicleRAG } from "../services/vehicleRag.service.js";
 import CarProblem from "../models/CarProblem.js";
 
 import { extractEntities } from "../ai/entityEngine.js";
 import { detectIntent } from "../ai/intentEngine.js";
 
-import { matchIssue } from "../ai/technicalRag.js";
 import { matchVehicles } from "../ai/vehicleRag.js";
+import { matchIssue } from "../ai/technicalRag.js";
 
 import {
   buildVehicleResponse,
@@ -31,39 +29,33 @@ export const agentCore = async (userId, message) => {
     if (match) {
       return {
         type: "TECHNICAL",
-        confidence: match.confidence,
-        reply: buildTechnicalResponse(match.issue),
+        reply: buildTechnicalResponse(match),
       };
     }
 
     return {
       type: "TECHNICAL",
-      reply: "Mô tả rõ hơn giúp mình nhé",
+      reply: "Vui lòng mô tả rõ hơn (rung, giật, điều hòa...)",
     };
   }
 
   // ================= VEHICLE =================
   const matched = matchVehicles(message, vehicles);
 
-  if (matched.length) {
+  if (matched.length > 0) {
     return {
       type: intent,
-      reply:
-        intent === "COMPARE"
-          ? buildCompareResponse(
-              matched[0],
-              matched[1] || matched[0],
-              matched[0].bestVariant,
-              matched[1]?.bestVariant
-            )
-          : matched.map((v) =>
-              buildVehicleResponse(v, v.bestVariant)
-            ),
+      reply: matched.map((v) =>
+        buildVehicleResponse(
+          v,
+          v.bestVariant || v.variants?.[0] || {}
+        )
+      ),
     };
   }
 
   return {
     type: "GENERAL",
-    reply: "Bạn muốn tìm xe, lỗi hay so sánh?",
+    reply: "Bạn muốn tìm xe, lỗi kỹ thuật hay so sánh?",
   };
 };
