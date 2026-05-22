@@ -4,21 +4,19 @@ export const matchIssue = (msg, issues) => {
   let best = null;
   let bestScore = 0;
 
-  for (const i of issues || []) {
+  for (const i of issues) {
     let score = 0;
 
-    const title = normalize(i.title || "");
+    const title = normalize(i.title);
 
-    // ⚠️ chỉ match STRONG TITLE
     if (text.includes(title)) score += 10;
 
     for (const s of i.symptoms || []) {
-      if (text.includes(normalize(s))) score += 3;
+      if (text.includes(normalize(s))) score += 5;
     }
 
-    // 🔥 CHẶN LỆCH DOMAIN
-    if (text.includes("7 cho") || text.includes("suv")) {
-      score -= 5;
+    for (const c of i.causes || []) {
+      if (text.includes(normalize(c))) score += 4;
     }
 
     if (score > bestScore) {
@@ -27,5 +25,5 @@ export const matchIssue = (msg, issues) => {
     }
   }
 
-  return bestScore >= 6 ? { issue: best } : null;
+  return bestScore >= 5 ? { issue: best } : null;
 };

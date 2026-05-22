@@ -1,22 +1,28 @@
+import { getVehicleRAG } from "../services/vehicleRag.service.js";
+import CarProblem from "../models/CarProblem.js";
+
+import { detectIntent } from "../ai/intentEngine.js";
+import { extractEntities } from "../ai/entityEngine.js";
+import { rankVehicles } from "../ai/vehicleRanker.js";
+import { getBestVariant } from "../utils/getBestVariant.js";
+
+import {
+  buildVehicleResponse,
+  buildTechnicalResponse,
+} from "../ai/responseBuilder.js";
+
+import { matchIssue } from "../ai/technicalRag.js";
+
 export const agentCore = async (userId, message) => {
   try {
     const [vehicles, problems] = await Promise.all([
-      getVehicleRAG().catch(() => []),
-      CarProblem.find().lean().catch(() => []),
+      getVehicleRAG(),
+      CarProblem.find().lean(),
     ]);
-
-    // ⚠️ DEBUG QUAN TRỌNG
-    if (!Array.isArray(vehicles)) return fallback();
-    if (!Array.isArray(problems)) return fallback();
 
     const techMatch = matchIssue(message, problems);
 
-    // ⚠️ CHẶN FALSE POSITIVE
-    const isReallyTechnical =
-      techMatch?.issue &&
-      detectIntent(message) === "TECHNICAL";
-
-    if (isReallyTechnical) {
+    if (techMatch?.issue) {
       return {
         type: "TECHNICAL",
         reply: buildTechnicalResponse(techMatch.issue),
@@ -25,24 +31,25 @@ export const agentCore = async (userId, message) => {
 
     const ranked = rankVehicles(message, vehicles);
 
-    if (ranked?.length) {
+    if (ranked.length > 0) {
       return {
         type: "VEHICLE",
-        reply: ranked
-          .map((v) => buildVehicleResponse(v, getBestVariant(v)))
-          .filter(Boolean),
+        reply: ranked.map((v) =>
+          buildVehicleResponse(v, getBestVariant(v))
+        ),
       };
     }
 
-    return fallback();
+    return {
+      type: "GENERAL",
+      reply: "Bạn muốn xe 7 chỗ, SUV hay offroad?",
+    };
 
   } catch (err) {
-    console.error("AGENT ERROR:", err);
-    return fallback();
+    console.error(err);
+    return {
+      type: "ERROR",
+      reply: "Server lỗi, vui lòng thử lại",
+    };
   }
 };
-
-const fallback = () => ({
-  type: "GENERAL",
-  reply: "Bạn muốn xe 7 chỗ, SUV hay offroad?",
-});
