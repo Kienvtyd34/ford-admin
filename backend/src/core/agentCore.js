@@ -1,13 +1,22 @@
 export const agentCore = async (userId, message) => {
   try {
     const [vehicles, problems] = await Promise.all([
-      getVehicleRAG(),
-      CarProblem.find().lean(),
+      getVehicleRAG().catch(() => []),
+      CarProblem.find().lean().catch(() => []),
     ]);
+
+    // ⚠️ DEBUG QUAN TRỌNG
+    if (!Array.isArray(vehicles)) return fallback();
+    if (!Array.isArray(problems)) return fallback();
 
     const techMatch = matchIssue(message, problems);
 
-    if (techMatch?.issue) {
+    // ⚠️ CHẶN FALSE POSITIVE
+    const isReallyTechnical =
+      techMatch?.issue &&
+      detectIntent(message) === "TECHNICAL";
+
+    if (isReallyTechnical) {
       return {
         type: "TECHNICAL",
         reply: buildTechnicalResponse(techMatch.issue),
@@ -25,16 +34,15 @@ export const agentCore = async (userId, message) => {
       };
     }
 
-    return {
-      type: "GENERAL",
-      reply: "Bạn muốn xe 7 chỗ, SUV hay offroad?",
-    };
+    return fallback();
 
   } catch (err) {
-    console.error("agentCore crash:", err);
-    return {
-      type: "ERROR",
-      reply: "Hệ thống đang xử lý lỗi, vui lòng thử lại sau",
-    };
+    console.error("AGENT ERROR:", err);
+    return fallback();
   }
 };
+
+const fallback = () => ({
+  type: "GENERAL",
+  reply: "Bạn muốn xe 7 chỗ, SUV hay offroad?",
+});

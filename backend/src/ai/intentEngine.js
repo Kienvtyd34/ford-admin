@@ -1,21 +1,20 @@
 export const detectIntent = (msg = "") => {
   const m = msg.toLowerCase();
 
-  if (
+  const isVehicle =
+    m.includes("7 chỗ") ||
+    m.includes("gia đình") ||
+    m.includes("suv") ||
+    m.includes("xe");
+
+  const isTech =
     m.includes("rung") ||
     m.includes("giật") ||
     m.includes("lỗi") ||
-    m.includes("điều hoà") ||
-    m.includes("không lạnh") ||
-    m.includes("kém lạnh") ||
-    m.includes("máy yếu")
-  ) {
-    return "TECHNICAL";
-  }
+    m.includes("điều hoà");
 
-  if (m.includes("7 chỗ") || m.includes("gia đình")) return "FAMILY";
-  if (m.includes("offroad")) return "OFFROAD";
-  if (m.includes("màu")) return "COLOR";
+  if (isVehicle && !isTech) return "VEHICLE";
+  if (isTech) return "TECHNICAL";
 
   return "GENERAL";
 };
