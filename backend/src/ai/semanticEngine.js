@@ -1,21 +1,29 @@
-export const scoreVehicle = (msg, v) => {
-  const m = msg.toLowerCase();
+const normalize = (t = "") =>
+  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  let score = 0;
+// ===== HARD INTENT MAP =====
+export const detectUserNeed = (message) => {
+  const msg = normalize(message);
 
-  if (m.includes(v.name.toLowerCase())) score += 30;
-
-  if (m.includes("offroad")) {
-    if (v.name.includes("Raptor")) score += 40;
-    if (v.name.includes("Ranger")) score += 25;
-    if (v.name.includes("Everest")) score += 10;
+  // FAMILY
+  if (msg.includes("7 cho") || msg.includes("gia dinh")) {
+    return { type: "FAMILY", seats: 7 };
   }
 
-  if (m.includes("7 chỗ") && v.seats >= 7) score += 30;
+  // OFFROAD
+  if (msg.includes("offroad") || msg.includes("dia hinh")) {
+    return { type: "OFFROAD" };
+  }
 
-  if (m.includes("gia đình") && v.seats >= 7) score += 25;
+  // ERROR
+  if (msg.includes("loi") || msg.includes("rung") || msg.includes("giat")) {
+    return { type: "TECHNICAL" };
+  }
 
-  if (m.includes("suv") && v.type === "SUV") score += 15;
+  // COLOR
+  if (msg.includes("mau")) {
+    return { type: "COLOR" };
+  }
 
-  return score;
+  return { type: "GENERAL" };
 };

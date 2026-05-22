@@ -14,16 +14,11 @@ export const getVehicles = async () => {
     {
       $lookup: {
         from: "vehiclecolors",
-        let: { modelId: "$_id", variantIds: "$variants._id" },
+        let: { variantIds: "$variants._id" },
         pipeline: [
           {
             $match: {
-              $expr: {
-                $or: [
-                  { $eq: ["$modelId", "$$modelId"] },
-                  { $in: ["$variantId", "$$variantIds"] },
-                ],
-              },
+              $expr: { $in: ["$variantId", "$$variantIds"] },
             },
           },
         ],
@@ -63,6 +58,7 @@ export const getVehicles = async () => {
         name: 1,
         type: 1,
         seats: 1,
+        description: 1,
         variants: 1,
         colors: 1,
         bestVariant: 1,
