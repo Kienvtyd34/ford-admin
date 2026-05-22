@@ -14,14 +14,8 @@ export const getVehicles = async () => {
     {
       $lookup: {
         from: "vehiclecolors",
-        let: { variantIds: "$variants._id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $in: ["$variantId", "$$variantIds"] },
-            },
-          },
-        ],
+        localField: "variants._id",
+        foreignField: "variantId",
         as: "colors",
       },
     },
@@ -38,19 +32,29 @@ export const getVehicles = async () => {
     {
       $addFields: {
         bestVariant: {
-          $arrayElemAt: [
-            {
-              $sortArray: {
-                input: "$variants",
-                sortBy: { basePrice: -1 },
-              },
+          $first: {
+            $sortArray: {
+              input: "$variants",
+              sortBy: { basePrice: -1 },
             },
-            0,
-          ],
+          },
         },
+      },
+    },
 
-        availableCount: {
-          $size: "$inventory",
+    {
+      $addFields: {
+        colorMap: {
+          $map: {
+            input: "$colors",
+            as: "c",
+            in: {
+              name: "$$c.name",
+              hexCode: "$$c.hexCode",
+              variantId: "$$c.variantId",
+              images: "$$c.images",
+            },
+          },
         },
       },
     },
@@ -60,11 +64,12 @@ export const getVehicles = async () => {
         name: 1,
         type: 1,
         seats: 1,
+        imageUrl: 1,
         variants: 1,
         colors: 1,
+        colorMap: 1,
         inventory: 1,
         bestVariant: 1,
-        availableCount: 1,
       },
     },
   ]);

@@ -2,46 +2,32 @@ const normalize = (text = "") =>
   text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+    .replace(/[\u0300-\u036f]/g, "");
 
-// ================= SYNONYM MAP =================
-const concepts = {
-  suv: ["suv", "xe gia dinh", "7 cho", "xe da dung", "xe rong"],
-  pickup: ["ban tai", "pickup", "pick up", "xe tai nhe", "offroad"],
-  offroad: ["dia hinh", "offroad", "leo doi", "duong rung"],
-  economy: ["tiet kiem", "it xang", "diesel", "hybrid"],
-  luxury: ["cao cap", "sang trong", "full option"],
-};
-
-// ================= SEMANTIC SCORE =================
-export const semanticScore = (message, key) => {
+// semantic weight scoring
+export const bestConceptMatch = (message) => {
   const msg = normalize(message);
 
-  const keywords = concepts[key] || [];
+  const rules = [
+    { key: "suv", words: ["suv", "7 cho", "xe gia dinh"] },
+    { key: "pickup", words: ["ban tai", "pickup", "offroad"] },
+    { key: "fault", words: ["loi", "rung", "giat", "khong lanh", "khong no"] },
+    { key: "color", words: ["mau", "son", "mau sac"] },
+  ];
 
-  let score = 0;
-
-  keywords.forEach((k) => {
-    if (msg.includes(normalize(k))) {
-      score += 1;
-    }
-  });
-
-  return score;
-};
-
-// ================= BEST MATCH =================
-export const bestConceptMatch = (message) => {
   let best = { key: null, score: 0 };
 
-  Object.keys(concepts).forEach((key) => {
-    const score = semanticScore(message, key);
+  for (const r of rules) {
+    let score = 0;
+
+    for (const w of r.words) {
+      if (msg.includes(w)) score++;
+    }
 
     if (score > best.score) {
-      best = { key, score };
+      best = { key: r.key, score };
     }
-  });
+  }
 
   return best;
 };

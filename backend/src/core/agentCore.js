@@ -1,10 +1,9 @@
 import { getVehicles } from "../services/getVehicles.js";
-import { bestConceptMatch } from "../ai/semanticEngine.js";
-import { mapColors } from "../ai/colorEngine.js";
-import { recommendVehicles } from "../ai/recommendationEngine.js";
-
 import Inventory from "../models/Inventory.js";
 import CarProblem from "../models/CarProblem.js";
+
+import { bestConceptMatch } from "../ai/semanticEngine.js";
+import { mapColors } from "../ai/colorEngine.js";
 
 import {
   buildVehicleResponse,
@@ -14,8 +13,8 @@ import {
 
 import { salesAdvisor } from "../ai/salesAdvisor.js";
 
-const normalize = (text = "") =>
-  text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const normalize = (t="") =>
+  t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 
 export const agentCore = async (userId, message) => {
   const [models, inventories, problems] = await Promise.all([
@@ -25,13 +24,13 @@ export const agentCore = async (userId, message) => {
   ]);
 
   const msg = normalize(message);
-
   const intent = bestConceptMatch(message);
-  const entities = { models };
 
-  // ================= COLOR =================
-  if (msg.includes("mau") || msg.includes("mau sac")) {
-    const car = models[0];
+  // ================= COLOR FIX =================
+  if (intent.key === "color") {
+    const car = models.find(m =>
+      msg.includes(normalize(m.name))
+    ) || models[0];
 
     return {
       type: "VEHICLE_COLOR",
@@ -43,9 +42,10 @@ export const agentCore = async (userId, message) => {
   }
 
   // ================= TECHNICAL =================
-  if (intent.key === "offroad" && msg.includes("loi")) {
-    const found = problems.find((p) =>
-      msg.includes(normalize(p.title))
+  if (intent.key === "fault") {
+    const found = problems.find(p =>
+      msg.includes(normalize(p.title)) ||
+      p.symptoms.some(s => msg.includes(normalize(s)))
     );
 
     if (found) {
@@ -57,48 +57,55 @@ export const agentCore = async (userId, message) => {
   }
 
   // ================= COMPARE =================
-  if (msg.includes("vs")) {
-    const [car1, car2] = models;
+  if (msg.includes(" vs ")) {
+    const [a, b] = models;
 
     return {
       type: "COMPARE",
       reply: buildCompareResponse(
-        car1,
-        car2,
-        car1.bestVariant,
-        car2.bestVariant
+        a,
+        b,
+        a.bestVariant,
+        b.bestVariant
       ),
     };
   }
 
   // ================= DETAIL =================
-  if (models.length === 1) {
+  const matched = models.filter(m =>
+    msg.includes(normalize(m.name))
+  );
+
+  if (matched.length === 1) {
     return {
       type: "DETAIL",
-      reply: buildVehicleResponse(models[0], models[0].bestVariant),
+      reply: buildVehicleResponse(
+        matched[0],
+        matched[0].bestVariant
+      ),
     };
   }
 
   // ================= RECOMMEND =================
-  if (intent.key) {
-    const recs = recommendVehicles({
-      message,
-      models,
-    });
-
+  if (intent.key === "suv" || intent.key === "pickup") {
     return {
       type: "RECOMMEND",
-      reply: recs.map((r) => ({
-        name: r.name,
-        type: r.type,
-        seats: r.seats,
-        score: r.score,
-        colors: mapColors(r),
-      })),
+      reply: models
+        .filter(m =>
+          intent.key === "suv"
+            ? m.type === "SUV"
+            : m.type === "Pick-up"
+        )
+        .map(m => ({
+          name: m.name,
+          type: m.type,
+          seats: m.seats,
+          price: m.bestVariant?.basePrice,
+          colors: mapColors(m),
+        })),
     };
   }
 
-  // ================= DEFAULT =================
   return {
     type: "GENERAL",
     reply: salesAdvisor({}),
