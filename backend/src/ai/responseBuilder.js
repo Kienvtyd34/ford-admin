@@ -1,17 +1,19 @@
+import safe from "../utils/getBestVariant.js";
 export const buildVehicleResponse = (car, variant) => {
-  const v = variant || car?.variants?.[0];
-
   return `
-🚗 ${car?.name || "Không rõ"}
+🚗 ${safe.str(car?.name)}
 
-💰 ${v?.basePrice ? v.basePrice.toLocaleString("vi-VN") + " VNĐ" : "Liên hệ"}
-🚘 ${v?.variantName || "Tiêu chuẩn"}
-⚙️ ${v?.transmission || "AT"}
-🛞 ${v?.driveTrain || "4x2"}
-⛽ ${v?.fuelType || "Xăng"}
+💰 ${variant?.basePrice
+    ? variant.basePrice.toLocaleString("vi-VN") + " VNĐ"
+    : "Liên hệ"}
 
-👥 ${car?.seats || "?"} chỗ
-🔥 ${car?.type || "?"}
+🚘 ${safe.str(variant?.variantName, "Tiêu chuẩn")}
+⚙️ ${safe.str(variant?.transmission)}
+🛞 ${safe.str(variant?.driveTrain)}
+⛽ ${safe.str(variant?.fuelType)}
+
+👥 ${safe.str(car?.seats, "?")} chỗ
+🔥 ${safe.str(car?.type)}
 `.trim();
 };
 

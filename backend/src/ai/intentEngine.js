@@ -1,11 +1,11 @@
-export const detectIntent = (msg, entities) => {
+export const detectIntent = (msg = "", entities = {}) => {
   const m = msg.toLowerCase();
 
   if (entities.isTechnical) return "TECHNICAL";
-  if (m.includes("so sánh")) return "COMPARE";
-  if (m.includes("7 chỗ") || m.includes("gia đình")) return "FAMILY";
+  if (m.includes("so sanh") || m.includes("vs")) return "COMPARE";
+  if (m.includes("7 cho") || m.includes("gia dinh")) return "FAMILY";
   if (m.includes("offroad")) return "OFFROAD";
-  if (m.includes("màu")) return "COLOR";
+  if (m.includes("mau")) return "COLOR";
 
   return "GENERAL";
 };

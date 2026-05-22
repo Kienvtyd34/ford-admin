@@ -33,15 +33,17 @@ export const getVehicleRAG = async () => {
         inventory: { $ifNull: ["$inventory", []] },
 
         bestVariant: {
-          $arrayElemAt: [
-            {
-              $sortArray: {
-                input: "$variants",
-                sortBy: { basePrice: 1 },
+          $let: {
+            vars: {
+              sorted: {
+                $sortArray: {
+                  input: { $ifNull: ["$variants", []] },
+                  sortBy: { basePrice: -1 },
+                },
               },
             },
-            0,
-          ],
+            in: { $arrayElemAt: ["$$sorted", 0] },
+          },
         },
       },
     },
