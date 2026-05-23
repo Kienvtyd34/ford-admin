@@ -50,13 +50,24 @@ export const extractEntities = async (message = "") => {
   };
 
   for (const model of db.models) {
-    const name = normalize(model.name);
 
-    if (text.includes(name)) {
-      entities.model = model;
-      break;
-    }
+  const fullName = normalize(model.name);
+
+  // ford ranger -> ranger
+  const shortName = fullName
+    .replace("ford ", "")
+    .trim();
+
+  if (
+    text.includes(fullName) ||
+    text.includes(shortName)
+  ) {
+
+    entities.model = model;
+
+    break;
   }
+}
 
   for (const variant of db.variants) {
     const name = normalize(variant.variantName);

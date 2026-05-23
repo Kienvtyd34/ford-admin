@@ -61,7 +61,9 @@ export default function Chatbot() {
 
       console.log("API RESPONSE:", res.data);
 
-      let reply = res.data?.reply;
+      let reply =
+  res.data?.reply ||
+  res.data?.message;
 
       // =========================
       // FIX OBJECT RESPONSE
