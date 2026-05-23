@@ -1,6 +1,6 @@
 import CarProblem from "../../models/CarProblem.js";
 
-import { normalize } from "../utils/normalize.js";
+import { normalize } from "../../../src/utils/normalize.js";
 
 export const findCarProblem = async (message) => {
   const text = normalize(message);
