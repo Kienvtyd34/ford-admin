@@ -1,4 +1,4 @@
-import { normalize } from "../utils/normalize.js";
+import { normalize } from "../core/utils/normalize.js";
 
 const patterns = {
   PRICE_QUERY: [
