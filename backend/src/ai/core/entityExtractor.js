@@ -2,7 +2,7 @@ import VehicleModel from "../../models/VehicleModel.js";
 import Variant from "../../models/Variant.js";
 import VehicleColor from "../../models/VehicleColor.js";
 
-import { normalize } from "../utils/normalize.js";
+import { normalize } from "../../../src/utils/normalize.js";
 
 let cache = {
   models: [],
