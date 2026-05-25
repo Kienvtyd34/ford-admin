@@ -1,4 +1,4 @@
-import { normalize } from "../../../src/utils/normalize.js";
+import { normalize } from "../../utils/normalize.js";
 
 const patterns = {
   PRICE_QUERY: [
@@ -6,72 +6,65 @@ const patterns = {
     "bao nhieu",
     "bao gia",
     "lan banh",
-    "bao tien",
+  ],
+
+  INVENTORY_CHECK: [
+    "con hang",
+    "giao ngay",
+    "ton kho",
+    "mau",
   ],
 
   VEHICLE_SUGGESTION: [
     "goi y",
-    "gia dinh",
+    "xe gia dinh",
+    "xe nao",
+    "tu van",
     "di pho",
     "du lich",
     "cong trinh",
-    "rong rai",
     "tiet kiem",
-    "ban tai",
-    "tu van",
   ],
 
   COMPARE: [
     "so sanh",
     "khac gi",
     "hon gi",
-    "manh hon",
     "nen chon",
-  ],
-
-  INVENTORY_CHECK: [
-    "con hang",
-    "ton kho",
-    "giao ngay",
-    "co san",
-    "mau",
-    "showroom",
   ],
 
   VEHICLE_SPEC: [
     "dong co",
-    "camera",
     "adas",
-    "4x4",
-    "turbo",
+    "camera 360",
     "tieu hao",
+    "may cho",
+    "4x4",
+    "cua so troi",
     "binh xang",
     "tai duoc",
-    "may cho",
-    "cua so troi",
+    "turbo",
   ],
 
   TECH_SUPPORT: [
     "khong mat",
     "rung",
+    "bao loi",
     "abs",
-    "dong co",
-    "kho no",
     "hao xang",
-    "vo lang",
     "chet binh",
-    "mui hoi",
-    "gam xe",
+    "vo lang",
+    "dong co",
   ],
 
   GREETING: [
     "xin chao",
-    "ban la ai",
+    "hello",
+    "hi",
     "cam on",
     "tam biet",
     "hotline",
     "khuyen mai",
-    "tu van mua xe",
   ],
 };
 
@@ -90,20 +83,36 @@ export const detectIntent = (
       intent
     ]) {
       if (text.includes(keyword)) {
-        score += keyword.length;
+        score++;
       }
     }
 
+    // Ưu tiên intent mạnh hơn
     if (score > bestScore) {
       bestScore = score;
       bestIntent = intent;
     }
   }
 
+  // fallback đặc biệt cho giá xe
+
+  if (
+    text.includes("ranger") ||
+    text.includes("everest") ||
+    text.includes("territory")
+  ) {
+    if (
+      text.includes("gia") ||
+      text.includes("bao nhieu")
+    ) {
+      bestIntent = "PRICE_QUERY";
+    }
+  }
+
   return {
     intent: bestIntent,
     confidence: Math.min(
-      bestScore / 15,
+      bestScore / 3,
       1
     ),
   };
