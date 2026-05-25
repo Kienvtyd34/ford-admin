@@ -6,42 +6,78 @@ const patterns = {
     "bao nhieu",
     "bao gia",
     "lan banh",
-  ],
-
-  INVENTORY_CHECK: [
-    "con hang",
-    "giao ngay",
-    "ton kho",
+    "bao tien",
   ],
 
   VEHICLE_SUGGESTION: [
     "goi y",
-    "xe gia dinh",
-    "xe nao",
+    "gia dinh",
+    "di pho",
+    "du lich",
+    "cong trinh",
+    "rong rai",
+    "tiet kiem",
+    "ban tai",
     "tu van",
   ],
 
-  TEST_DRIVE: [
-    "lai thu",
-    "test drive",
+  COMPARE: [
+    "so sanh",
+    "khac gi",
+    "hon gi",
+    "manh hon",
+    "nen chon",
   ],
 
-  BOOKING: [
-    "dat coc",
-    "booking",
-    "thanh toan",
-    "vietqr",
+  INVENTORY_CHECK: [
+    "con hang",
+    "ton kho",
+    "giao ngay",
+    "co san",
+    "mau",
+    "showroom",
+  ],
+
+  VEHICLE_SPEC: [
+    "dong co",
+    "camera",
+    "adas",
+    "4x4",
+    "turbo",
+    "tieu hao",
+    "binh xang",
+    "tai duoc",
+    "may cho",
+    "cua so troi",
   ],
 
   TECH_SUPPORT: [
     "khong mat",
     "rung",
-    "bao loi",
     "abs",
+    "dong co",
+    "kho no",
+    "hao xang",
+    "vo lang",
+    "chet binh",
+    "mui hoi",
+    "gam xe",
+  ],
+
+  GREETING: [
+    "xin chao",
+    "ban la ai",
+    "cam on",
+    "tam biet",
+    "hotline",
+    "khuyen mai",
+    "tu van mua xe",
   ],
 };
 
-export const detectIntent = (message = "") => {
+export const detectIntent = (
+  message = ""
+) => {
   const text = normalize(message);
 
   let bestIntent = "UNKNOWN";
@@ -50,9 +86,11 @@ export const detectIntent = (message = "") => {
   for (const intent in patterns) {
     let score = 0;
 
-    for (const keyword of patterns[intent]) {
+    for (const keyword of patterns[
+      intent
+    ]) {
       if (text.includes(keyword)) {
-        score++;
+        score += keyword.length;
       }
     }
 
@@ -64,7 +102,10 @@ export const detectIntent = (message = "") => {
 
   return {
     intent: bestIntent,
-    confidence: Math.min(bestScore / 3, 1),
+    confidence: Math.min(
+      bestScore / 15,
+      1
+    ),
   };
 };
 

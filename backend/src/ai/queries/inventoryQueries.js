@@ -1,19 +1,24 @@
 import Inventory from "../../models/Inventory.js";
 
-export const findInventory = async (entities) => {
-  const inventories = await Inventory.find({
-    status: "Trong kho",
-  })
-    .populate({
-      path: "variantId",
-      populate: {
-        path: "modelId",
-      },
+export const findInventory = async (
+  entities
+) => {
+  const inventories =
+    await Inventory.find({
+      status: "Trong kho",
     })
-    .populate("colorId");
+      .populate({
+        path: "variantId",
+        populate: {
+          path: "modelId",
+        },
+      })
+      .populate("colorId");
 
   return inventories.filter((item) => {
-    const model = item.variantId?.modelId;
+    const model =
+      item.variantId?.modelId;
+
     const color = item.colorId;
 
     let matched = true;
