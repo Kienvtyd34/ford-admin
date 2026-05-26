@@ -60,7 +60,7 @@ const patterns = {
   GREETING: [
     "xin chao",
     "hello",
-    "hi",
+    " hi ",
     "cam on",
     "tam biet",
     "hotline",
