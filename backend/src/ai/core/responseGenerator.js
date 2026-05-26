@@ -45,24 +45,25 @@ ${data.minPrice.toLocaleString("vi-VN")} VNĐ
     // SUGGESTION
     // =====================================
 
-    case "VEHICLE_SUGGESTION":
+    case "VEHICLE_SUGGESTION": {
 
-      return data
-        .map((v) => {
+  return data
+    .map((v) => {
 
-          return `
+      return `
 🚗 ${v.name}
 
-💰 ${
-  v.basePrice
-    ? v.basePrice.toLocaleString(
-        "vi-VN"
-      )
-    : "Liên hệ"
-} VNĐ
+✅ ${v.reason || "Phù hợp nhu cầu sử dụng"}
+
+💰 Giá khởi điểm:
+${v.basePrice?.toLocaleString(
+  "vi-VN"
+)} VNĐ
 `;
-        })
-        .join("\n");
+
+    })
+    .join("\n");
+}
 
     // =====================================
     // COMPARE

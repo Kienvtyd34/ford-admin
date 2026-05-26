@@ -108,9 +108,9 @@ export const getVehicleSuggestions =
       await Variant.find()
         .populate("modelId");
 
-    // =========================
-    // FILTER BY BUDGET
-    // =========================
+    // =====================================
+    // BUDGET
+    // =====================================
 
     if (entities.budget) {
 
@@ -127,61 +127,197 @@ export const getVehicleSuggestions =
         name:
           v.modelId?.name,
 
-        variant:
-          v.variantName,
+        reason:
+          "Phù hợp ngân sách",
 
         basePrice:
           v.basePrice,
       }));
     }
 
-    // =========================
-    // 7 SEATS
-    // =========================
+    // =====================================
+    // FAMILY / 7 SEATS
+    // =====================================
 
     if (
+      text.includes("gia dinh") ||
       text.includes("7 cho") ||
-      text.includes("gia dinh")
+      text.includes("rong rai")
     ) {
 
-      return models.filter(
-        (m) => m.seats >= 7
-      );
+      const everest =
+        models.find((m) =>
+          m.name
+            .toLowerCase()
+            .includes("everest")
+        );
+
+      const territory =
+        models.find((m) =>
+          m.name
+            .toLowerCase()
+            .includes("territory")
+        );
+
+      return [
+        {
+          name:
+            everest?.name,
+
+          reason:
+            "SUV 7 chỗ rộng rãi, phù hợp gia đình và du lịch",
+
+          basePrice:
+            1099000000,
+        },
+
+        {
+          name:
+            territory?.name,
+
+          reason:
+            "SUV tiện nghi, tiết kiệm nhiên liệu",
+
+          basePrice:
+            822000000,
+        },
+      ];
     }
 
-    // =========================
-    // PICKUP
-    // =========================
+    // =====================================
+    // DU LỊCH
+    // =====================================
+
+    if (
+      text.includes("du lich")
+    ) {
+
+      const everest =
+        models.find((m) =>
+          m.name
+            .toLowerCase()
+            .includes("everest")
+        );
+
+      return [
+        {
+          name:
+            everest?.name,
+
+          reason:
+            "Khung gầm chắc chắn, đi đường dài tốt",
+
+          basePrice:
+            1099000000,
+        },
+      ];
+    }
+
+    // =====================================
+    // CÔNG TRÌNH / BÁN TẢI
+    // =====================================
 
     if (
       text.includes("cong trinh") ||
       text.includes("ban tai")
     ) {
 
-      return models.filter(
-        (m) =>
-          m.type ===
-          "Pick-up"
-      );
+      const ranger =
+        models.find((m) =>
+          m.name
+            .toLowerCase()
+            .includes("ranger")
+        );
+
+      return [
+        {
+          name:
+            ranger?.name,
+
+          reason:
+            "Bán tải mạnh mẽ, tải tốt, phù hợp công trình",
+
+          basePrice:
+            665000000,
+        },
+      ];
     }
 
-    // =========================
-    // CITY
-    // =========================
+    // =====================================
+    // ĐI PHỐ
+    // =====================================
 
     if (
       text.includes("di pho")
     ) {
 
-      return models.filter(
-        (m) =>
-          m.type === "SUV"
-      );
+      const territory =
+        models.find((m) =>
+          m.name
+            .toLowerCase()
+            .includes("territory")
+        );
+
+      return [
+        {
+          name:
+            territory?.name,
+
+          reason:
+            "Kích thước vừa phải, phù hợp đô thị",
+
+          basePrice:
+            822000000,
+        },
+      ];
     }
 
-    return models.slice(0, 5);
-  };
+    // =====================================
+    // TIẾT KIỆM
+    // =====================================
 
+    if (
+      text.includes("tiet kiem")
+    ) {
+
+      const territory =
+        models.find((m) =>
+          m.name
+            .toLowerCase()
+            .includes("territory")
+        );
+
+      return [
+        {
+          name:
+            territory?.name,
+
+          reason:
+            "Tiết kiệm nhiên liệu và chi phí vận hành",
+
+          basePrice:
+            822000000,
+        },
+      ];
+    }
+
+    // =====================================
+    // DEFAULT
+    // =====================================
+
+    return [
+      {
+        name:
+          "Ford Everest",
+
+        reason:
+          "Mẫu SUV nổi bật của Ford",
+
+        basePrice:
+          1099000000,
+      },
+    ];
+  };
 // =======================================
 // COMPARE
 // =======================================
