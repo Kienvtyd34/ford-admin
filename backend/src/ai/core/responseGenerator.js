@@ -2,54 +2,73 @@ export const generateResponse = ({
   intent,
   data,
 }) => {
+
   switch (intent) {
-    case "PRICE_QUERY":
+
+    // =====================================
+    // PRICE
+    // =====================================
+
+    case "PRICE_QUERY": {
+
+      // variant
+
+      if (
+        data.selectedVariant
+      ) {
+
+        return `
+🚗 ${data.model.name}
+
+📌 Phiên bản:
+${data.selectedVariant.variantName}
+
+💰 Giá niêm yết:
+${data.basePrice.toLocaleString("vi-VN")} VNĐ
+
+🚘 Giá lăn bánh tạm tính:
+${data.onRoadPrice.toLocaleString("vi-VN")} VNĐ
+`;
+      }
+
+      // fallback
+
       return `
 🚗 ${data.model.name}
 
 💰 Giá từ:
-${data.minPrice.toLocaleString(
-  "vi-VN"
-)} VNĐ
+${data.minPrice.toLocaleString("vi-VN")} VNĐ
 `;
+    }
+
+    // =====================================
+    // SUGGESTION
+    // =====================================
 
     case "VEHICLE_SUGGESTION":
+
       return data
-        .map(
-          (v) => `
+        .map((v) => {
+
+          return `
 🚗 ${v.name}
-💰 ${v.basePrice?.toLocaleString(
-            "vi-VN"
-          )} VNĐ
-`
-        )
+
+💰 ${
+  v.basePrice
+    ? v.basePrice.toLocaleString(
+        "vi-VN"
+      )
+    : "Liên hệ"
+} VNĐ
+`;
+        })
         .join("\n");
 
-    case "COMPARE":
+    // =====================================
+    // COMPARE
+    // =====================================
 
-      // compare xe Ford nội bộ
-
-      if (data.a && data.b) {
-        return `
-⚔️ So sánh ${data.a.name} và ${data.b.name}
-
-💺 Số chỗ:
-${data.a.seats} vs ${data.b.seats}
-
-🚘 Loại xe:
-${data.a.type} vs ${data.b.type}
-`;
-      }
-
-      // compare ngoài Ford
-
-      if (data.externalCompare) {
-        return `
-⚔️ ${data.externalCompare.title}
-
-✅ ${data.externalCompare.content}
-`;
-      }
+    case "COMPARE": {
 
       return `
 ⚔️ So sánh ${data.a.name} và ${data.b.name}
@@ -60,36 +79,61 @@ ${data.a.seats} vs ${data.b.seats}
 🚘 Loại xe:
 ${data.a.type} vs ${data.b.type}
 `;
+    }
 
-    case "INVENTORY_CHECK":
+    // =====================================
+    // INVENTORY
+    // =====================================
+
+    case "INVENTORY_CHECK": {
+
       return `
 📦 Hiện còn ${data.length} xe trong kho.
 `;
+    }
 
-    case "VEHICLE_SPEC":
+    // =====================================
+    // SPECS
+    // =====================================
+
+    case "VEHICLE_SPEC": {
+
       return `
 🚗 ${data.name}
 
 ⚙️ Động cơ:
 ${data.engine}
 
+⛽ Nhiên liệu:
+${data.fuelType}
+
 💺 Số chỗ:
 ${data.seats}
 
 🛡️ Công nghệ:
-${data.features?.join(", ")}
+${data.features.join(", ")}
 `;
+    }
 
-    case "TECH_SUPPORT":
+    // =====================================
+    // TECH SUPPORT
+    // =====================================
+
+    case "TECH_SUPPORT": {
+
       return `
 ⚠️ ${data.title}
 
 🛠️ Giải pháp:
 ${data.solutions.join("\n")}
 `;
+    }
 
     default:
-      return "🤖 Tôi chưa hiểu yêu cầu.";
+
+      return `
+🤖 Tôi chưa hiểu yêu cầu.
+`;
   }
 };
 
