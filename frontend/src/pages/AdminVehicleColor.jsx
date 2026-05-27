@@ -16,12 +16,25 @@ const AdminVehicle = () => {
     name: '',
     type: 'SUV',
     seats: 5,
+    aliases: '',
     description: '',
     isHot: false
   });
 
   const [mainImage, setMainImage] = useState(null);
   const [specImage, setSpecImage] = useState(null);
+
+  // ================= VARIANT =================
+  const [editingVariant, setEditingVariant] = useState(null);
+
+  const [variantForm, setVariantForm] = useState({
+    variantName: '',
+    aliases: '',
+    basePrice: '',
+    transmission: '',
+    driveTrain: '',
+    fuelType: ''
+  });
 
   // ================= COLOR =================
   const [selectedModel, setSelectedModel] = useState(null);
@@ -85,6 +98,8 @@ const AdminVehicle = () => {
       name: model.name || '',
       type: model.type || 'SUV',
       seats: model.seats || 5,
+      aliases:
+        model.aliases?.join(', ') || '',
       description: model.description || '',
       isHot: model.isHot || false
     });
@@ -106,6 +121,11 @@ const AdminVehicle = () => {
       formData.append('seats', modelForm.seats);
 
       formData.append(
+        'aliases',
+        modelForm.aliases
+      );
+
+      formData.append(
         'description',
         modelForm.description
       );
@@ -123,7 +143,6 @@ const AdminVehicle = () => {
         );
       }
 
-      // ================= ẢNH THÔNG SỐ =================
       // ================= ẢNH THÔNG SỐ =================
       if (specImage) {
         formData.append(
@@ -187,6 +206,111 @@ const AdminVehicle = () => {
       );
     }
   };
+
+  // ================= EDIT VARIANT =================
+  const handleEditVariant = (
+    variant
+  ) => {
+    setEditingVariant(variant);
+
+    setVariantForm({
+      variantName:
+        variant.variantName || '',
+
+      aliases:
+        variant.aliases?.join(', ') || '',
+
+      basePrice:
+        variant.basePrice || '',
+
+      transmission:
+        variant.transmission || '',
+
+      driveTrain:
+        variant.driveTrain || '',
+
+      fuelType:
+        variant.fuelType || ''
+    });
+  };
+
+  // ================= UPDATE VARIANT =================
+  const handleUpdateVariant =
+    async () => {
+      try {
+        await api.put(
+          `/vehicles/variants/${editingVariant._id}`,
+          {
+            variantName:
+              variantForm.variantName,
+
+            aliases:
+              variantForm.aliases
+                .split(',')
+                .map(v => v.trim()),
+
+            basePrice:
+              Number(
+                variantForm.basePrice
+              ),
+
+            transmission:
+              variantForm.transmission,
+
+            driveTrain:
+              variantForm.driveTrain,
+
+            fuelType:
+              variantForm.fuelType
+          }
+        );
+
+        alert(
+          'Cập nhật phiên bản thành công'
+        );
+
+        setEditingVariant(null);
+
+        fetchVehicles();
+      } catch (err) {
+        console.error(err);
+
+        alert(
+          err.response?.data?.error ||
+            'Lỗi cập nhật phiên bản'
+        );
+      }
+    };
+
+  // ================= DELETE VARIANT =================
+  const handleDeleteVariant =
+    async (id) => {
+      if (
+        !window.confirm(
+          'Bạn có chắc chắn muốn xóa phiên bản này?'
+        )
+      )
+        return;
+
+      try {
+        await api.delete(
+          `/vehicles/variants/${id}`
+        );
+
+        alert(
+          'Xóa phiên bản thành công'
+        );
+
+        fetchVehicles();
+      } catch (err) {
+        console.error(err);
+
+        alert(
+          err.response?.data?.message ||
+            'Lỗi xóa phiên bản'
+        );
+      }
+    };
 
   // ================= ADD COLOR =================
   const handleAddColor = async () => {
@@ -322,7 +446,6 @@ const AdminVehicle = () => {
   return (
     <div className="p-8 space-y-10 bg-gray-50 min-h-screen">
 
-      {/* ================= HEADER ================= */}
       <div className="flex justify-between items-center">
 
         <h2 className="text-3xl font-black text-blue-900">
@@ -335,7 +458,6 @@ const AdminVehicle = () => {
 
       </div>
 
-      {/* ================= VEHICLE LIST ================= */}
       <div className="space-y-6">
 
         {vehicles.map((v) => (
@@ -346,7 +468,6 @@ const AdminVehicle = () => {
 
             <div className="flex flex-col md:flex-row gap-8">
 
-              {/* IMAGE */}
               <div className="w-full md:w-1/4">
 
                 <img
@@ -361,7 +482,6 @@ const AdminVehicle = () => {
 
               </div>
 
-              {/* INFO */}
               <div className="flex-1 space-y-5">
 
                 <div className="flex items-center gap-3">
@@ -394,7 +514,6 @@ const AdminVehicle = () => {
 
                 </div>
 
-                {/* ================= VARIANTS ================= */}
                 <div className="border-t pt-5 space-y-4">
 
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
@@ -410,7 +529,6 @@ const AdminVehicle = () => {
                           className="border rounded-2xl p-4 bg-gray-50"
                         >
 
-                          {/* HEADER */}
                           <div className="flex justify-between items-center">
 
                             <div>
@@ -424,7 +542,6 @@ const AdminVehicle = () => {
                               <p className="text-blue-900 font-black">
                                 {(
                                   variant.basePrice ||
-                                  variant.price ||
                                   0
                                 ).toLocaleString()}{' '}
                                 VNĐ
@@ -432,217 +549,49 @@ const AdminVehicle = () => {
 
                             </div>
 
-                            <button
-                              onClick={() => {
-                                setSelectedVariant(
-                                  variant
-                                );
+                            <div className="flex gap-2">
 
-                                fetchColors(
-                                  variant._id
-                                );
-                              }}
-                              className="bg-blue-700 text-white px-4 py-2 rounded-xl font-bold"
-                            >
-                              Quản lý màu
-                            </button>
-
-                          </div>
-
-                          {/* ================= COLOR PANEL ================= */}
-                          {selectedVariant?._id ===
-                            variant._id && (
-                            <div className="mt-5 space-y-5">
-
-                              {/* FORM */}
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-
-                                <input
-                                  type="text"
-                                  placeholder="Tên màu"
-                                  value={
-                                    colorForm.name
-                                  }
-                                  onChange={(e) =>
-                                    setColorForm({
-                                      ...colorForm,
-                                      name:
-                                        e.target
-                                          .value
-                                    })
-                                  }
-                                  className="border p-3 rounded-xl"
-                                />
-
-                                <input
-                                  type="text"
-                                  placeholder="#ffffff"
-                                  value={
-                                    colorForm.hexCode
-                                  }
-                                  onChange={(e) =>
-                                    setColorForm({
-                                      ...colorForm,
-                                      hexCode:
-                                        e.target
-                                          .value
-                                    })
-                                  }
-                                  className="border p-3 rounded-xl"
-                                />
-
-                                <input
-                                  type="file"
-                                  multiple
-                                  onChange={(e) =>
-                                    setColorImages(
-                                      Array.from(
-                                        e.target
-                                          .files
-                                      )
-                                    )
-                                  }
-                                  className="border p-3 rounded-xl"
-                                />
-
-                                <button
-                                  onClick={
-                                    editingColor
-                                      ? handleUpdateColor
-                                      : handleAddColor
-                                  }
-                                  className="bg-green-600 text-white rounded-xl font-bold"
-                                >
-                                  {editingColor
-                                    ? 'Cập nhật màu'
-                                    : 'Thêm màu'}
-                                </button>
-
-                              </div>
-
-                              {/* COLOR LIST */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                                {colors.map(
-                                  (color) => (
-                                    <div
-                                      key={
-                                        color._id
-                                      }
-                                      className="border rounded-2xl p-4 bg-white"
-                                    >
-
-                                      <div className="flex justify-between items-center">
-
-                                        <div className="flex items-center gap-3">
-
-                                          <div
-                                            className="w-10 h-10 rounded-full border"
-                                            style={{
-                                              background:
-                                                color.hexCode
-                                            }}
-                                          />
-
-                                          <div>
-
-                                            <p className="font-bold">
-                                              {
-                                                color.name
-                                              }
-                                            </p>
-
-                                            <p className="text-xs text-gray-500">
-                                              {
-                                                color.hexCode
-                                              }
-                                            </p>
-
-                                          </div>
-
-                                        </div>
-
-                                        <div className="flex gap-2">
-
-                                          <button
-                                            onClick={() => {
-                                              setEditingColor(
-                                                color
-                                              );
-
-                                              setColorForm(
-                                                {
-                                                  name:
-                                                    color.name,
-                                                  hexCode:
-                                                    color.hexCode
-                                                }
-                                              );
-                                            }}
-                                            className="bg-yellow-400 px-3 py-1 rounded-lg text-sm font-bold"
-                                          >
-                                            Sửa
-                                          </button>
-
-                                          <button
-                                            onClick={() =>
-                                              handleDeleteColor(
-                                                color._id
-                                              )
-                                            }
-                                            className="bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold"
-                                          >
-                                            Xóa
-                                          </button>
-
-                                        </div>
-
-                                      </div>
-
-                                      {/* IMAGES */}
-                                      {color.images
-                                        ?.length >
-                                        0 && (
-                                        <div className="flex gap-2 mt-4 overflow-x-auto">
-
-                                          {color.images.map(
-                                            (
-                                              img,
-                                              index
-                                            ) => (
-                                              <img
-                                                key={
-                                                  index
-                                                }
-                                                src={
-                                                  img ||
-                                                  FALLBACK_IMG
-                                                }
-                                                alt={
-                                                  color.name
-                                                }
-                                                onError={(
-                                                  e
-                                                ) => {
-                                                  e.target.src =
-                                                    FALLBACK_IMG;
-                                                }}
-                                                className="w-28 h-20 object-cover rounded-xl border bg-white"
-                                              />
-                                            )
-                                          )}
-
-                                        </div>
-                                      )}
-
-                                    </div>
+                              <button
+                                onClick={() =>
+                                  handleEditVariant(
+                                    variant
                                   )
-                                )}
+                                }
+                                className="bg-yellow-400 text-black px-4 py-2 rounded-xl font-bold"
+                              >
+                                Sửa
+                              </button>
 
-                              </div>
+                              <button
+                                onClick={() =>
+                                  handleDeleteVariant(
+                                    variant._id
+                                  )
+                                }
+                                className="bg-red-500 text-white px-4 py-2 rounded-xl font-bold"
+                              >
+                                Xóa
+                              </button>
+
+                              <button
+                                onClick={() => {
+
+                                  setSelectedVariant(
+                                    variant
+                                  );
+
+                                  fetchColors(
+                                    variant._id
+                                  );
+                                }}
+                                className="bg-blue-700 text-white px-4 py-2 rounded-xl font-bold"
+                              >
+                                Quản lý màu
+                              </button>
 
                             </div>
-                          )}
+
+                          </div>
 
                         </div>
                       )
@@ -657,7 +606,6 @@ const AdminVehicle = () => {
 
               </div>
 
-              {/* ACTIONS */}
               <div className="flex flex-col gap-3 justify-center min-w-[130px]">
 
                 <button
@@ -686,13 +634,12 @@ const AdminVehicle = () => {
 
       </div>
 
-      {/* ================= EDIT MODAL ================= */}
+      {/* ================= EDIT MODEL MODAL ================= */}
       {isEditingModel && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5">
 
           <div className="bg-white rounded-[2rem] w-full max-w-6xl max-h-[90vh] overflow-y-auto p-10">
 
-            {/* HEADER */}
             <div className="flex justify-between items-center mb-8 border-b pb-4">
 
               <h3 className="text-3xl font-black text-blue-900">
@@ -711,7 +658,6 @@ const AdminVehicle = () => {
 
             </div>
 
-            {/* FORM */}
             <form
               onSubmit={handleUpdateModel}
               className="space-y-8"
@@ -719,7 +665,6 @@ const AdminVehicle = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
 
-                {/* LEFT */}
                 <div className="space-y-5">
 
                   <input
@@ -730,6 +675,20 @@ const AdminVehicle = () => {
                       setModelForm({
                         ...modelForm,
                         name:
+                          e.target.value
+                      })
+                    }
+                    className="w-full border p-4 rounded-2xl"
+                  />
+
+                  <input
+                    type="text"
+                    placeholder="Aliases: everest, suv 7 cho..."
+                    value={modelForm.aliases}
+                    onChange={(e) =>
+                      setModelForm({
+                        ...modelForm,
+                        aliases:
                           e.target.value
                       })
                     }
@@ -777,47 +736,8 @@ const AdminVehicle = () => {
                     className="w-full border p-4 rounded-2xl"
                   />
 
-                  <div>
-
-                    <label className="font-bold text-sm text-gray-500">
-                      Ảnh đại diện xe
-                    </label>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        setMainImage(
-                          e.target.files[0]
-                        )
-                      }
-                      className="w-full border p-3 rounded-2xl mt-2"
-                    />
-
-                  </div>
-
-                  <div>
-
-                    <label className="font-bold text-sm text-gray-500">
-                      Ảnh bảng thông số
-                    </label>
-
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) =>
-                        setSpecImage(
-                          e.target.files[0]
-                        )
-                      }
-                      className="w-full border p-3 rounded-2xl mt-2"
-                    />
-
-                  </div>
-
                 </div>
 
-                {/* RIGHT */}
                 <div>
 
                   <Editor
@@ -843,7 +763,6 @@ const AdminVehicle = () => {
 
               </div>
 
-              {/* ACTION */}
               <div className="flex justify-end gap-4">
 
                 <button
@@ -869,6 +788,154 @@ const AdminVehicle = () => {
               </div>
 
             </form>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ================= EDIT VARIANT MODAL ================= */}
+
+      {editingVariant && (
+
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5">
+
+          <div className="bg-white rounded-[2rem] w-full max-w-3xl p-10 space-y-6">
+
+            <div className="flex justify-between items-center">
+
+              <h3 className="text-3xl font-black text-blue-900">
+                Chỉnh sửa phiên bản
+              </h3>
+
+              <button
+                onClick={() =>
+                  setEditingVariant(null)
+                }
+                className="text-3xl text-gray-400"
+              >
+                ✕
+              </button>
+
+            </div>
+
+            <input
+              type="text"
+              placeholder="Tên phiên bản"
+              value={
+                variantForm.variantName
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  variantName:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="text"
+              placeholder="Aliases: wildtrak, ban tai..."
+              value={
+                variantForm.aliases
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  aliases:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="number"
+              placeholder="Giá"
+              value={
+                variantForm.basePrice
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  basePrice:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="text"
+              placeholder="Hộp số"
+              value={
+                variantForm.transmission
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  transmission:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="text"
+              placeholder="Dẫn động"
+              value={
+                variantForm.driveTrain
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  driveTrain:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="text"
+              placeholder="Nhiên liệu"
+              value={
+                variantForm.fuelType
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  fuelType:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <div className="flex justify-end gap-4">
+
+              <button
+                onClick={() =>
+                  setEditingVariant(null)
+                }
+                className="px-6 py-3 bg-gray-200 rounded-2xl font-bold"
+              >
+                Hủy
+              </button>
+
+              <button
+                onClick={
+                  handleUpdateVariant
+                }
+                className="px-8 py-3 bg-blue-900 text-white rounded-2xl font-bold"
+              >
+                Cập nhật
+              </button>
+
+            </div>
 
           </div>
 

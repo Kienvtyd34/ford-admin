@@ -5,19 +5,9 @@ export const generateResponse = ({
 
   switch (intent) {
 
-    // =====================================
-    // PRICE
-    // =====================================
-
     case "PRICE_QUERY": {
 
-      // variant
-
-      if (
-        data.selectedVariant
-      ) {
-
-        return `
+      return `
 🚗 ${data.model.name}
 
 📌 Phiên bản:
@@ -29,45 +19,27 @@ ${data.basePrice.toLocaleString("vi-VN")} VNĐ
 🚘 Giá lăn bánh tạm tính:
 ${data.onRoadPrice.toLocaleString("vi-VN")} VNĐ
 `;
-      }
-
-      // fallback
-
-      return `
-🚗 ${data.model.name}
-
-💰 Giá từ:
-${data.minPrice.toLocaleString("vi-VN")} VNĐ
-`;
     }
 
-    // =====================================
-    // SUGGESTION
-    // =====================================
+    // =========================
 
     case "VEHICLE_SUGGESTION": {
 
-  return data
-    .map((v) => {
-
-      return `
+      return data
+        .map((v) => {
+          return `
 🚗 ${v.name}
 
-✅ ${v.reason || "Phù hợp nhu cầu sử dụng"}
+✅ ${v.reason}
 
 💰 Giá khởi điểm:
-${v.basePrice?.toLocaleString(
-  "vi-VN"
-)} VNĐ
+${v.basePrice.toLocaleString("vi-VN")} VNĐ
 `;
+        })
+        .join("\n");
+    }
 
-    })
-    .join("\n");
-}
-
-    // =====================================
-    // COMPARE
-    // =====================================
+    // =========================
 
     case "COMPARE": {
 
@@ -82,9 +54,7 @@ ${data.a.type} vs ${data.b.type}
 `;
     }
 
-    // =====================================
-    // INVENTORY
-    // =====================================
+    // =========================
 
     case "INVENTORY_CHECK": {
 
@@ -93,9 +63,7 @@ ${data.a.type} vs ${data.b.type}
 `;
     }
 
-    // =====================================
-    // SPECS
-    // =====================================
+    // =========================
 
     case "VEHICLE_SPEC": {
 
@@ -116,9 +84,7 @@ ${data.features.join(", ")}
 `;
     }
 
-    // =====================================
-    // TECH SUPPORT
-    // =====================================
+    // =========================
 
     case "TECH_SUPPORT": {
 
@@ -132,9 +98,7 @@ ${data.solutions.join("\n")}
 
     default:
 
-      return `
-🤖 Tôi chưa hiểu yêu cầu.
-`;
+      return `🤖 Tôi chưa hiểu yêu cầu.`;
   }
 };
 

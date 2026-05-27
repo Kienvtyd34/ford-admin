@@ -16,7 +16,10 @@ import {
   deleteVehicleColor,
   updateVehicleColor,
   getColorsByVariant,
-  updateInventory
+  updateInventory,
+  updateVariant,
+  deleteVariant,
+  getVariantsByModel
 } from "../controllers/vehicleController.js";
 
 import { protect, staff } from "../middleware/authMiddleware.js";
@@ -116,6 +119,20 @@ router.post(
   protect,
   staff,
   addVariant
+);
+router.put(
+  "/variants/:id",
+  updateVariant
+);
+
+router.delete(
+  "/variants/:id",
+  deleteVariant
+);
+
+router.get(
+  "/models/:modelId/variants",
+  getVariantsByModel
 );
 
 // ================= VEHICLE COLORS =================

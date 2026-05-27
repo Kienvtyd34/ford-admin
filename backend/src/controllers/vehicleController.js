@@ -908,3 +908,112 @@ export const addVariant = async (req, res) => {
     });
   }
 };
+// ================= UPDATE VARIANT =================
+
+export const updateVariant =
+  async (req, res) => {
+    try {
+
+      const variant =
+        await Variant.findById(
+          req.params.id
+        );
+
+      if (!variant) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Không tìm thấy phiên bản",
+        });
+      }
+
+      const updated =
+        await Variant.findByIdAndUpdate(
+          req.params.id,
+          req.body,
+          {
+            new: true,
+          }
+        );
+
+      res.json({
+        success: true,
+        data: updated,
+      });
+
+    } catch (err) {
+
+      console.log(
+        "UPDATE VARIANT ERROR:",
+        err
+      );
+
+      res.status(500).json({
+        success: false,
+        error: err.message,
+      });
+    }
+  };
+  // ================= DELETE VARIANT =================
+
+export const deleteVariant =
+  async (req, res) => {
+    try {
+
+      const inventoryExists =
+        await Inventory.exists({
+          variantId:
+            req.params.id,
+        });
+
+      if (inventoryExists) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Không thể xóa vì còn xe trong kho",
+        });
+      }
+
+      await Variant.findByIdAndDelete(
+        req.params.id
+      );
+
+      res.json({
+        success: true,
+      });
+
+    } catch (err) {
+
+      res.status(500).json({
+        success: false,
+        error: err.message,
+      });
+    }
+  };
+  // ================= GET VARIANTS BY MODEL =================
+
+export const getVariantsByModel =
+  async (req, res) => {
+    try {
+
+      const variants =
+        await Variant.find({
+          modelId:
+            req.params.modelId,
+        });
+
+      res.json({
+        success: true,
+        data: variants,
+      });
+
+    } catch (err) {
+
+      res.status(500).json({
+        success: false,
+        error: err.message,
+      });
+    }
+  };

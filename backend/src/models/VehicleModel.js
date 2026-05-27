@@ -14,6 +14,11 @@ const vehicleModelSchema = new mongoose.Schema(
 
     seats: Number,
 
+    aliases: {
+        type: [String],
+        default: [],
+      },
+
     images: {
       type: [String],
       default: [],
