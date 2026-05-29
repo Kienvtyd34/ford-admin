@@ -10,46 +10,75 @@ const AdminVehicle = () => {
   const [loading, setLoading] = useState(false);
 
   // ================= MODEL =================
-  const [isEditingModel, setIsEditingModel] = useState(false);
+  const [isEditingModel, setIsEditingModel] =
+    useState(false);
 
-  const [modelForm, setModelForm] = useState({
-    name: '',
-    type: 'SUV',
-    seats: 5,
-    aliases: '',
-    description: '',
-    isHot: false
-  });
+  const [modelForm, setModelForm] =
+    useState({
+      name: '',
+      type: 'SUV',
+      seats: 5,
+      aliases: '',
+      description: '',
+      isHot: false
+    });
 
-  const [mainImage, setMainImage] = useState(null);
-  const [specImage, setSpecImage] = useState(null);
+  const [mainImage, setMainImage] =
+    useState(null);
+
+  const [specImage, setSpecImage] =
+    useState(null);
 
   // ================= VARIANT =================
-  const [editingVariant, setEditingVariant] = useState(null);
+  const [editingVariant, setEditingVariant] =
+    useState(null);
 
-  const [variantForm, setVariantForm] = useState({
-    variantName: '',
-    aliases: '',
-    basePrice: '',
-    transmission: '',
-    driveTrain: '',
-    fuelType: ''
-  });
+  const [variantForm, setVariantForm] =
+    useState({
+      variantName: '',
+      aliases: '',
+      basePrice: '',
+      transmission: '',
+      driveTrain: '',
+      fuelType: '',
+
+      // ================= SPECS =================
+      engine: '',
+      horsepower: '',
+      torque: '',
+      fuelConsumption: '',
+
+      // ================= FEATURES =================
+      adas: false,
+      turbo: false,
+      camera360: false,
+      sunroof: false,
+      abs: false,
+
+      // ================= HOT =================
+      isHot: false
+    });
 
   // ================= COLOR =================
-  const [selectedModel, setSelectedModel] = useState(null);
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedModel, setSelectedModel] =
+    useState(null);
+
+  const [selectedVariant, setSelectedVariant] =
+    useState(null);
 
   const [colors, setColors] = useState([]);
 
-  const [editingColor, setEditingColor] = useState(null);
+  const [editingColor, setEditingColor] =
+    useState(null);
 
-  const [colorForm, setColorForm] = useState({
-    name: '',
-    hexCode: ''
-  });
+  const [colorForm, setColorForm] =
+    useState({
+      name: '',
+      hexCode: ''
+    });
 
-  const [colorImages, setColorImages] = useState([]);
+  const [colorImages, setColorImages] =
+    useState([]);
 
   // ================= GET VEHICLE IMAGE =================
   const getVehicleImage = (vehicle) => {
@@ -135,7 +164,6 @@ const AdminVehicle = () => {
         modelForm.isHot
       );
 
-      // ================= ẢNH ĐẠI DIỆN =================
       if (mainImage) {
         formData.append(
           'images',
@@ -143,7 +171,6 @@ const AdminVehicle = () => {
         );
       }
 
-      // ================= ẢNH THÔNG SỐ =================
       if (specImage) {
         formData.append(
           'imageUrl',
@@ -208,9 +235,7 @@ const AdminVehicle = () => {
   };
 
   // ================= EDIT VARIANT =================
-  const handleEditVariant = (
-    variant
-  ) => {
+  const handleEditVariant = (variant) => {
     setEditingVariant(variant);
 
     setVariantForm({
@@ -230,7 +255,43 @@ const AdminVehicle = () => {
         variant.driveTrain || '',
 
       fuelType:
-        variant.fuelType || ''
+        variant.fuelType || '',
+
+      // ================= SPECS =================
+      engine:
+        variant?.specs?.engine || '',
+
+      horsepower:
+        variant?.specs?.horsepower || '',
+
+      torque:
+        variant?.specs?.torque || '',
+
+      fuelConsumption:
+        variant?.specs
+          ?.fuelConsumption || '',
+
+      // ================= FEATURES =================
+      adas:
+        variant?.features?.adas || false,
+
+      turbo:
+        variant?.features?.turbo || false,
+
+      camera360:
+        variant?.features?.camera360 ||
+        false,
+
+      sunroof:
+        variant?.features?.sunroof ||
+        false,
+
+      abs:
+        variant?.features?.abs || false,
+
+      // ================= HOT =================
+      isHot:
+        variant?.isHot || false
     });
   };
 
@@ -247,12 +308,12 @@ const AdminVehicle = () => {
             aliases:
               variantForm.aliases
                 .split(',')
-                .map(v => v.trim()),
+                .map((v) => v.trim())
+                .filter(Boolean),
 
-            basePrice:
-              Number(
-                variantForm.basePrice
-              ),
+            basePrice: Number(
+              variantForm.basePrice
+            ),
 
             transmission:
               variantForm.transmission,
@@ -261,7 +322,46 @@ const AdminVehicle = () => {
               variantForm.driveTrain,
 
             fuelType:
-              variantForm.fuelType
+              variantForm.fuelType,
+
+            // ================= SPECS =================
+            specs: {
+              engine:
+                variantForm.engine,
+
+              horsepower: Number(
+                variantForm.horsepower
+              ) || 0,
+
+              torque: Number(
+                variantForm.torque
+              ) || 0,
+
+              fuelConsumption:
+                variantForm.fuelConsumption
+            },
+
+            // ================= FEATURES =================
+            features: {
+              adas:
+                variantForm.adas,
+
+              turbo:
+                variantForm.turbo,
+
+              camera360:
+                variantForm.camera360,
+
+              sunroof:
+                variantForm.sunroof,
+
+              abs:
+                variantForm.abs
+            },
+
+            // ================= HOT =================
+            isHot:
+              variantForm.isHot
           }
         );
 
@@ -444,10 +544,9 @@ const AdminVehicle = () => {
   };
 
   return (
+    <>
     <div className="p-8 space-y-10 bg-gray-50 min-h-screen">
-
       <div className="flex justify-between items-center">
-
         <h2 className="text-3xl font-black text-blue-900">
           QUẢN LÝ DÒNG XE FORD
         </h2>
@@ -455,21 +554,16 @@ const AdminVehicle = () => {
         <button className="bg-blue-900 text-white px-5 py-3 rounded-xl font-bold">
           + THÊM XE
         </button>
-
       </div>
 
       <div className="space-y-6">
-
         {vehicles.map((v) => (
           <div
             key={v._id}
             className="bg-white rounded-3xl p-6 shadow"
           >
-
             <div className="flex flex-col md:flex-row gap-8">
-
               <div className="w-full md:w-1/4">
-
                 <img
                   src={getVehicleImage(v)}
                   alt={v.name}
@@ -479,13 +573,10 @@ const AdminVehicle = () => {
                   }}
                   className="w-full h-52 object-contain rounded-2xl bg-white"
                 />
-
               </div>
 
               <div className="flex-1 space-y-5">
-
                 <div className="flex items-center gap-3">
-
                   <h3 className="text-3xl font-black text-blue-900 italic uppercase">
                     {v.name}
                   </h3>
@@ -499,11 +590,9 @@ const AdminVehicle = () => {
                       HOT
                     </span>
                   )}
-
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm font-bold text-gray-500">
-
                   <div>
                     💺 {v.seats} chỗ
                   </div>
@@ -511,11 +600,9 @@ const AdminVehicle = () => {
                   <div>
                     🚘 Ford
                   </div>
-
                 </div>
 
                 <div className="border-t pt-5 space-y-4">
-
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
                     Các phiên bản
                   </p>
@@ -528,11 +615,8 @@ const AdminVehicle = () => {
                           key={variant._id}
                           className="border rounded-2xl p-4 bg-gray-50"
                         >
-
                           <div className="flex justify-between items-center">
-
                             <div>
-
                               <h4 className="font-bold text-lg text-gray-700">
                                 {
                                   variant.variantName
@@ -546,11 +630,9 @@ const AdminVehicle = () => {
                                 ).toLocaleString()}{' '}
                                 VNĐ
                               </p>
-
                             </div>
 
                             <div className="flex gap-2">
-
                               <button
                                 onClick={() =>
                                   handleEditVariant(
@@ -575,7 +657,6 @@ const AdminVehicle = () => {
 
                               <button
                                 onClick={() => {
-
                                   setSelectedVariant(
                                     variant
                                   );
@@ -588,11 +669,8 @@ const AdminVehicle = () => {
                               >
                                 Quản lý màu
                               </button>
-
                             </div>
-
                           </div>
-
                         </div>
                       )
                     )
@@ -601,13 +679,10 @@ const AdminVehicle = () => {
                       Chưa có phiên bản
                     </p>
                   )}
-
                 </div>
-
               </div>
 
               <div className="flex flex-col gap-3 justify-center min-w-[130px]">
-
                 <button
                   onClick={() =>
                     handleEditModel(v)
@@ -625,23 +700,18 @@ const AdminVehicle = () => {
                 >
                   XÓA
                 </button>
-
               </div>
-
             </div>
           </div>
         ))}
-
       </div>
 
       {/* ================= EDIT MODEL MODAL ================= */}
+
       {isEditingModel && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5">
-
           <div className="bg-white rounded-[2rem] w-full max-w-6xl max-h-[90vh] overflow-y-auto p-10">
-
             <div className="flex justify-between items-center mb-8 border-b pb-4">
-
               <h3 className="text-3xl font-black text-blue-900">
                 Chỉnh sửa:{' '}
                 {selectedModel?.name}
@@ -655,18 +725,14 @@ const AdminVehicle = () => {
               >
                 ✕
               </button>
-
             </div>
 
             <form
               onSubmit={handleUpdateModel}
               className="space-y-8"
             >
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-
                 <div className="space-y-5">
-
                   <input
                     type="text"
                     placeholder="Tên xe"
@@ -683,7 +749,7 @@ const AdminVehicle = () => {
 
                   <input
                     type="text"
-                    placeholder="Aliases: everest, suv 7 cho..."
+                    placeholder="Aliases"
                     value={modelForm.aliases}
                     onChange={(e) =>
                       setModelForm({
@@ -735,11 +801,9 @@ const AdminVehicle = () => {
                     }
                     className="w-full border p-4 rounded-2xl"
                   />
-
                 </div>
 
                 <div>
-
                   <Editor
                     apiKey="gv0dobysumfihba6i2rhdg3v79x9bvpa2e33l13gmng5f0qv"
                     value={
@@ -758,13 +822,10 @@ const AdminVehicle = () => {
                       height: 500
                     }}
                   />
-
                 </div>
-
               </div>
 
               <div className="flex justify-end gap-4">
-
                 <button
                   type="button"
                   onClick={() =>
@@ -784,26 +845,18 @@ const AdminVehicle = () => {
                     ? 'ĐANG LƯU...'
                     : 'CẬP NHẬT'}
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
       )}
 
       {/* ================= EDIT VARIANT MODAL ================= */}
 
       {editingVariant && (
-
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5">
-
-          <div className="bg-white rounded-[2rem] w-full max-w-3xl p-10 space-y-6">
-
+          <div className="bg-white rounded-[2rem] w-full max-w-3xl p-10 space-y-6 overflow-y-auto max-h-[90vh]">
             <div className="flex justify-between items-center">
-
               <h3 className="text-3xl font-black text-blue-900">
                 Chỉnh sửa phiên bản
               </h3>
@@ -816,7 +869,6 @@ const AdminVehicle = () => {
               >
                 ✕
               </button>
-
             </div>
 
             <input
@@ -837,10 +889,8 @@ const AdminVehicle = () => {
 
             <input
               type="text"
-              placeholder="Aliases: wildtrak, ban tai..."
-              value={
-                variantForm.aliases
-              }
+              placeholder="Aliases"
+              value={variantForm.aliases}
               onChange={(e) =>
                 setVariantForm({
                   ...variantForm,
@@ -854,9 +904,7 @@ const AdminVehicle = () => {
             <input
               type="number"
               placeholder="Giá"
-              value={
-                variantForm.basePrice
-              }
+              value={variantForm.basePrice}
               onChange={(e) =>
                 setVariantForm({
                   ...variantForm,
@@ -886,9 +934,7 @@ const AdminVehicle = () => {
             <input
               type="text"
               placeholder="Dẫn động"
-              value={
-                variantForm.driveTrain
-              }
+              value={variantForm.driveTrain}
               onChange={(e) =>
                 setVariantForm({
                   ...variantForm,
@@ -902,9 +948,7 @@ const AdminVehicle = () => {
             <input
               type="text"
               placeholder="Nhiên liệu"
-              value={
-                variantForm.fuelType
-              }
+              value={variantForm.fuelType}
               onChange={(e) =>
                 setVariantForm({
                   ...variantForm,
@@ -915,8 +959,169 @@ const AdminVehicle = () => {
               className="w-full border p-4 rounded-2xl"
             />
 
-            <div className="flex justify-end gap-4">
+            {/* ================= SPECS ================= */}
 
+            <input
+              type="text"
+              placeholder="Động cơ"
+              value={variantForm.engine}
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  engine:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="number"
+              placeholder="Mã lực"
+              value={
+                variantForm.horsepower
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  horsepower:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="number"
+              placeholder="Mô men xoắn"
+              value={variantForm.torque}
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  torque:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            <input
+              type="text"
+              placeholder="Mức tiêu hao nhiên liệu"
+              value={
+                variantForm.fuelConsumption
+              }
+              onChange={(e) =>
+                setVariantForm({
+                  ...variantForm,
+                  fuelConsumption:
+                    e.target.value
+                })
+              }
+              className="w-full border p-4 rounded-2xl"
+            />
+
+            {/* ================= FEATURES ================= */}
+
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center gap-2 font-bold">
+                <input
+                  type="checkbox"
+                  checked={variantForm.adas}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      adas:
+                        e.target.checked
+                    })
+                  }
+                />
+                ADAS
+              </label>
+
+              <label className="flex items-center gap-2 font-bold">
+                <input
+                  type="checkbox"
+                  checked={variantForm.turbo}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      turbo:
+                        e.target.checked
+                    })
+                  }
+                />
+                Turbo
+              </label>
+
+              <label className="flex items-center gap-2 font-bold">
+                <input
+                  type="checkbox"
+                  checked={
+                    variantForm.camera360
+                  }
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      camera360:
+                        e.target.checked
+                    })
+                  }
+                />
+                Camera 360
+              </label>
+
+              <label className="flex items-center gap-2 font-bold">
+                <input
+                  type="checkbox"
+                  checked={
+                    variantForm.sunroof
+                  }
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      sunroof:
+                        e.target.checked
+                    })
+                  }
+                />
+                Cửa sổ trời
+              </label>
+
+              <label className="flex items-center gap-2 font-bold">
+                <input
+                  type="checkbox"
+                  checked={variantForm.abs}
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      abs:
+                        e.target.checked
+                    })
+                  }
+                />
+                ABS
+              </label>
+
+              <label className="flex items-center gap-2 font-bold">
+                <input
+                  type="checkbox"
+                  checked={
+                    variantForm.isHot
+                  }
+                  onChange={(e) =>
+                    setVariantForm({
+                      ...variantForm,
+                      isHot:
+                        e.target.checked
+                    })
+                  }
+                />
+                HOT
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-4">
               <button
                 onClick={() =>
                   setEditingVariant(null)
@@ -934,15 +1139,201 @@ const AdminVehicle = () => {
               >
                 Cập nhật
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+    {/* ================= COLOR MODAL ================= */}
+
+{selectedVariant && (
+  <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5">
+
+    <div className="bg-white rounded-[2rem] w-full max-w-5xl max-h-[90vh] overflow-y-auto p-10 space-y-8">
+
+      <div className="flex justify-between items-center border-b pb-4">
+
+        <div>
+          <h3 className="text-3xl font-black text-blue-900">
+            Quản lý màu xe
+          </h3>
+
+          <p className="text-gray-500 font-semibold mt-1">
+            {selectedVariant.variantName}
+          </p>
+        </div>
+
+        <button
+          onClick={() => {
+            setSelectedVariant(null);
+            setEditingColor(null);
+          }}
+          className="text-3xl text-gray-400 hover:text-red-500"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      {/* ================= FORM ================= */}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        <input
+          type="text"
+          placeholder="Tên màu"
+          value={colorForm.name}
+          onChange={(e) =>
+            setColorForm({
+              ...colorForm,
+              name: e.target.value
+            })
+          }
+          className="border p-4 rounded-2xl"
+        />
+
+        <input
+          type="text"
+          placeholder="#ffffff"
+          value={colorForm.hexCode}
+          onChange={(e) =>
+            setColorForm({
+              ...colorForm,
+              hexCode: e.target.value
+            })
+          }
+          className="border p-4 rounded-2xl"
+        />
+
+      </div>
+
+      <input
+        type="file"
+        multiple
+        onChange={(e) =>
+          setColorImages(
+            Array.from(e.target.files)
+          )
+        }
+        className="w-full border p-4 rounded-2xl"
+      />
+
+      <div className="flex gap-4">
+
+        {editingColor ? (
+          <button
+            onClick={handleUpdateColor}
+            className="bg-yellow-500 text-white px-8 py-3 rounded-2xl font-bold"
+          >
+            Cập nhật màu
+          </button>
+        ) : (
+          <button
+            onClick={handleAddColor}
+            className="bg-blue-900 text-white px-8 py-3 rounded-2xl font-bold"
+          >
+            Thêm màu
+          </button>
+        )}
+
+      </div>
+
+      {/* ================= COLOR LIST ================= */}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+        {colors.map((color) => (
+          <div
+            key={color._id}
+            className="border rounded-3xl p-5 bg-gray-50 space-y-4"
+          >
+
+            <div className="flex justify-between items-center">
+
+              <div className="flex items-center gap-3">
+
+                <div
+                  className="w-10 h-10 rounded-full border"
+                  style={{
+                    background:
+                      color.hexCode
+                  }}
+                />
+
+                <div>
+                  <h4 className="font-black text-lg">
+                    {color.name}
+                  </h4>
+
+                  <p className="text-sm text-gray-500">
+                    {color.hexCode}
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="flex gap-2">
+
+                <button
+                  onClick={() => {
+                    setEditingColor(color);
+
+                    setColorForm({
+                      name: color.name,
+                      hexCode:
+                        color.hexCode
+                    });
+                  }}
+                  className="bg-yellow-400 px-4 py-2 rounded-xl font-bold"
+                >
+                  Sửa
+                </button>
+
+                <button
+                  onClick={() =>
+                    handleDeleteColor(
+                      color._id
+                    )
+                  }
+                  className="bg-red-500 text-white px-4 py-2 rounded-xl font-bold"
+                >
+                  Xóa
+                </button>
+
+              </div>
+
+            </div>
+
+            {/* ================= IMAGES ================= */}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+
+              {color.images?.map(
+                (img, index) => (
+                  <img
+                    key={index}
+                    src={img}
+                    alt={color.name}
+                    className="w-full h-32 object-cover rounded-2xl border"
+                  />
+                )
+              )}
 
             </div>
 
           </div>
+        ))}
 
-        </div>
-      )}
+      </div>
+
     </div>
+
+  </div>
+)}
+</>
+    
   );
+  
 };
 
 export default AdminVehicle;
