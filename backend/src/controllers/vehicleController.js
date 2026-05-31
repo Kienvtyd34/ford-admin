@@ -914,19 +914,17 @@ export const updateVariant =
   async (req, res) => {
     try {
 
-      const variant =
-        await Variant.findById(
-          req.params.id
-        );
+      console.log(
+        "BODY RECEIVED:"
+      );
 
-      if (!variant) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "Không tìm thấy phiên bản",
-        });
-      }
+      console.log(
+        JSON.stringify(
+          req.body,
+          null,
+          2
+        )
+      );
 
       const updated =
         await Variant.findByIdAndUpdate(
@@ -934,25 +932,29 @@ export const updateVariant =
           req.body,
           {
             new: true,
+            runValidators: true
           }
         );
 
+      console.log(
+        "UPDATED:"
+      );
+
+      console.log(
+        JSON.stringify(
+          updated,
+          null,
+          2
+        )
+      );
+
       res.json({
         success: true,
-        data: updated,
+        data: updated
       });
 
     } catch (err) {
-
-      console.log(
-        "UPDATE VARIANT ERROR:",
-        err
-      );
-
-      res.status(500).json({
-        success: false,
-        error: err.message,
-      });
+      console.log(err);
     }
   };
   // ================= DELETE VARIANT =================
