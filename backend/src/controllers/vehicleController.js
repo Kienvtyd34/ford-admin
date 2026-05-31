@@ -910,53 +910,60 @@ export const addVariant = async (req, res) => {
 };
 // ================= UPDATE VARIANT =================
 
-export const updateVariant =
-  async (req, res) => {
-    try {
+export const updateVariant = async (req, res) => {
+  try {
 
-      console.log(
-        "BODY RECEIVED:"
-      );
+    console.log("========== UPDATE VARIANT ==========");
+    console.log("PARAM ID:", req.params.id);
 
-      console.log(
-        JSON.stringify(
-          req.body,
-          null,
-          2
-        )
-      );
+    console.log(
+      "BODY:",
+      JSON.stringify(req.body, null, 2)
+    );
 
-      const updated =
-        await Variant.findByIdAndUpdate(
-          req.params.id,
-          req.body,
-          {
-            new: true,
-            runValidators: true
-          }
-        );
+    const variant =
+      await Variant.findById(req.params.id);
 
-      console.log(
-        "UPDATED:"
-      );
-
-      console.log(
-        JSON.stringify(
-          updated,
-          null,
-          2
-        )
-      );
-
-      res.json({
-        success: true,
-        data: updated
+    if (!variant) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy phiên bản",
       });
-
-    } catch (err) {
-      console.log(err);
     }
-  };
+
+    const updated =
+      await Variant.findByIdAndUpdate(
+        req.params.id,
+        req.body,
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+    console.log(
+      "UPDATED:",
+      JSON.stringify(updated, null, 2)
+    );
+
+    res.json({
+      success: true,
+      data: updated,
+    });
+
+  } catch (err) {
+
+    console.log(
+      "UPDATE VARIANT ERROR:",
+      err
+    );
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+};
   // ================= DELETE VARIANT =================
 
 export const deleteVariant =
