@@ -802,6 +802,56 @@ const AdminVehicle = () => {
                     className="w-full border p-4 rounded-2xl"
                   />
                 </div>
+                <div className="space-y-3">
+
+  <label className="font-bold">
+    Ảnh đại diện
+  </label>
+
+  {selectedModel?.images?.[0] && (
+    <img
+      src={selectedModel.images[0]}
+      alt=""
+      className="w-full h-48 object-contain border rounded-2xl"
+    />
+  )}
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(e) =>
+      setMainImage(
+        e.target.files[0]
+      )
+    }
+    className="w-full border p-3 rounded-xl"
+  />
+</div>
+<div className="space-y-3">
+
+  <label className="font-bold">
+    Ảnh bảng thông số
+  </label>
+
+  {selectedModel?.imageUrl && (
+    <img
+      src={selectedModel.imageUrl}
+      alt=""
+      className="w-full h-48 object-contain border rounded-2xl"
+    />
+  )}
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(e) =>
+      setSpecImage(
+        e.target.files[0]
+      )
+    }
+    className="w-full border p-3 rounded-xl"
+  />
+</div>
 
                 <div>
                   <Editor
@@ -853,296 +903,375 @@ const AdminVehicle = () => {
 
       {/* ================= EDIT VARIANT MODAL ================= */}
 
-      {editingVariant && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5">
-          <div className="bg-white rounded-[2rem] w-full max-w-3xl p-10 space-y-6 overflow-y-auto max-h-[90vh]">
-            <div className="flex justify-between items-center">
-              <h3 className="text-3xl font-black text-blue-900">
-                Chỉnh sửa phiên bản
-              </h3>
+{editingVariant && (
 
-              <button
-                onClick={() =>
-                  setEditingVariant(null)
-                }
-                className="text-3xl text-gray-400"
-              >
-                ✕
-              </button>
-            </div>
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-5">
 
-            <input
-              type="text"
-              placeholder="Tên phiên bản"
-              value={
-                variantForm.variantName
-              }
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  variantName:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+```
+<div className="bg-white rounded-[2rem] w-full max-w-7xl max-h-[95vh] overflow-y-auto p-10">
 
-            <input
-              type="text"
-              placeholder="Aliases"
-              value={variantForm.aliases}
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  aliases:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+  <div className="flex justify-between items-center border-b pb-5 mb-8">
 
-            <input
-              type="number"
-              placeholder="Giá"
-              value={variantForm.basePrice}
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  basePrice:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+    <h3 className="text-3xl font-black text-blue-900">
+      Chỉnh sửa phiên bản
+    </h3>
 
-            <input
-              type="text"
-              placeholder="Hộp số"
-              value={
-                variantForm.transmission
-              }
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  transmission:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+    <button
+      onClick={() =>
+        setEditingVariant(null)
+      }
+      className="text-3xl text-gray-400 hover:text-red-500"
+    >
+      ✕
+    </button>
 
-            <input
-              type="text"
-              placeholder="Dẫn động"
-              value={variantForm.driveTrain}
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  driveTrain:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+  </div>
 
-            <input
-              type="text"
-              placeholder="Nhiên liệu"
-              value={variantForm.fuelType}
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  fuelType:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+  {/* ================= THÔNG TIN CHUNG ================= */}
 
-            {/* ================= SPECS ================= */}
+  <div className="mb-10">
 
-            <input
-              type="text"
-              placeholder="Động cơ"
-              value={variantForm.engine}
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  engine:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+    <h4 className="font-black text-xl text-blue-900 mb-5">
+      Thông tin chung
+    </h4>
 
-            <input
-              type="number"
-              placeholder="Mã lực"
-              value={
-                variantForm.horsepower
-              }
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  horsepower:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+    <div className="grid md:grid-cols-3 gap-5">
 
-            <input
-              type="number"
-              placeholder="Mô men xoắn"
-              value={variantForm.torque}
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  torque:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+      <input
+        type="text"
+        placeholder="Tên phiên bản"
+        value={variantForm.variantName}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            variantName:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
 
-            <input
-              type="text"
-              placeholder="Mức tiêu hao nhiên liệu"
-              value={
-                variantForm.fuelConsumption
-              }
-              onChange={(e) =>
-                setVariantForm({
-                  ...variantForm,
-                  fuelConsumption:
-                    e.target.value
-                })
-              }
-              className="w-full border p-4 rounded-2xl"
-            />
+      <input
+        type="text"
+        placeholder="Alias"
+        value={variantForm.aliases}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            aliases:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
 
-            {/* ================= FEATURES ================= */}
+      <input
+        type="number"
+        placeholder="Giá"
+        value={variantForm.basePrice}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            basePrice:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
 
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex items-center gap-2 font-bold">
-                <input
-                  type="checkbox"
-                  checked={variantForm.adas}
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      adas:
-                        e.target.checked
-                    })
-                  }
-                />
-                ADAS
-              </label>
+      <input
+        type="text"
+        placeholder="Hộp số"
+        value={variantForm.transmission}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            transmission:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
 
-              <label className="flex items-center gap-2 font-bold">
-                <input
-                  type="checkbox"
-                  checked={variantForm.turbo}
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      turbo:
-                        e.target.checked
-                    })
-                  }
-                />
-                Turbo
-              </label>
+      <input
+        type="text"
+        placeholder="Dẫn động"
+        value={variantForm.driveTrain}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            driveTrain:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
 
-              <label className="flex items-center gap-2 font-bold">
-                <input
-                  type="checkbox"
-                  checked={
-                    variantForm.camera360
-                  }
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      camera360:
-                        e.target.checked
-                    })
-                  }
-                />
-                Camera 360
-              </label>
+      <input
+        type="text"
+        placeholder="Nhiên liệu"
+        value={variantForm.fuelType}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            fuelType:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
 
-              <label className="flex items-center gap-2 font-bold">
-                <input
-                  type="checkbox"
-                  checked={
-                    variantForm.sunroof
-                  }
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      sunroof:
-                        e.target.checked
-                    })
-                  }
-                />
-                Cửa sổ trời
-              </label>
+    </div>
 
-              <label className="flex items-center gap-2 font-bold">
-                <input
-                  type="checkbox"
-                  checked={variantForm.abs}
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      abs:
-                        e.target.checked
-                    })
-                  }
-                />
-                ABS
-              </label>
+  </div>
 
-              <label className="flex items-center gap-2 font-bold">
-                <input
-                  type="checkbox"
-                  checked={
-                    variantForm.isHot
-                  }
-                  onChange={(e) =>
-                    setVariantForm({
-                      ...variantForm,
-                      isHot:
-                        e.target.checked
-                    })
-                  }
-                />
-                HOT
-              </label>
-            </div>
+  {/* ================= THÔNG SỐ KỸ THUẬT ================= */}
 
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() =>
-                  setEditingVariant(null)
-                }
-                className="px-6 py-3 bg-gray-200 rounded-2xl font-bold"
-              >
-                Hủy
-              </button>
+  <div className="mb-10">
 
-              <button
-                onClick={
-                  handleUpdateVariant
-                }
-                className="px-8 py-3 bg-blue-900 text-white rounded-2xl font-bold"
-              >
-                Cập nhật
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    <h4 className="font-black text-xl text-blue-900 mb-5">
+      Thông số kỹ thuật
+    </h4>
+
+    <div className="grid md:grid-cols-4 gap-5">
+
+      <input
+        placeholder="Động cơ"
+        value={variantForm.engine}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            engine:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Mã lực"
+        value={variantForm.horsepower}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            horsepower:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Mô men xoắn"
+        value={variantForm.torque}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            torque:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Tiêu hao nhiên liệu"
+        value={variantForm.fuelConsumption}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            fuelConsumption:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Số chỗ"
+        value={variantForm.seats}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            seats:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Mâm xe"
+        value={variantForm.wheelSize}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            wheelSize:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Bình nhiên liệu"
+        value={variantForm.fuelTank}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            fuelTank:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Khoảng sáng gầm"
+        value={variantForm.groundClearance}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            groundClearance:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Chiều dài cơ sở"
+        value={variantForm.wheelbase}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            wheelbase:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Dài"
+        value={variantForm.length}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            length:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Rộng"
+        value={variantForm.width}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            width:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+      <input
+        placeholder="Cao"
+        value={variantForm.height}
+        onChange={(e)=>
+          setVariantForm({
+            ...variantForm,
+            height:e.target.value
+          })
+        }
+        className="border p-4 rounded-2xl"
+      />
+
+    </div>
+
+  </div>
+
+  {/* ================= TÍNH NĂNG ================= */}
+
+  <div className="mb-10">
+
+    <h4 className="font-black text-xl text-blue-900 mb-5">
+      Trang bị & Công nghệ
+    </h4>
+
+    <div className="grid md:grid-cols-4 gap-4">
+
+      {[
+        "turbo",
+        "abs",
+        "adas",
+        "adaptiveCruise",
+        "blindSpot",
+        "laneKeepAssist",
+        "autoEmergencyBrake",
+        "rearCrossTrafficAlert",
+        "trafficSignRecognition",
+        "camera360",
+        "reverseCamera",
+        "parkingSensorFront",
+        "parkingSensorRear",
+        "sunroof",
+        "wirelessCharging",
+        "powerTailgate",
+        "autoHeadlamp",
+        "autoWiper",
+        "ambientLight",
+        "leatherSeat",
+        "ventilatedSeat",
+        "heatedSeat",
+        "powerDriverSeat",
+        "powerPassengerSeat",
+        "appleCarplay",
+        "androidAuto",
+        "sync4",
+        "fordPass",
+        "premiumAudio",
+        "powerSlidingDoor",
+        "powerRunningBoard",
+        "luggageRack",
+        "foldableLastRow",
+        "isHot"
+      ].map((field)=>(
+        <label
+          key={field}
+          className="flex items-center gap-2 font-semibold"
+        >
+          <input
+            type="checkbox"
+            checked={variantForm[field]}
+            onChange={(e)=>
+              setVariantForm({
+                ...variantForm,
+                [field]:e.target.checked
+              })
+            }
+          />
+
+          {field}
+        </label>
+      ))}
+
+    </div>
+
+  </div>
+
+  <div className="flex justify-end gap-4">
+
+    <button
+      onClick={() =>
+        setEditingVariant(null)
+      }
+      className="px-8 py-3 bg-gray-200 rounded-2xl font-bold"
+    >
+      Hủy
+    </button>
+
+    <button
+      onClick={handleUpdateVariant}
+      className="px-10 py-3 bg-blue-900 text-white rounded-2xl font-bold"
+    >
+      Cập nhật
+    </button>
+
+  </div>
+
+</div>
+```
+
+  </div>
+)}
+
     </div>
     {/* ================= COLOR MODAL ================= */}
 
