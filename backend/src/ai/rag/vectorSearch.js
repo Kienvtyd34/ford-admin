@@ -1,4 +1,4 @@
-import VehicleEmbedding from "../models/VehicleEmbedding.js";
+import VehicleEmbedding from "../model/VehicleEmbedding.js";
 import { embedText } from "./embedder.js";
 
 const cosine = (a, b) => {
