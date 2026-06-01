@@ -4,7 +4,7 @@ export const intentEngine = (message = "") => {
   const text = normalize(message);
 
   const rules = [
-    { intent: "PRICE", keys: ["gia", "bao nhieu"] },
+    { intent: "PRICE", keys: ["gia", "bao nhieu", "everest", "ranger", "territory"] },
     { intent: "COMPARE", keys: ["so sanh", "khac nhau"] },
     { intent: "FEATURE", keys: ["tinh nang", "co khong"] },
     { intent: "SUGGEST", keys: ["7 cho", "gia dinh", "nen mua"] },

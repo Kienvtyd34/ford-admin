@@ -5,7 +5,7 @@ export default async (entities) => {
     if (!entities?.model?._id) {
       return {
         intent: "PRICE",
-        message: "🚗 Bạn muốn xem giá Ford Everest, Ranger hay Territory?",
+        message: "🚗 Bạn muốn xem Ford Everest, Ranger hay Territory?",
       };
     }
 
@@ -16,7 +16,7 @@ export default async (entities) => {
     if (!variants.length) {
       return {
         intent: "PRICE",
-        message: "❌ Không tìm thấy phiên bản phù hợp",
+        message: `❌ Không tìm thấy phiên bản của ${entities.model.name}`,
       };
     }
 
@@ -24,7 +24,7 @@ export default async (entities) => {
       intent: "PRICE",
       message: variants
         .map(v =>
-          `🚗 ${v.modelId?.name} ${v.variantName} - ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
+          `🚗 ${v.modelId.name} ${v.variantName} - ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
         )
         .join("\n"),
     };
