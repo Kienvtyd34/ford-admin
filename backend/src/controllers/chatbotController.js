@@ -11,6 +11,8 @@ export const chatController = async (req, res) => {
 
     res.json(response);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       success: false,
       error: error.message,

@@ -14,5 +14,3 @@ ${docs.map(d => `• ${d.text}`).join("\n")}
     sources: docs,
   };
 };
-
-export default ragEngine;
