@@ -1,4 +1,4 @@
-import semanticAI from "../ai/core/semanticEngine.js";
+import semanticAI from "../ai/core/router.js";
 
 export const chatController = async (req, res) => {
   try {
