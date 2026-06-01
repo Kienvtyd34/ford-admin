@@ -1,7 +1,7 @@
-import { searchVector } from "./vectorSearch.js";
+import { vectorSearch } from "./vectorSearch.js";
 
 export const ragEngine = async (query) => {
-  const docs = await searchVector(query);
+  const docs = await vectorSearch(query);
 
   if (!docs.length) return null;
 
