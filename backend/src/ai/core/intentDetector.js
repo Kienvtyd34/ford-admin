@@ -1,168 +1,77 @@
 import { normalize } from "../../../src/utils/normalize.js";
 
-export const detectIntent = (
-  message = ""
-) => {
+const INTENT_RULES = [
+  {
+    intent: "PRICE_QUERY",
+    keywords: ["gia", "bao nhieu", "cost", "price"],
+    weight: 3,
+  },
+  {
+    intent: "COMPARE",
+    keywords: ["so sanh", "khac nhau", "vs", "hay hon"],
+    weight: 3,
+  },
+  {
+    intent: "FEATURE_QUERY",
+    keywords: ["co khong", "adas", "camera", "sunroof"],
+    weight: 2,
+  },
+  {
+    intent: "VEHICLE_SPEC",
+    keywords: ["thong so", "dong co", "cong suat", "hp"],
+    weight: 3,
+  },
+  {
+    intent: "TECH_SUPPORT",
+    keywords: ["khong mát", "loi", "rung", "den bao"],
+    weight: 3,
+  },
+  {
+    intent: "INVENTORY_CHECK",
+    keywords: ["ton kho", "con xe", "giao ngay"],
+    weight: 3,
+  },
+  {
+    intent: "VEHICLE_SUGGESTION",
+    keywords: ["phu hop", "gia dinh", "du lich", "nen mua"],
+    weight: 3,
+  },
+  {
+    intent: "GREETING",
+    keywords: ["xin chao", "hello", "hi"],
+    weight: 5,
+  },
+];
 
+export const detectIntent = (message = "") => {
   const text = normalize(message);
 
-  // =========================
-  // PRICE QUERY
-  // =========================
+  const scores = {};
 
-  if (
+  for (const rule of INTENT_RULES) {
+    scores[rule.intent] = 0;
 
-    (
-      text.includes("gia") ||
-      text.includes("bao nhieu") ||
-      text.includes("lan banh")
-    )
+    for (const kw of rule.keywords) {
+      if (text.includes(kw)) {
+        scores[rule.intent] += rule.weight;
+      }
+    }
+  }
 
-  ) {
+  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
 
+  if (!best || best[1] === 0) {
     return {
-      intent: "PRICE_QUERY",
-      confidence: 1,
+      intent: "UNKNOWN",
+      confidence: 0,
     };
   }
 
-  // =========================
-  // COMPARE
-  // =========================
-
-  if (
-
-    text.includes("so sanh") ||
-    text.includes("khac nhau") ||
-    text.includes("hon gi") ||
-    text.includes("nen chon")
-
-  ) {
-
-    return {
-      intent: "COMPARE",
-      confidence: 1,
-    };
-  }
-
-  // =========================
-  // INVENTORY
-  // =========================
-
-  if (
-
-    text.includes("con hang") ||
-    text.includes("giao ngay") ||
-    text.includes("ton kho") ||
-    text.includes("co san") ||
-    text.includes("showroom") ||
-    text.includes("mau")
-
-  ) {
-
-    return {
-      intent: "INVENTORY_CHECK",
-      confidence: 1,
-    };
-  }
-
-  // =========================
-  // VEHICLE SPEC
-  // =========================
-
-  if (
-
-    text.includes("dong co") ||
-    text.includes("may cho") ||
-    text.includes("adas") ||
-    text.includes("camera 360") ||
-    text.includes("4x4") ||
-    text.includes("turbo") ||
-    text.includes("cua so troi") ||
-    text.includes("binh xang") ||
-    text.includes("tai duoc")
-
-  ) {
-
-    return {
-      intent: "VEHICLE_SPEC",
-      confidence: 1,
-    };
-  }
-
-  // =========================
-  // TECH SUPPORT
-  // =========================
-
-  if (
-
-    text.includes("khong mat") ||
-    text.includes("rung") ||
-    text.includes("abs") ||
-    text.includes("hao xang") ||
-    text.includes("chet binh") ||
-    text.includes("dong co") ||
-    text.includes("vo lang") ||
-    text.includes("kho no")
-
-  ) {
-
-    return {
-      intent: "TECH_SUPPORT",
-      confidence: 1,
-    };
-  }
-
-  // =========================
-  // VEHICLE SUGGESTION
-  // =========================
-
-  if (
-
-    text.includes("goi y") ||
-    text.includes("gia dinh") ||
-    text.includes("rong rai") ||
-    text.includes("du lich") ||
-    text.includes("di pho") ||
-    text.includes("cong trinh") ||
-    text.includes("tiet kiem") ||
-    text.includes("phu hop") ||
-    text.includes("7 cho") ||
-    text.includes("duoi")
-
-  ) {
-
-    return {
-      intent:
-        "VEHICLE_SUGGESTION",
-
-      confidence: 1,
-    };
-  }
-
-  // =========================
-  // GREETING
-  // =========================
-
-  if (
-
-    text === "xin chao" ||
-    text === "hello" ||
-    text === "hi" ||
-    text === "cam on" ||
-    text === "tam biet"
-
-  ) {
-
-    return {
-      intent: "GREETING",
-      confidence: 1,
-    };
-  }
+  const confidence = Math.min(best[1] / 5, 1);
 
   return {
-    intent: "UNKNOWN",
-    confidence: 0,
+    intent: best[0],
+    confidence,
   };
 };
 

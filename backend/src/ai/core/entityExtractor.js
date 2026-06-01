@@ -15,7 +15,12 @@ let cache = {
 
 const CACHE_TIME = 1000 * 60 * 5;
 
+// =====================================
+// LOAD CACHE
+// =====================================
+
 const loadDatabaseEntities = async () => {
+
   const now = Date.now();
 
   if (
@@ -28,7 +33,7 @@ const loadDatabaseEntities = async () => {
   const [models, variants, colors] =
     await Promise.all([
       VehicleModel.find(),
-      Variant.find(),
+      Variant.find().populate("modelId"),
       VehicleColor.find(),
     ]);
 
@@ -40,160 +45,437 @@ const loadDatabaseEntities = async () => {
   return cache;
 };
 
+// =====================================
+// FEATURE MAP
+// =====================================
+
+const featureMap = {
+
+  adas: [
+    "adas"
+  ],
+
+  camera360: [
+    "camera 360",
+    "360"
+  ],
+
+  sunroof: [
+    "cua so troi",
+    "sunroof"
+  ],
+
+  wirelessCharging: [
+    "sac khong day",
+    "wireless charging"
+  ],
+
+  powerTailgate: [
+    "cop dien"
+  ],
+
+  ventilatedSeat: [
+    "ghe lam mat"
+  ],
+
+  appleCarplay: [
+    "apple carplay",
+    "carplay"
+  ],
+
+  androidAuto: [
+    "android auto"
+  ],
+
+  blindSpot: [
+    "canh bao diem mu",
+    "diem mu"
+  ],
+
+  adaptiveCruise: [
+    "adaptive cruise",
+    "cruise control"
+  ],
+};
+
+// =====================================
+// SPEC MAP
+// =====================================
+
+const specMap = {
+
+  engine: [
+    "dong co"
+  ],
+
+  horsepower: [
+    "cong suat",
+    "ma luc",
+    "hp"
+  ],
+
+  torque: [
+    "mo men",
+    "mo men xoan",
+    "torque"
+  ],
+
+  transmission: [
+    "hop so"
+  ],
+
+  driveTrain: [
+    "dan dong"
+  ],
+
+  fuelTank: [
+    "binh xang"
+  ],
+
+  wheelSize: [
+    "mam xe"
+  ],
+
+  seats: [
+    "may cho",
+    "so cho"
+  ],
+
+  wheelbase: [
+    "chieu dai co so"
+  ],
+
+  groundClearance: [
+    "khoang sang gam"
+  ]
+};
+
+// =====================================
+// MAIN
+// =====================================
+
 export const extractEntities = async (
   message = ""
 ) => {
-  const text = normalize(message);
+
+  const text =
+    normalize(message);
 
   const db =
     await loadDatabaseEntities();
 
   const entities = {
+
     model: null,
+
     variant: null,
+
     color: null,
+
     compareModels: [],
+
+    compareVariants: [],
+
     budget: null,
+
     seats: null,
+
+    feature: null,
+
+    specField: null,
+
     tags: [],
   };
 
-  // =========================
-  // MODELS
-  // =========================
+  // =====================================
+  // MODEL
+  // =====================================
 
   for (const model of db.models) {
-    const fullName = normalize(
+
+    const names = [
+
+      model.name,
+
       model.name
-    );
+        .replace("Ford ", "")
+        .trim(),
 
-    const shortName = fullName
-      .replace("ford ", "")
-      .trim();
+      ...(model.aliases || [])
+    ];
 
-    if (
-      text.includes(fullName) ||
-      text.includes(shortName)
-    ) {
+    const matched =
+      names.some(
+        (name) =>
+          text.includes(
+            normalize(name)
+          )
+      );
+
+    if (matched) {
+
       entities.compareModels.push(
         model
+      );
+
+      if (!entities.model) {
+        entities.model =
+          model;
+      }
+    }
+  }
+
+  // =====================================
+  // VARIANT
+  // =====================================
+
+  const foundVariants = [];
+
+  for (const variant of db.variants) {
+
+    const names = [
+
+      variant.variantName,
+
+      ...(variant.aliases || [])
+    ];
+
+    const matched =
+      names.some(
+        (name) =>
+          text.includes(
+            normalize(name)
+          )
+      );
+
+    if (matched) {
+
+      foundVariants.push(
+        variant
       );
     }
   }
 
-  if (entities.compareModels[0]) {
-    entities.model =
-      entities.compareModels[0];
+  if (
+    foundVariants.length >= 2
+  ) {
+
+    entities.compareVariants =
+      foundVariants.slice(
+        0,
+        2
+      );
   }
 
-  // =========================
-  // VARIANT
-  // =========================
+  if (
+    foundVariants.length === 1
+  ) {
 
-  const variantFuse = new Fuse(
-    db.variants,
-    {
-      keys: ["variantName"],
-      threshold: 0.4,
-    }
-  );
-
-  const variantResult =
-    variantFuse.search(text);
-
-  if (variantResult.length) {
     entities.variant =
-      variantResult[0].item;
+      foundVariants[0];
   }
 
-  // =========================
-  // COLOR
-  // =========================
+  // =====================================
+  // FUZZY VARIANT
+  // =====================================
 
-  const colorFuse = new Fuse(
-    db.colors,
-    {
-      keys: ["name"],
-      threshold: 0.4,
+  if (
+    !entities.variant
+  ) {
+
+    const variantFuse =
+      new Fuse(
+        db.variants,
+        {
+          keys: [
+            "variantName",
+            "aliases"
+          ],
+
+          threshold: 0.35,
+        }
+      );
+
+    const result =
+      variantFuse.search(text);
+
+    if (
+      result.length
+    ) {
+
+      entities.variant =
+        result[0].item;
     }
-  );
+  }
+
+  // =====================================
+  // COLOR
+  // =====================================
+
+  const colorFuse =
+    new Fuse(
+      db.colors,
+      {
+        keys: ["name"],
+        threshold: 0.3,
+      }
+    );
 
   const colorResult =
     colorFuse.search(text);
 
-  if (colorResult.length) {
+  if (
+    colorResult.length
+  ) {
+
     entities.color =
       colorResult[0].item;
   }
 
-  // =========================
-  // BUDGET
-  // =========================
+  // =====================================
+  // FEATURE
+  // =====================================
 
-  const budgetRegex =
-    /(duoi|tam)\s+(\d+)\s*(ty|trieu)/i;
+  for (
+    const [key, keywords]
+    of Object.entries(
+      featureMap
+    )
+  ) {
+
+    const found =
+      keywords.some(
+        (keyword) =>
+          text.includes(keyword)
+      );
+
+    if (found) {
+
+      entities.feature =
+        key;
+
+      break;
+    }
+  }
+
+  // =====================================
+  // SPEC FIELD
+  // =====================================
+
+  for (
+    const [field, keywords]
+    of Object.entries(
+      specMap
+    )
+  ) {
+
+    const found =
+      keywords.some(
+        (keyword) =>
+          text.includes(keyword)
+      );
+
+    if (found) {
+
+      entities.specField =
+        field;
+
+      break;
+    }
+  }
+
+  // =====================================
+  // BUDGET
+  // =====================================
 
   const budgetMatch =
-    text.match(budgetRegex);
-
-  if (budgetMatch) {
-    let value = Number(
-      budgetMatch[2]
+    text.match(
+      /(\d+(?:\.\d+)?)\s*(ty|trieu)/i
     );
 
-    if (budgetMatch[3] === "ty") {
-      value *= 1000000000;
+  if (
+    budgetMatch
+  ) {
+
+    let value =
+      Number(
+        budgetMatch[1]
+      );
+
+    if (
+      budgetMatch[2]
+        .toLowerCase() ===
+      "ty"
+    ) {
+
+      value *=
+        1000000000;
     }
 
     if (
-      budgetMatch[3] ===
+      budgetMatch[2]
+        .toLowerCase() ===
       "trieu"
     ) {
-      value *= 1000000;
+
+      value *=
+        1000000;
     }
 
-    entities.budget = value;
+    entities.budget =
+      Math.round(value);
   }
 
-  // =========================
+  // =====================================
   // SEATS
-  // =========================
+  // =====================================
 
-  if (text.includes("7 cho")) {
+  if (
+    text.includes("7 cho")
+  ) {
+
     entities.seats = 7;
   }
 
-  if (text.includes("5 cho")) {
+  if (
+    text.includes("5 cho")
+  ) {
+
     entities.seats = 5;
   }
 
-  // =========================
+  // =====================================
   // TAGS
-  // =========================
+  // =====================================
 
-  if (text.includes("gia dinh")) {
-    entities.tags.push("gia dinh");
-  }
+  const tags = [
 
-  if (text.includes("du lich")) {
-    entities.tags.push("du lich");
-  }
+    "gia dinh",
 
-  if (text.includes("cong trinh")) {
-    entities.tags.push("cong trinh");
-  }
+    "du lich",
 
-  if (text.includes("di pho")) {
-    entities.tags.push("di pho");
-  }
+    "di pho",
 
-  if (text.includes("tiet kiem")) {
-    entities.tags.push("tiet kiem");
-  }
+    "tiet kiem",
 
-  if (text.includes("ban tai")) {
-    entities.tags.push("ban tai");
-  }
+    "cong trinh",
+
+    "ban tai"
+  ];
+
+  tags.forEach(
+    (tag) => {
+
+      if (
+        text.includes(tag)
+      ) {
+
+        entities.tags.push(
+          tag
+        );
+      }
+    }
+  );
 
   return entities;
 };

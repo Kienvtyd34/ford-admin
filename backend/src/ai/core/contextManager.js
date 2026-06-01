@@ -1,27 +1,21 @@
 const sessions = new Map();
 
-export const saveContext = (
-  userId,
-  data
-) => {
+export const saveContext = (userId, data) => {
+  const old = sessions.get(userId) || {};
+
   sessions.set(userId, {
+    ...old,
     ...data,
     updatedAt: Date.now(),
+    history: [...(old.history || []), data.intent].slice(-15),
   });
 };
 
-export const getContext = (
-  userId
-) => {
+export const getContext = (userId) => {
   const data = sessions.get(userId);
-
   if (!data) return null;
 
-  const expired =
-    Date.now() - data.updatedAt >
-    1000 * 60 * 30;
-
-  if (expired) {
+  if (Date.now() - data.updatedAt > 45 * 60 * 1000) {
     sessions.delete(userId);
     return null;
   }
@@ -29,7 +23,4 @@ export const getContext = (
   return data;
 };
 
-export default {
-  saveContext,
-  getContext,
-};
+export default { saveContext, getContext };

@@ -1,384 +1,216 @@
 import VehicleModel from "../../models/VehicleModel.js";
 import Variant from "../../models/Variant.js";
+import cache from "../utils/cacheEngine.js";
+import Inventory from "../../models/Inventory.js";
+import CarProblem from "../../models/CarProblem.js";
+import { normalize } from "../../../src/utils/normalize.js";
 
 // =======================================
-// PRICE
+// PRICE (CACHE + SAFE)
 // =======================================
+export const getVehiclePrice = async (modelName, variantEntity) => {
+  if (!modelName) return null;
 
-export const getVehiclePrice = async (
-  modelName,
-  variantEntity,
-  isOnRoad = false
-) => {
+  const cacheKey = `price_${modelName}`;
+  const cached = cache.getCache(cacheKey);
+  if (cached) return cached;
 
-  const model =
-    await VehicleModel.findOne({
-      name: {
-        $regex: modelName,
-        $options: "i",
-      },
-    });
+  const model = await VehicleModel.findOne({
+    name: { $regex: modelName, $options: "i" },
+  });
 
   if (!model) return null;
 
-  const variants =
-    await Variant.find({
-      modelId: model._id,
-    }).sort({
-      basePrice: 1,
-    });
+  const variants = await Variant.find({
+    modelId: model._id,
+  }).sort({ basePrice: 1 });
 
-  if (!variants.length) {
-    return null;
+  if (!variants.length) return null;
+
+  const selectedVariant = variants[0];
+
+  const result = {
+    model,
+    variants,
+    selectedVariant,
+    basePrice: selectedVariant.basePrice,
+    onRoadPrice: Math.round(selectedVariant.basePrice * 1.12),
+  };
+
+  cache.setCache(cacheKey, result, 600000); // 10 min cache
+
+  return result;
+};
+
+// =======================================
+// SPEC
+// =======================================
+export const getVehicleSpecs = async (entities) => {
+  if (!entities?.model && !entities?.variant) return null;
+
+  let variant = entities.variant;
+
+  if (!variant && entities.model) {
+    variant = await Variant.findOne({
+      modelId: entities.model._id,
+    }).sort({ basePrice: -1 });
   }
 
-  // =========================
-  // FIND VARIANT
-  // =========================
-
-  let selectedVariant =
-    variants[0];
-
-  if (variantEntity) {
-
-    const found =
-      variants.find((v) => {
-
-        return v.variantName
-          .toLowerCase()
-          .includes(
-            variantEntity.variantName.toLowerCase()
-          );
-      });
-
-    if (found) {
-      selectedVariant = found;
-    }
-  }
-
-  // =========================
-  // PRICE
-  // =========================
-
-  const basePrice =
-    selectedVariant.basePrice;
-
-  // giả lập lăn bánh
-
-  const onRoadPrice =
-    Math.round(
-      basePrice * 1.12
-    );
+  if (!variant) return null;
 
   return {
-    model,
-
-    variants,
-
-    selectedVariant,
-
-    minPrice:
-      variants[0].basePrice,
-
-    basePrice,
-
-    onRoadPrice,
-
-    isOnRoad,
+    variantName: variant.variantName,
+    basePrice: variant.basePrice,
+    transmission: variant.transmission,
+    driveTrain: variant.driveTrain,
+    fuelType: variant.fuelType,
+    specs: variant.specs,
+    features: variant.features,
   };
 };
 
 // =======================================
-// SUGGESTION
+// FEATURE INFO
 // =======================================
+export const getFeatureInfo = async (entities) => {
+  if (!entities?.variant || !entities?.feature) return null;
 
-export const getVehicleSuggestions =
-  async (
-    entities,
-    message = ""
-  ) => {
+  const variant = await Variant.findById(entities.variant._id);
+  if (!variant) return null;
 
-    const text =
-      message.toLowerCase();
-
-    const models =
-      await VehicleModel.find();
-
-    const variants =
-      await Variant.find()
-        .populate("modelId");
-
-    // =====================================
-    // BUDGET
-    // =====================================
-
-    if (entities.budget) {
-
-      const matched =
-        variants.filter((v) => {
-
-          return (
-            v.basePrice <=
-            entities.budget
-          );
-        });
-
-      return matched.map((v) => ({
-        name:
-          v.modelId?.name,
-
-        reason:
-          "Phù hợp ngân sách",
-
-        basePrice:
-          v.basePrice,
-      }));
-    }
-
-    // =====================================
-    // FAMILY / 7 SEATS
-    // =====================================
-
-    if (
-      text.includes("gia dinh") ||
-      text.includes("7 cho") ||
-      text.includes("rong rai")
-    ) {
-
-      const everest =
-        models.find((m) =>
-          m.name
-            .toLowerCase()
-            .includes("everest")
-        );
-
-      const territory =
-        models.find((m) =>
-          m.name
-            .toLowerCase()
-            .includes("territory")
-        );
-
-      return [
-        {
-          name:
-            everest?.name,
-
-          reason:
-            "SUV 7 chỗ rộng rãi, phù hợp gia đình và du lịch",
-
-          basePrice:
-            1099000000,
-        },
-
-        {
-          name:
-            territory?.name,
-
-          reason:
-            "SUV tiện nghi, tiết kiệm nhiên liệu",
-
-          basePrice:
-            822000000,
-        },
-      ];
-    }
-
-    // =====================================
-    // DU LỊCH
-    // =====================================
-
-    if (
-      text.includes("du lich")
-    ) {
-
-      const everest =
-        models.find((m) =>
-          m.name
-            .toLowerCase()
-            .includes("everest")
-        );
-
-      return [
-        {
-          name:
-            everest?.name,
-
-          reason:
-            "Khung gầm chắc chắn, đi đường dài tốt",
-
-          basePrice:
-            1099000000,
-        },
-      ];
-    }
-
-    // =====================================
-    // CÔNG TRÌNH / BÁN TẢI
-    // =====================================
-
-    if (
-      text.includes("cong trinh") ||
-      text.includes("ban tai")
-    ) {
-
-      const ranger =
-        models.find((m) =>
-          m.name
-            .toLowerCase()
-            .includes("ranger")
-        );
-
-      return [
-        {
-          name:
-            ranger?.name,
-
-          reason:
-            "Bán tải mạnh mẽ, tải tốt, phù hợp công trình",
-
-          basePrice:
-            665000000,
-        },
-      ];
-    }
-
-    // =====================================
-    // ĐI PHỐ
-    // =====================================
-
-    if (
-      text.includes("di pho")
-    ) {
-
-      const territory =
-        models.find((m) =>
-          m.name
-            .toLowerCase()
-            .includes("territory")
-        );
-
-      return [
-        {
-          name:
-            territory?.name,
-
-          reason:
-            "Kích thước vừa phải, phù hợp đô thị",
-
-          basePrice:
-            822000000,
-        },
-      ];
-    }
-
-    // =====================================
-    // TIẾT KIỆM
-    // =====================================
-
-    if (
-      text.includes("tiet kiem")
-    ) {
-
-      const territory =
-        models.find((m) =>
-          m.name
-            .toLowerCase()
-            .includes("territory")
-        );
-
-      return [
-        {
-          name:
-            territory?.name,
-
-          reason:
-            "Tiết kiệm nhiên liệu và chi phí vận hành",
-
-          basePrice:
-            822000000,
-        },
-      ];
-    }
-
-    // =====================================
-    // DEFAULT
-    // =====================================
-
-    return [
-      {
-        name:
-          "Ford Everest",
-
-        reason:
-          "Mẫu SUV nổi bật của Ford",
-
-        basePrice:
-          1099000000,
-      },
-    ];
+  return {
+    variantName: variant.variantName,
+    feature: entities.feature,
+    featureLabel: entities.feature,
+    available: !!variant.features?.[entities.feature],
   };
+};
+
 // =======================================
-// COMPARE
+// AI SUGGESTION + RANKING
 // =======================================
+export const getVehicleSuggestions = async (entities) => {
+  const query = {};
 
-export const compareVehiclesService =
-  async (entities) => {
+  if (entities?.budget) {
+    query.basePrice = { $lte: entities.budget };
+  }
 
-    if (
-      !entities.compareModels ||
-      entities.compareModels.length < 2
-    ) {
+  if (entities?.seats) {
+    query["specs.seats"] = entities.seats;
+  }
 
-      return null;
+  if (entities?.feature) {
+    query[`features.${entities.feature}`] = true;
+  }
+
+  const variants = await Variant.find(query).populate("modelId");
+
+  return variants.map((v) => ({
+    name: v.modelId?.name,
+    variantName: v.variantName,
+    basePrice: v.basePrice,
+    reason: "Phù hợp nhu cầu của bạn",
+  }));
+};
+
+// =======================================
+// COMPARE MODELS
+// =======================================
+export const compareVehiclesService = async (entities) => {
+  if (!entities?.compareModels || entities.compareModels.length < 2)
+    return null;
+
+  const [a, b] = entities.compareModels;
+
+  const variantA = await Variant.findOne({ modelId: a._id });
+  const variantB = await Variant.findOne({ modelId: b._id });
+
+  if (!variantA || !variantB) return null;
+
+  return {
+    a: {
+      name: a.name,
+      seats: variantA.specs?.seats,
+      type: a.type,
+    },
+    b: {
+      name: b.name,
+      seats: variantB.specs?.seats,
+      type: b.type,
+    },
+  };
+};
+
+// =======================================
+// COMPARE VARIANTS
+// =======================================
+export const compareVariants = async (entities) => {
+  if (!entities?.compareVariants || entities.compareVariants.length < 2)
+    return null;
+
+  const [v1, v2] = entities.compareVariants;
+
+  const variantA = await Variant.findById(v1._id).populate("modelId");
+  const variantB = await Variant.findById(v2._id).populate("modelId");
+
+  if (!variantA || !variantB) return null;
+
+  return { a: variantA, b: variantB };
+};
+
+// =======================================
+// INVENTORY
+// =======================================
+export const findInventory = async (entities) => {
+  const data = await Inventory.find({ status: "Trong kho" })
+    .populate({
+      path: "variantId",
+      populate: { path: "modelId" },
+    })
+    .populate("colorId");
+
+  return data.filter((item) => {
+    const model = item.variantId?.modelId;
+    const color = item.colorId;
+
+    if (entities?.model) {
+      if (
+        !model?.name
+          ?.toLowerCase()
+          .includes(entities.model.name.toLowerCase())
+      ) {
+        return false;
+      }
     }
 
-    return {
-      a:
-        entities.compareModels[0],
-
-      b:
-        entities.compareModels[1],
-    };
-  };
-
-// =======================================
-// SPECS
-// =======================================
-
-export const getVehicleSpecs =
-  async (entities) => {
-
-    if (!entities.model) {
-      return null;
+    if (entities?.color) {
+      if (
+        !color?.name
+          ?.toLowerCase()
+          .includes(entities.color.name.toLowerCase())
+      ) {
+        return false;
+      }
     }
 
-    return {
-      name:
-        entities.model.name,
+    return true;
+  });
+};
 
-      seats:
-        entities.model.seats,
+// =======================================
+// TECH PROBLEM
+// =======================================
+export const findCarProblem = async (message) => {
+  const text = normalize(message);
 
-      engine:
-        entities.model.specs
-          ?.engine ||
-        "Đang cập nhật",
+  const problems = await CarProblem.find();
 
-      fuelType:
-        entities.model.specs
-          ?.fuelType ||
-        "Đang cập nhật",
+  for (const p of problems) {
+    if (p.symptoms.some((s) => text.includes(normalize(s)))) {
+      return p;
+    }
+  }
 
-      wheel:
-        entities.model.specs
-          ?.wheel ||
-        "Đang cập nhật",
-
-      features: [
-        "ABS",
-        "Camera 360",
-        "ADAS",
-      ],
-    };
-  };
+  return null;
+};
