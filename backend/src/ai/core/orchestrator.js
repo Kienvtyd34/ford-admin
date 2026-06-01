@@ -1,7 +1,7 @@
 import { intentEngine } from "./intentEngine.js";
 import { entityEngine } from "./entityEngine.js";
 import { router } from "./router.js";
-import { contextManager } from "./contextManager.js";
+import { saveContext, getContext } from "./contextManager.js";
 import { ragEngine } from "../rag/ragEngine.js";
 import { formatResponse } from "../utils/formatResponse.js";
 
@@ -9,14 +9,14 @@ export const orchestrator = async (userId, message) => {
   const intent = intentEngine(message);
   const entities = await entityEngine(message);
 
-  const context = contextManager.getContext(userId);
+  const context = getContext(userId);
 
   const merged = {
     ...(context?.entities || {}),
     ...entities,
   };
 
-  contextManager.saveContext(userId, {
+  saveContext(userId, {
     intent: intent.intent,
     entities: merged,
   });
