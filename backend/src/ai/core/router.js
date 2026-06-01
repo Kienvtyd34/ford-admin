@@ -6,14 +6,26 @@ import inventory from "../pipelines/inventory.pipeline.js";
 import tech from "../pipelines/tech.pipeline.js";
 
 export const router = async (intent, entities, message) => {
-  switch (intent) {
-    case "PRICE": return price(entities);
-    case "SUGGEST": return suggestion(entities);
-    case "COMPARE": return compare(entities);
-    case "FEATURE": return feature(entities);
-    case "INVENTORY": return inventory(entities);
-    case "TECH": return tech(message);
-    default: return null;
+  try {
+    switch (intent) {
+      case "PRICE": return await price(entities);
+      case "SUGGEST": return await suggestion(entities);
+      case "COMPARE": return await compare(entities);
+      case "FEATURE": return await feature(entities);
+      case "INVENTORY": return await inventory(entities);
+      case "TECH": return await tech(message);
+
+      default:
+        return {
+          intent: "FALLBACK",
+          message: "🤖 Tôi chưa hiểu rõ yêu cầu, bạn có thể nói rõ hơn không?",
+        };
+    }
+  } catch (e) {
+    return {
+      intent: "ERROR",
+      message: "❌ Router error",
+    };
   }
 };
 

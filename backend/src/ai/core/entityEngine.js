@@ -1,15 +1,10 @@
-import Fuse from "fuse.js";
-import VehicleModel from "../../models/VehicleModel.js";
-import Variant from "../../models/Variant.js";
-import { normalize } from "../utils/normalize.js";
+const normalize = (s) =>
+  s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
 export const entityEngine = async (message) => {
   const text = normalize(message);
 
-  const [models, variants] = await Promise.all([
-    VehicleModel.find(),
-    Variant.find().populate("modelId"),
-  ]);
+  const models = await VehicleModel.find();
 
   const out = {
     model: null,
@@ -18,21 +13,27 @@ export const entityEngine = async (message) => {
     seats: null,
   };
 
-  const modelFuse = new Fuse(models, {
-    keys: ["name", "aliases"],
-    threshold: 0.4,
-  });
+  // 🔥 FIX MODEL MATCH STRONG
+  for (const m of models) {
+    const names = [m.name, ...(m.aliases || [])];
 
-  const m = modelFuse.search(text);
-  if (m.length) out.model = m[0].item;
+    if (names.some(n => text.includes(normalize(n)))) {
+      out.model = m;
+      break;
+    }
+  }
 
-  const variantFuse = new Fuse(variants, {
-    keys: ["variantName", "aliases"],
-    threshold: 0.35,
-  });
+  const variants = await Variant.find().populate("modelId");
 
-  const v = variantFuse.search(text);
-  if (v.length) out.variant = v[0].item;
+  for (const v of variants) {
+    const names = [v.variantName, ...(v.aliases || [])];
+
+    if (names.some(n => text.includes(normalize(n)))) {
+      out.variant = v;
+      out.model = v.modelId;
+      break;
+    }
+  }
 
   if (text.includes("7 cho")) out.seats = 7;
   if (text.includes("5 cho")) out.seats = 5;

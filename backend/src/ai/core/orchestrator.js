@@ -6,32 +6,42 @@ import { ragEngine } from "../rag/ragEngine.js";
 import { formatResponse } from "../utils/formatResponse.js";
 
 export const orchestrator = async (userId, message) => {
-  const intent = intentEngine(message);
-  const entities = await entityEngine(message);
+  try {
+    const intent = intentEngine(message);
+    const entities = await entityEngine(message);
 
-  const context = getContext(userId);
+    const context = getContext(userId);
 
-  const merged = {
-    ...(context?.entities || {}),
-    ...entities,
-  };
+    const merged = {
+      ...(context?.entities || {}),
+      ...entities,
+    };
 
-  saveContext(userId, {
-    intent: intent.intent,
-    entities: merged,
-  });
+    saveContext(userId, {
+      intent: intent.intent,
+      entities: merged,
+    });
 
-  const result = await router(intent.intent, merged, message);
+    const result = await router(intent.intent, merged, message);
 
-  if (result) return formatResponse(result);
+    if (result?.message) {
+      return formatResponse(result);
+    }
 
-  const rag = await ragEngine(message);
+    const rag = await ragEngine(message);
 
-  return formatResponse({
-    intent: "RAG_FALLBACK",
-    message: rag,
-    entities: merged,
-  });
+    return formatResponse({
+      intent: "RAG_FALLBACK",
+      message: rag?.answer || "🤖 Không tìm thấy thông tin",
+      entities: merged,
+    });
+
+  } catch (e) {
+    return formatResponse({
+      intent: "ERROR",
+      message: "❌ System overload",
+    });
+  }
 };
 
 export default orchestrator;
