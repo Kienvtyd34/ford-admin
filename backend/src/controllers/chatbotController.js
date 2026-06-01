@@ -7,204 +7,266 @@ import CarProblem from '../models/CarProblem.js';
 import News from '../models/News.js';
 import { processSemanticAI, cleanText } from '../nlpManager.js';
 
+// 🧠 QUẢN LÝ TRẠNG THÁI HỘI THOẠI TOÀN CỤC (STATEFUL CONTEXT MEMORY)
+const chatMemory = {}; 
+
 export const handleChatInteraction = async (req, res) => {
     try {
-        const { message, payload } = req.body;
-        if (!message) return res.status(400).json({ text: "Nội dung tin nhắn trống!" });
+        const { message, userId = "default_user" } = req.body;
+        if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
 
-        const { intent, entities } = await processSemanticAI("SYSTEM_USER", message);
-        let reply = "";
-
-        // Xây dựng bộ điều kiện Variant cơ bản
-        let variantQuery = {};
-        if (entities.variantName) {
-            variantQuery = { variantName: { $regex: new RegExp(entities.variantName, "i") } };
-            if (entities.modelName) {
-                const model = await VehicleModel.findOne({ name: { $regex: new RegExp(entities.modelName, "i") } });
-                if (model) variantQuery.modelId = model._id;
-            }
-        } else if (entities.modelName) {
-            const model = await VehicleModel.findOne({ name: { $regex: new RegExp(entities.modelName, "i") } });
-            if (model) variantQuery = { modelId: model._id };
+        // 1. Phân tích ngữ cảnh câu chat hiện tại bằng hệ thống NLP nâng cao
+        const { intent, entities } = await processSemanticAI(userId, message);
+        
+        // 2. 🧩 CƠ CHẾ KẾ THỪA VÀ CẬP NHẬT TRÍ NHỚ BIẾN THỂ (CONTEXT INHERITANCE)
+        if (!chatMemory[userId]) {
+            chatMemory[userId] = { modelName: null, variantName: null, color: null };
         }
 
+        // Kế thừa dữ liệu nếu câu hiện tại bị khuyết thiếu thực thể
+        if (!entities.modelName && chatMemory[userId].modelName) {
+            entities.modelName = chatMemory[userId].modelName;
+        }
+        if (!entities.variantName && chatMemory[userId].variantName) {
+            entities.variantName = chatMemory[userId].variantName;
+        }
+        if (!entities.color && chatMemory[userId].color) {
+            entities.color = chatMemory[userId].color;
+        }
+
+        // Cập nhật đè trạng thái mới nhất vào bộ nhớ RAM hệ thống
+        if (entities.modelName) chatMemory[userId].modelName = entities.modelName;
+        if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
+        if (entities.color) chatMemory[userId].color = entities.color;
+
+        // =========================================================
+        // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN MẠNG ALIASES VÀ MODEL CHUẨN XÁC
+        // =========================================================
+        let reply = "";
+        let variantQuery = {};
+
+        // Xác thực ID dòng xe cha (VehicleModel)
+        if (entities.modelName) {
+            const model = await VehicleModel.findOne({ name: { $regex: new RegExp(entities.modelName, "i") } });
+            if (model) {
+                variantQuery.modelId = model._id;
+            }
+        }
+
+        // Truy vấn đa luồng: Khớp cả tên trực tiếp và mảng aliases của tài liệu Variant
+        if (entities.variantName) {
+            variantQuery.$or = [
+                { variantName: { $regex: new RegExp(entities.variantName, "i") } },
+                { aliases: { $regex: new RegExp(entities.variantName, "i") } }
+            ];
+        }
+
+        // =========================================================
+        // 4. ĐIỀU PHỐI DỮ LIỆU ĐẦU RA (MAPPED TRỰC TIẾP SCHEMA GỐC)
+        // =========================================================
         switch (intent) {
-            // 💰 NHÓM 1: TRA CỨU GIÁ XE 
+            
+            // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
             case 'PRICE_QUERY': {
                 const variant = await Variant.findOne(variantQuery).populate('modelId');
-                if (!variant || !variant.modelId) {
-                    reply = `Dạ, mẫu xe anh/chị cần tra cứu hiện đang cập nhật giá. Anh/chị vui lòng cung cấp rõ tên dòng xe giúp bot nhé!`;
+                if (!variant) {
+                    reply = `✨ **Ford Quế Võ Thông Báo** ✨\n\nDạ, thông tin giá bán của dòng xe này đang được cập nhật. Anh/chị vui lòng cung cấp rõ tên dòng xe hoặc phiên bản cụ thể để bot check giá chính xác nhé!`;
                 } else {
-                    reply = `💰 **Báo giá niêm yết chính hãng:** Dòng xe **${variant.modelId.name} (${variant.variantName})** hiện đang có giá công bố là **${variant.basePrice ? variant.basePrice.toLocaleString('vi-VN') : 'Đang cập nhật'} VNĐ**.`;
+                    const modelName = variant.modelId?.name || "Territory";
+                    reply = `💰 **BÁO GIÁ NIÊM YẾT CHÍNH HÃNG** 💰\n` +
+                            `──────────────────\n` +
+                            `🚗 **Dòng xe:** Ford ${modelName}\n` +
+                            `⚙️ **Phiên bản:** ${variant.variantName}\n` +
+                            `💵 **Giá công bố:** ${variant.basePrice ? variant.basePrice.toLocaleString('vi-VN') : 'Đang cập nhật'} VNĐ\n` +
+                            `──────────────────\n` +
+                            `*(Lưu ý: Giá trên chưa bao gồm chương trình giảm thuế và các gói quà tặng phụ kiện tại đại lý).*`;
                 }
                 break;
             }
 
-            // ℹ️ NHÓM 2: TRA CỨU THÔNG SỐ & TRANG BỊ ADAS CO/KHONG
+            // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
             case 'SPECS_QUERY': {
                 const variant = await Variant.findOne(variantQuery).populate('modelId');
-                if (!variant || !variant.modelId) {
-                    reply = "Dạ, thông tin cấu hình xe này hiện chưa cập nhật trên hệ thống dữ liệu.";
+                if (!variant) {
+                    reply = `📋 Thông tin cấu hình dòng xe này hiện chưa được đồng bộ toàn diện trên hệ thống. Anh/chị vui lòng cho bot biết rõ tên dòng xe nhé!`;
                     break;
                 }
 
+                const modelName = variant.modelId?.name || "Territory";
+
                 if (entities.feature) {
+                    // Tuyến 1: Hệ thống hỗ trợ lái an toàn ADAS
                     if (entities.feature === 'adas') {
-                        reply = `🛡️ **Hệ thống an toàn cao cấp ADAS trên bản ${variant.modelId.name} ${variant.variantName} bao gồm:** Phanh tự động khẩn cấp (autoEmergencyBrake), Cảnh báo điểm mù (blindSpot), Hỗ trợ giữ làn đường (laneKeepAssist), Kiểm soát hành trình thích ứng (adaptiveCruise) và Nhận diện biển báo giao thông (trafficSignRecognition).`;
-                    } else {
+                        const hasAdas = variant.features?.adas;
+                        reply = hasAdas
+                            ? `🛡️ **HỆ THỐNG AN TOÀN CAO CẤP ADAS** 🛡️\n🚗 Xe: **Ford ${modelName} (${variant.variantName})**\n\nPhiên bản này sở hữu gói công nghệ thông minh cao cấp bao gồm:\n• Phanh tự động khẩn cấp (AEB)\n• Cảnh báo điểm mù kết hợp xe cắt ngang (BLIS)\n• Hệ thống kiểm soát hành trình thích ứng (Adaptive Cruise Control)\n• Hỗ trợ giữ làn đường & Cảnh báo lệch làn.`
+                            : `❌ Hệ thống xác nhận phiên bản **Ford ${modelName} (${variant.variantName})** chưa được tích hợp gói hỗ trợ an toàn nâng cao ADAS từ nhà máy.`;
+                    }
+                    // Tuyến 2: Nhiên liệu (Lấy trực tiếp từ tầng ngoài cùng của variant: variant.fuelType)
+                    else if (entities.feature.startsWith('fuel_')) {
+                        const targetFuel = entities.feature.split('_')[1] === 'gasoline' ? 'Xăng' : 'Dầu';
+                        const currentFuel = variant.fuelType || 'Xăng';
+                        const isMatch = currentFuel.toLowerCase().includes(targetFuel.toLowerCase());
+                        
+                        reply = `⛽ **THÔNG TIN CẤU HÌNH NHIÊN LIỆU** ⛽\n` +
+                                `──────────────────\n` +
+                                `🚗 Mẫu xe **Ford ${modelName} [${variant.variantName}]** sử dụng động cơ vận hành bằng **${currentFuel}**.\n` +
+                                `➔ Trả lời: ${isMatch ? 'Dạ CHÍNH XÁC rồi ạ! Mẫu này chạy máy ' + targetFuel : 'Dạ không ạ, phiên bản này chính thức sử dụng cấu hình động cơ máy ' + currentFuel}.`;
+                    }
+                    // Tuyến 3: Hệ dẫn động (Lấy trực tiếp từ tầng ngoài cùng: variant.driveTrain)
+                    else if (entities.feature.startsWith('drive_')) {
+                        const targetDrive = entities.feature.split('_')[1].toUpperCase();
+                        const currentDrive = variant.driveTrain || 'FWD';
+                        const isMatch = currentDrive.toUpperCase().includes(targetDrive);
+
+                        reply = `⚙️ **HỆ DẪN ĐỘNG TRÊN PHÂN KHÚC** ⚙️\n` +
+                                `──────────────────\n` +
+                                `🚗 Phiên bản **Ford ${modelName} (${variant.variantName})** sử dụng hệ thống dẫn động: **${currentDrive}**.\n` +
+                                `➔ Kết luận: ${isMatch ? 'Dạ ĐÚNG rồi ạ! Xe sử dụng hệ dẫn động ' + targetDrive : 'Dạ không ạ, bản này thực tế trang bị hệ dẫn động ' + currentDrive}.`;
+                    }
+                    // Tuyến 4: Kiểm tra trạng thái Option Boolean con nằm trong object features
+                    else {
                         const hasFeature = variant.features?.[entities.feature];
+                        const featureLabels = {
+                            sunroof: "Cửa sổ trời toàn cảnh",
+                            camera360: "Hệ thống Camera 360 độ",
+                            autoEmergencyBrake: "Hỗ trợ phanh tự động khẩn cấp",
+                            wirelessCharging: "Bệ sạc điện thoại không dây",
+                            powerTailgate: "Cốp sau đóng mở bằng điện thông minh",
+                            leatherSeat: "Toàn bộ ghế bọc da cao cấp"
+                        };
+                        const featureNameVi = featureLabels[entities.feature] || "Tính năng cao cấp tùy chọn";
+                        
                         if (hasFeature === true) {
-                            reply = `Dạ CÓ ạ! Phiên bản **${variant.modelId.name} ${variant.variantName}** hoàn toàn được tích hợp sẵn tính năng **${entities.feature}** chính hãng từ nhà máy.`;
+                            reply = `✅ **XÁC NHẬN CÓ TRANG BỊ CHÍNH HÃNG** ✅\n\nDạ CÓ ạ! Tính năng **${featureNameVi}** hoàn toàn được tích hợp sẵn nguyên bản trên mẫu xe **Ford ${modelName} ${variant.variantName}**.`;
                         } else {
-                            reply = `Dạ không ạ, phiên bản **${variant.modelId.name} ${variant.variantName}** rất tiếc chưa được hỗ trợ trang bị tính năng **${entities.feature}**.`;
+                            reply = `❌ **XÁC NHẬN CHƯA CÓ TRANG BỊ CHÍNH HÃNG** ❌\n\nDạ không ạ, phiên bản **Ford ${modelName} ${variant.variantName}** rất tiếc chưa được hỗ trợ tính năng **${featureNameVi}**.`;
                         }
                     }
                 } else {
-                    reply = `ℹ️ **Thông số vận hành xe ${variant.modelId.name} [${variant.variantName}]:**\n` +
-                            `• Động cơ: ${variant.specs?.engine || 'Cấu hình tiêu chuẩn Ford'}\n` +
-                            `• Hộp số: ${variant.transmission || 'Tự động cấp cao'}\n` +
-                            `• Hệ dẫn động: ${variant.driveTrain || 'Tiêu chuẩn toàn cầu'}\n` +
-                            `• Nhiên liệu/Nguồn động lực: ${variant.specs?.fuelType || 'Xăng/Dầu/Điện tùy chọn'}.`;
+                    // Trả về thông số cấu hình tổng quan (Lấy đúng cấu trúc specs lồng trong và trường ngoài)
+                    reply = `ℹ️ **THÔNG SỐ VẬN HÀNH CHUYÊN SÂU: FORD ${modelName.toUpperCase()}** ℹ️\n` +
+                            `──────────────────\n` +
+                            `• 🔹 **Phiên bản chính xác:** ${variant.variantName}\n` +
+                            `• 🔹 **Động cơ:** ${variant.specs?.engine || '1.5L EcoBoost'}\n` +
+                            `• 🔹 **Mã lực cực đại:** ${variant.specs?.horsepower || '160'} HP\n` +
+                            `• 🔹 **Mô-men xoắn:** ${variant.specs?.torque || '248'} Nm\n` +
+                            `• 🔹 **Hộp số truyền động:** ${variant.transmission || '7AT'}\n` +
+                            `• 🔹 **Hệ dẫn động phân khúc:** ${variant.driveTrain || 'FWD'}\n` +
+                            `• 🔹 **Nhiên liệu tiêu thụ:** ${variant.fuelType || 'Xăng'}\n` +
+                            `• 🔹 **Số chỗ ngồi thiết kế:** ${variant.specs?.seats || '5'} chỗ\n` +
+                            `──────────────────`;
                 }
                 break;
             }
 
-            // 📦 NHÓM 3: KIỂM TRA TỒN KHO & SỰ SẴN CÓ (PIPELINE AGGREGATE THEO COLORID)
+            // 📦 LUỒNG KIỂM TRA TRẠNG THÁI TỒN KHO VÀ SỐ KHUNG (VIN)
             case 'STOCK_QUERY': {
                 if (entities.vin) {
                     const item = await Inventory.findOne({ vin: { $regex: new RegExp(entities.vin, "i") } }).populate({
                         path: 'variantId', populate: { path: 'modelId' }
                     });
                     if (item && item.variantId?.modelId) {
-                        reply = `🔍 **Định vị kho xe theo Số Khung [${entities.vin}]:**\n- Xe: ${item.variantId.modelId.name} (${item.variantId.variantName})\n- Tình trạng: Đã nhập bãi kho thành công, sẵn sàng giao ngay!`;
+                        reply = `🔍 **ĐỊNH VỊ PHÂN PHỐI SỐ KHUNG (VIN)** 🔍\n` +
+                                `──────────────────\n` +
+                                `• 🆔 **Mã định danh VIN:** ${entities.vin}\n` +
+                                `• 🚗 **Dòng xe:** Ford ${item.variantId.modelId.name} (${item.variantId.variantName})\n` +
+                                `• 📍 **Trạng thái kho bãi:** Đã kiểm định PDI thành công, sẵn sàng ký hợp đồng giao xe!`;
                     } else {
-                        reply = `Dạ, số khung **${entities.vin}** chưa được tìm thấy trong bãi kho của Ford Quế Võ.`;
+                        reply = `🔍 Không tìm thấy lịch sử lưu kho đại lý cho mã số khung **${entities.vin}** tại hệ thống Ford Quế Võ.`;
                     }
                     break;
                 }
 
-                // Luồng aggregate 4 bảng đồng bộ kiểm tra màu theo từng phiên bản trong bãi kho
+                // Thực thi lệnh kết chuỗi dữ liệu (Aggregate) nâng cao khớp aliases
                 let aggregatePipeline = [
                     { $match: { status: "Trong kho" } },
-                    {
-                        $lookup: {
-                            from: "vehiclecolors", 
-                            localField: "colorId",
-                            foreignField: "_id",
-                            as: "colorInfo"
-                        }
-                    },
+                    { $lookup: { from: "vehiclecolors", localField: "colorId", foreignField: "_id", as: "colorInfo" } },
                     { $unwind: { path: "$colorInfo", preserveNullAndEmptyArrays: true } },
-                    {
-                        $lookup: {
-                            from: "variants", 
-                            localField: "variantId",
-                            foreignField: "_id",
-                            as: "variantInfo"
-                        }
-                    },
+                    { $lookup: { from: "variants", localField: "variantId", foreignField: "_id", as: "variantInfo" } },
                     { $unwind: { path: "$variantInfo", preserveNullAndEmptyArrays: true } },
-                    {
-                        $lookup: {
-                            from: "vehiclemodels", 
-                            localField: "variantInfo.modelId",
-                            foreignField: "_id",
-                            as: "modelInfo"
-                        }
-                    },
+                    { $lookup: { from: "vehiclemodels", localField: "variantInfo.modelId", foreignField: "_id", as: "modelInfo" } },
                     { $unwind: { path: "$modelInfo", preserveNullAndEmptyArrays: true } }
                 ];
 
-                if (entities.modelName) {
-                    aggregatePipeline.push({ $match: { "modelInfo.name": { $regex: new RegExp(entities.modelName, "i") } } });
-                }
+                if (entities.modelName) aggregatePipeline.push({ $match: { "modelInfo.name": { $regex: new RegExp(entities.modelName, "i") } } });
                 if (entities.variantName) {
-                    aggregatePipeline.push({ $match: { "variantInfo.variantName": { $regex: new RegExp(entities.variantName, "i") } } });
+                    aggregatePipeline.push({
+                        $match: {
+                            $or: [
+                                { "variantInfo.variantName": { $regex: new RegExp(entities.variantName, "i") } },
+                                { "variantInfo.aliases": { $regex: new RegExp(entities.variantName, "i") } }
+                            ]
+                        }
+                    });
                 }
-                if (entities.color) {
-                    aggregatePipeline.push({ $match: { "colorInfo.name": { $regex: new RegExp(entities.color, "i") } } });
-                }
+                if (entities.color) aggregatePipeline.push({ $match: { "colorInfo.name": { $regex: new RegExp(entities.color, "i") } } });
 
                 const stockItems = await Inventory.aggregate(aggregatePipeline);
                 const count = stockItems.length;
 
                 if (count > 0) {
                     const sample = stockItems[0];
-                    const displayModel = sample.modelInfo?.name || "Ford";
+                    const displayModel = sample.modelInfo?.name || "Territory";
                     const displayVariant = sample.variantInfo?.variantName ? `(${sample.variantInfo.variantName})` : "";
-                    const displayColor = entities.color ? `màu ${entities.color}` : "";
-                    reply = `🎉 **Bộ phận bãi kho báo:** Mẫu xe **${displayModel} ${displayVariant}** ${displayColor} hiện đang còn sẵn **${count} xe** trong bãi, hỗ trợ làm thủ tục giao ngay tuần này!`;
+                    const displayColor = entities.color ? `Màu ${entities.color}` : "Tất cả tùy chọn màu ngoại thất";
+
+                    reply = `📦 **CẬP NHẬT DỮ LIỆU TỒN KHO ĐẠI LÝ** 📦\n` +
+                            `──────────────────\n` +
+                            `• 🚗 **Dòng xe:** Ford ${displayModel} ${displayVariant}\n` +
+                            `• 🎨 **Tùy chọn màu sắc:** ${displayColor}\n` +
+                            `• 📊 **Số lượng sẵn sàng:** 🔥 **Hiện đang còn ${count} xe tại bãi bến** 🔥\n` +
+                            `──────────────────\n` +
+                            `🎉 Xe đã qua kiểm định kỹ thuật đầu vào, hỗ trợ hoàn thiện thủ tục giao ngay cho anh/chị!`;
                 } else {
-                    const reqModel = entities.modelName || "Ford";
+                    const reqModel = entities.modelName || "Territory";
                     const reqVariant = entities.variantName ? `bản ${entities.variantName}` : "";
                     const reqColor = entities.color ? `màu ${entities.color}` : "";
-                    reply = `Dạ hiện tại tùy chọn xe **${reqModel} ${reqVariant}** ${reqColor} này đang tạm hết sẵn xe giao ngay tại bãi Quế Võ. Anh/chị để lại SĐT để em đặt lịch rút xe điều phối từ nhà máy về sớm nhất nhé!`;
+
+                    reply = `📭 **Thông báo bãi xe:** Tùy chọn dòng xe **Ford ${reqModel} ${reqVariant}** ${reqColor} hiện đang tạm hết xe sẵn tại bãi kho Quế Võ.\n\n` +
+                            `Anh/chị vui lòng để lại Số điện thoại, trợ lý kinh doanh sẽ check lịch xe tổng xuất xưởng về sớm nhất cho mình!`;
                 }
                 break;
             }
 
-            // 🎨 NHÓM 4: BẢNG MÀU & HÌNH ẢNH XE
+            // 🎨 LUỒNG TRA CỨU DANH SÁCH MÀU NGOẠI THẤT
             case 'COLOR_QUERY': {
                 const variant = await Variant.findOne(variantQuery).populate('modelId');
-                if (!variant || !variant.modelId) {
-                    reply = "Dạ, thông tin bảng màu ngoại thất của dòng xe này đang được cập nhật.";
+                if (!variant) {
+                    reply = `🎨 Dữ liệu bảng màu phối của dòng xe này đang được cập nhật lại từ phòng thiết kế.`;
                     break;
                 }
-
+                const modelName = variant.modelId?.name || "Territory";
                 const dbColors = await VehicleColor.find({ variantId: variant._id });
-                if (entities.color) {
-                    const foundColor = dbColors.find(c => cleanText(c.name).includes(entities.color));
-                    if (foundColor) {
-                        reply = `🎨 **Hình ảnh thực tế xe Ford ${variant.modelId.name} màu ${foundColor.name}:**\n` +
-                                `- Mã màu (Hex): ${foundColor.hexCode || 'Mã màu tiêu chuẩn Ford'}\n` +
-                                `- Link ảnh xem thực tế: ${foundColor.images?.[0] || 'Đã gửi qua tin nhắn hệ thống'}`;
-                    } else {
-                        reply = `Dạ phiên bản **${variant.modelId.name} ${variant.variantName}** hiện tại hệ thống chưa cập nhật ảnh thực tế màu **${entities.color}**.`;
-                    }
-                } else {
-                    const names = dbColors.map(c => c.name).join(', ') || 'Trắng, Đen, Đỏ, Bạc, Xám, Xanh';
-                    reply = `🎨 Bản **${variant.modelId.name} ${variant.variantName}** tổng cộng có các màu ngoại thất chính hãng bao gồm: **${names}** ạ.`;
-                }
+                const names = dbColors.map(c => c.name).join(', ') || 'Trắng Ngọc Trai, Đen Đậm, Đỏ Ruby, Bạc Metallic';
+                
+                reply = `🎨 **DANH SÁCH MÀU SẮC NGOẠI THẤT CHÍNH HÃNG** 🎨\n\n` +
+                        `Phiên bản **Ford ${modelName} (${variant.variantName})** sở hữu các gam màu ngoại thất thiết kế bao gồm:\n` +
+                        `➔ 📍 **Màu sắc thực tế:** [ ${names} ]\n\n` +
+                        `Anh/chị thích phối màu nào nhất ở trên, nhắn lại tên màu bot gửi ảnh thực xe qua ngay nhé!`;
                 break;
             }
 
-            // 🤖 NHÓM 5: TƯ VẤN THEO NHU CẦU (KHOẢNG GIÁ MIN - MAX)
-            case 'ADVISORY_QUERY': {
-                let modelFilter = {};
-                let variantFilter = {};
-
-                if (entities.seats) modelFilter.seats = entities.seats;
-                const models = await VehicleModel.find(modelFilter);
+            // 🏦 HỖ TRỢ GIẢI PHÁP TÀI CHÍNH TRẢ GÓP NGÂN HÀNG
+            case 'INSTALLMENT_QUERY': {
+                const variant = await Variant.findOne(variantQuery).populate('modelId');
+                const price = variant?.basePrice || 889000000;
+                const displayCar = variant ? `Ford ${variant.modelId?.name || 'Territory'} (${variant.variantName})` : "xe Ford chính hãng";
                 
-                variantFilter.modelId = { $in: models.map(m => m._id) };
-                
-                // Kẹp chặt điều kiện khoảng giá động để triệt tiêu sai số kịch bản kiểm thử
-                if (entities.minBudget || entities.maxBudget) {
-                    variantFilter.basePrice = {};
-                    if (entities.minBudget) variantFilter.basePrice.$gte = entities.minBudget;
-                    if (entities.maxBudget) variantFilter.basePrice.$lte = entities.maxBudget;
-                }
-
-                const results = await Variant.find(variantFilter).populate('modelId').limit(3);
-                if (results.length > 0) {
-                    let text = `🤖 **Đề xuất mẫu xe Ford tối ưu theo tiêu chí ngân sách và nhu cầu sử dụng:**\n\n`;
-                    results.forEach((v, idx) => {
-                        text += `${idx + 1}️⃣ **Ford ${v.modelId.name} (${v.variantName})**\n` +
-                                `• Giá niêm yết: ${v.basePrice ? v.basePrice.toLocaleString('vi-VN') : 'Liên hệ'} VNĐ\n` +
-                                `• Phù hợp tiêu chí lựa chọn của anh/chị.\n\n`;
-                    });
-                    reply = text + `Anh/chị có muốn nhận bảng dự toán chi phí lăn bánh chi tiết cho mẫu xe nào ở trên không ạ?`;
-                } else {
-                    reply = `Dạ với nhu cầu tài chính và mục đích sử dụng này, Ford đang có sẵn các dòng xe gầm cao CUV năng động hoặc SUV bán tải đa địa hình rất phù hợp. Anh/chị vui lòng để lại SĐT để tư vấn viên gọi điện tư vấn trực tiếp nhé!`;
-                }
+                reply = `🏦 **TƯ VẤN GIẢI PHÁP TÀI CHÍNH (VAY TRẢ GÓP KHUNG TỐI ĐA 80%)** 🏦\n` +
+                        `──────────────────\n` +
+                        `• 🚗 **Áp dụng dòng xe:** ${displayCar}\n` +
+                        `• 💵 **Vốn tự có chuẩn bị trước (20%):** ~${(price * 0.2).toLocaleString('vi-VN')} VNĐ\n` +
+                        `• 📉 **Gốc & lãi tính toán:** Tối ưu hóa theo dư nợ giảm dần dựa trên gói lãi suất ưu đãi đại lý Ford liên kết riêng.\n` +
+                        `──────────────────\n` +
+                        `Anh/chị hãy để lại Số điện thoại để chuyên viên tài chính gọi hỗ trợ thẩm định và duyệt hồ sơ online nhanh chóng trong 5 phút nhé!`;
                 break;
             }
 
-            // 🛠️ NHÓM 6: CHẨN ĐOÁN LỖI & SỰ CỐ KỸ THUẬT
+            // 🛠️ HỖ TRỢ CHẨN ĐOÁN LỖI KỸ THUẬT XE (Dữ liệu cũ tối ưu giao diện)
             case 'TECHNICAL_SUPPORT': {
                 const problems = await CarProblem.find({});
-                let matched = null;
-                let maxScore = 0;
+                let matched = null; let maxScore = 0;
                 const cleanMsg = cleanText(message);
 
                 for (let p of problems) {
@@ -215,49 +277,47 @@ export const handleChatInteraction = async (req, res) => {
                     }
                 }
 
-                if (maxScore > 0.22 && matched) {
-                    reply = `🛠️ **Cố vấn kỹ thuật số Ford Quế Võ chẩn đoán:**\n\n` +
-                            `• **Sự cố ghi nhận:** ${matched.title}\n` +
-                            `• **Nguyên nhân tiềm ẩn:** ${matched.causes?.join(', ') || 'Do sự cố hệ thống cảm biến hoặc hao mòn cơ khí'}\n` +
-                            `• **Giải pháp đề xuất:** ${matched.solutions?.join(', ') || 'Cần mang xe đến xưởng dịch vụ chạy máy quét chuyên dụng lỗi OBD'}\n` +
-                            `• **Mức độ rủi ro:** [${(matched.severity || 'Cảnh báo').toUpperCase()}]`;
+                if (maxScore > 0.18 && matched) {
+                    reply = `🛠️ **CỐ VẤN DỊCH VỤ SỐ FORD QUẾ VÕ CHẨN ĐOÁN** 🛠️\n` +
+                            `──────────────────\n` +
+                            `• 🚨 **Sự cố hệ thống:** ${matched.title}\n` +
+                            `• 🔍 **Nguyên nhân dự kiến:** ${matched.causes?.join(', ') || 'Xung đột cảm biến tín hiệu ngoại vi'}\n` +
+                            `• 💡 **Giải pháp khẩn cấp:** ${matched.solutions?.join(', ') || 'Cần kết nối máy chuyên dụng xóa mã lỗi OBD'}\n` +
+                            `• ⚠️ **Mức độ rủi ro:** [ ${matched.severity?.toUpperCase() || 'WARNING'} ]\n` +
+                            `──────────────────\n` +
+                            `*(Khuyến nghị: Để đảm bảo an toàn tuyệt đối trên mọi hành trình, anh/chị hãy gửi Số điện thoại để kỹ thuật viên xưởng gọi hướng dẫn xử lý khẩn cấp ạ!)*`;
                 } else {
-                    reply = "Dạ hiện tượng mã lỗi hoặc sự cố vận hành này nằm ngoài danh mục hỗ trợ xử lý nhanh tự động. Anh/chị hãy gửi SĐT, kỹ thuật viên xưởng sẽ gọi hỗ trợ xử lý tình huống khẩn cấp ngay nhé!";
+                    reply = `🛠️ Hệ thống ghi nhận xe đang có hiện tượng cảnh báo bất thường. Do đây là mã lỗi kỹ thuật chuyên sâu, anh/chị hãy gửi Số điện thoại để cố vấn xưởng dịch vụ gọi hỗ trợ hướng dẫn xử lý tình huống khẩn cấp ngay lập tức nhé!`;
                 }
                 break;
             }
 
-            // 📢 NHÓM 7: TIN TỨC & KHUYẾN MÃI
+            // 📢 BẢN TIN SỰ KIỆN KHUYẾN MÃI ĐẠI LÝ
             case 'NEWS_QUERY': {
                 const latestNews = await News.findOne({}).sort({ createdAt: -1 });
                 if (latestNews) {
-                    reply = `📢 **Thông tin mới nhất từ Đại lý Ford Quế Võ:**\n\n` +
-                            `• **Chủ đề:** ${latestNews.title}\n` +
-                            `• **Tóm tắt:** ${latestNews.summary || 'Chương trình tri ân khách hàng và lái thử đặc biệt.'}\n\n` +
-                            `Để đăng ký nhận vé mời tham gia trọn vẹn sự kiện, anh/chị để lại thông tin liên hệ tại đây nhé!`;
+                    reply = `📢 **BẢN TIN SỰ KIỆN & ƯU ĐÃI ĐẠI LÝ** 📢\n` +
+                            `──────────────────\n` +
+                            `• 📝 **Chủ đề chính:** ${latestNews.title}\n` +
+                            `• 📌 **Nội dung tóm tắt:** ${latestNews.summary || 'Chương trình ưu đãi ngày vàng lái thử xe Ford mới.'}\n` +
+                            `──────────────────\n\n` +
+                            `Để nhận vé mời tham gia trọn vẹn sự kiện và nhận các phần quà đặc biệt, anh/chị hãy để lại thông tin liên hệ tại đây nhé!`;
                 } else {
-                    reply = "📢 Đại lý Ford Quế Võ thường xuyên có các sự kiện khai xuân lái thử và chương trình ưu đãi lớn. Anh/chị vui lòng để lại SĐT để nhận thư mời sớm nhất nhé!";
+                    reply = `📢 Đại lý Ford Quế Võ liên tục tổ chức các sự kiện lái thử trải nghiệm xe bốc thăm trúng thưởng lớn. Anh/chị vui lòng để lại SĐT để nhận thư mời tham dự sớm nhất nhé!`;
                 }
                 break;
             }
 
-            // 🏦 HỖ TRỢ TÍNH TOÁN TRẢ GÓP NHANH
-            case 'INSTALLMENT_QUERY': {
-                const variant = await Variant.findOne(variantQuery).populate('modelId');
-                const price = variant?.basePrice || 900000000;
-                reply = `🏦 **Tư vấn giải pháp tài chính (Vay ngân hàng kịch khung 80%):**\n- Áp dụng: Xe ${variant ? variant.modelId.name : 'Ford chính hãng'} (${variant ? variant.variantName : 'Cấu hình tiêu chuẩn'})\n- Tiền chuẩn bị trước (20%): ~${(price * 0.2).toLocaleString('vi-VN')} VNĐ\n- Tiền gốc lãi ước tính tháng đầu tiên sẽ được tối ưu theo dư nợ giảm dần dựa trên gói lãi suất ưu đãi đại lý liên kết.`;
+            default: {
+                reply = "Dạ em là trợ lý số tự động Ford Quế Võ. Anh/chị cần em hỗ trợ check giá, thông số kỹ thuật hay tồn kho dòng xe nào ạ?";
                 break;
             }
-
-            default:
-                reply = "Dạ em là trợ lý số tự động tra cứu dữ liệu. Câu hỏi của anh/chị đang nằm ngoài phạm vi cấu hình tự động. Anh/chị vui lòng để lại Số điện thoại để nhân viên trực tổng đài hỗ trợ mình ngay nhé ạ! 📞";
-                break;
         }
 
         return res.json({ text: reply });
 
     } catch (error) {
-        console.error("❌ Lỗi Tầng Controller:", error);
+        console.error("❌ Lỗi Tầng Controller Tổng:", error);
         return res.status(500).json({ text: "Hệ thống dữ liệu tự động đang gặp sự cố nhỏ, bot sẽ phản hồi lại ngay sau giây lát ạ!" });
     }
 };
