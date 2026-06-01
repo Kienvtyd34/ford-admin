@@ -1,6 +1,6 @@
 import VehicleModel from "../../models/VehicleModel.js";
 import Variant from "../../models/Variant.js";
-import cache from "../utils/cacheEngine.js";
+import cache from "../../../src/utils/cacheEngine.js";
 import Inventory from "../../models/Inventory.js";
 import CarProblem from "../../models/CarProblem.js";
 import { normalize } from "../../../src/utils/normalize.js";
