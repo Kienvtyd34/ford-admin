@@ -1,14 +1,15 @@
-import * as use from "@tensorflow-models/universal-sentence-encoder";
+import crypto from "crypto";
 
-let model;
+export const embedder = async (text) => {
+  const hash = crypto.createHash("sha256").update(text).digest("hex");
 
-export const load = async () => {
-  if (!model) model = await use.load();
-  return model;
+  const vector = [];
+  for (let i = 0; i < 64; i++) {
+    const chunk = hash.slice(i * 4, i * 4 + 4);
+    vector.push((parseInt(chunk, 16) % 1000) / 1000);
+  }
+
+  return vector;
 };
 
-export const embedText = async (text) => {
-  const m = await load();
-  const v = await m.embed([text]);
-  return Array.from(v.arraySync()[0]);
-};
+export default embedder;
