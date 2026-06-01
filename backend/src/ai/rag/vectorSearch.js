@@ -1,5 +1,5 @@
 import VehicleEmbedding from "../model/VehicleEmbedding.js";
-import { embedText } from "./embedder.js";
+import { embedder } from "./embedder.js";
 
 const cosine = (a, b) => {
   let dot = 0, na = 0, nb = 0;
@@ -12,7 +12,7 @@ const cosine = (a, b) => {
 };
 
 export const vectorSearch = async (query) => {
-  const qv = await embedText(query);
+  const qv = await embedder(query);
 
   const docs = await VehicleEmbedding.find();
 
