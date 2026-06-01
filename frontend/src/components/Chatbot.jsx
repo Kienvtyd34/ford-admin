@@ -50,47 +50,36 @@ export default function Chatbot() {
     setLoading(true);
 
     try {
+  const res = await axios.post(
+    "https://ford-admin.onrender.com/api/ai/chat",
+    {
+      message: userText,
+      userId: "user_1",
+    }
+  );
 
-      const res = await axios.post(
-        "https://ford-admin.onrender.com/api/ai/chat",
-        {
-          message: userText,
-          userId: "user_1",
-        }
-      );
+  console.log("API RESPONSE:", res.data);
 
-      console.log("API RESPONSE:", res.data);
+  // === ĐOẠN FIX MỚI Ở ĐÂY ===
+  // Ưu tiên lấy key 'text' đúng theo cấu trúc Backend trả về, 
+  // nếu không có thì fallback về 'reply' hoặc 'message' cho an toàn.
+  let reply = res.data?.text || res.data?.reply || res.data?.message;
+  // ==========================
 
-      let reply =
-  res.data?.reply ||
-  res.data?.message;
+  // =========================
+  // FIX OBJECT RESPONSE
+  // =========================
+  if (typeof reply === "object" && reply !== null) {
+    if (reply.text) {          // Thêm check cho thuộc tính text trong object
+      reply = reply.text;
+    } else if (reply.message) {
+      reply = reply.message;
+    } else {
+      reply = JSON.stringify(reply, null, 2);
+    }
+  }
 
-      // =========================
-      // FIX OBJECT RESPONSE
-      // =========================
-
-      if (
-        typeof reply === "object" &&
-        reply !== null
-      ) {
-
-        // case:
-        // { message: "..." }
-
-        if (reply.message) {
-          reply = reply.message;
-        }
-
-        // object khác
-
-        else {
-          reply = JSON.stringify(
-            reply,
-            null,
-            2
-          );
-        }
-      }
+  // ... (Giữ nguyên các đoạn logic xử lý Array và setMessages phía dưới)
 
       // =========================
       // ARRAY RESPONSE
