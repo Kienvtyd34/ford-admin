@@ -1,4 +1,4 @@
-import semanticAI from "../ai/core/router.js";
+import semanticAI from "../ai/core/orchestrator.js";
 
 export const chatController = async (req, res) => {
   try {
