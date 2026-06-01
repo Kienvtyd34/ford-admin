@@ -3,7 +3,11 @@ import { normalize } from "../../../src/utils/normalize.js";
 const INTENT_RULES = [
   {
     intent: "PRICE_QUERY",
-    keywords: ["gia", "bao nhieu", "cost", "price"],
+    keywords: [
+      "gia", "bao nhieu", "price", "cost",
+      "gia xe", "gia everest", "gia ranger",
+      "everest", "ranger", "territory"
+    ],
     weight: 3,
   },
   {
@@ -13,32 +17,27 @@ const INTENT_RULES = [
   },
   {
     intent: "FEATURE_QUERY",
-    keywords: ["co khong", "adas", "camera", "sunroof"],
-    weight: 2,
-  },
-  {
-    intent: "VEHICLE_SPEC",
-    keywords: ["thong so", "dong co", "cong suat", "hp"],
+    keywords: ["co khong", "adas", "camera", "sunroof", "tinh nang"],
     weight: 3,
   },
   {
     intent: "TECH_SUPPORT",
-    keywords: ["khong mát", "loi", "rung", "den bao"],
-    weight: 3,
+    keywords: ["khong mát", "loi", "rung", "den bao", "u3000", "abs"],
+    weight: 4,
   },
   {
     intent: "INVENTORY_CHECK",
-    keywords: ["ton kho", "con xe", "giao ngay"],
+    keywords: ["ton kho", "con xe", "giao ngay", "co xe khong"],
     weight: 3,
   },
   {
     intent: "VEHICLE_SUGGESTION",
-    keywords: ["phu hop", "gia dinh", "du lich", "nen mua"],
+    keywords: ["phu hop", "gia dinh", "du lich", "nen mua", "xe nao"],
     weight: 3,
   },
   {
     intent: "GREETING",
-    keywords: ["xin chao", "hello", "hi"],
+    keywords: ["xin chao", "hello", "hi", "chao"],
     weight: 5,
   },
 ];
@@ -52,7 +51,7 @@ export const detectIntent = (message = "") => {
     scores[rule.intent] = 0;
 
     for (const kw of rule.keywords) {
-      if (text.includes(kw)) {
+      if (text.includes(normalize(kw))) {
         scores[rule.intent] += rule.weight;
       }
     }
@@ -67,11 +66,9 @@ export const detectIntent = (message = "") => {
     };
   }
 
-  const confidence = Math.min(best[1] / 5, 1);
-
   return {
     intent: best[0],
-    confidence,
+    confidence: Math.min(best[1] / 6, 1),
   };
 };
 

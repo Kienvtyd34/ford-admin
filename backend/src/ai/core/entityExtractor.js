@@ -37,34 +37,27 @@ export const extractEntities = async (message = "") => {
     tags: [],
   };
 
-  // =========================
-  // MODEL (FIX STRONG MATCH)
-  // =========================
+  // ================= MODEL MATCH (VERY STRONG FIX)
   for (const m of db.models) {
     const names = [
       m.name,
       m.name.replace("Ford", "").trim(),
       ...(m.aliases || []),
+      m.slug
     ];
 
-    const hit = names.some((n) =>
-      text.includes(normalize(n))
-    );
-
-    if (hit) {
+    if (names.some(n => text.includes(normalize(n)))) {
       entities.model = m;
       entities.compareModels.push(m);
       break;
     }
   }
 
-  // =========================
-  // FUZZY MODEL FALLBACK
-  // =========================
+  // fallback fuzzy model
   if (!entities.model) {
     const fuse = new Fuse(db.models, {
-      keys: ["name", "aliases"],
-      threshold: 0.4,
+      keys: ["name", "aliases", "slug"],
+      threshold: 0.35,
     });
 
     const r = fuse.search(text);
@@ -74,13 +67,11 @@ export const extractEntities = async (message = "") => {
     }
   }
 
-  // =========================
-  // VARIANT
-  // =========================
+  // ================= VARIANT
   for (const v of db.variants) {
     const names = [v.variantName, ...(v.aliases || [])];
 
-    if (names.some((n) => text.includes(normalize(n)))) {
+    if (names.some(n => text.includes(normalize(n)))) {
       entities.variant = v;
       break;
     }
@@ -89,38 +80,32 @@ export const extractEntities = async (message = "") => {
   if (!entities.variant) {
     const fuse = new Fuse(db.variants, {
       keys: ["variantName", "aliases"],
-      threshold: 0.35,
+      threshold: 0.3,
     });
 
     const r = fuse.search(text);
     if (r.length) entities.variant = r[0].item;
   }
 
-  // =========================
-  // COLOR
-  // =========================
+  // ================= COLOR
   const colorFuse = new Fuse(db.colors, {
     keys: ["name"],
     threshold: 0.3,
   });
 
-  const color = colorFuse.search(text);
-  if (color.length) entities.color = color[0].item;
+  const c = colorFuse.search(text);
+  if (c.length) entities.color = c[0].item;
 
-  // =========================
-  // SEATS
-  // =========================
+  // ================= SEATS
   if (text.includes("7 cho")) entities.seats = 7;
   if (text.includes("5 cho")) entities.seats = 5;
 
-  // =========================
-  // BUDGET FIX
-  // =========================
+  // ================= BUDGET
   const budget = text.match(/(\d+)\s*(ty|trieu)/i);
   if (budget) {
     let val = Number(budget[1]);
-    if (budget[2] === "ty") val *= 1_000_000_000;
-    if (budget[2] === "trieu") val *= 1_000_000;
+    if (budget[2] === "ty") val *= 1e9;
+    if (budget[2] === "trieu") val *= 1e6;
     entities.budget = val;
   }
 
