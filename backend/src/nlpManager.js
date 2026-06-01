@@ -1,172 +1,208 @@
 import stringSimilarity from 'string-similarity';
-import VehicleModel from './models/VehicleModel.js'; // Điều chỉnh đường dẫn cho đúng với cấu trúc thư mục của bạn
+import VehicleModel from './models/VehicleModel.js';
 
-/**
- * Hàm gọt giũa và chuẩn hóa văn bản đầu vào chuyên sâu
- * - Chuyển về chữ thường, xóa khoảng trắng thừa.
- * - Xóa bỏ hoàn toàn số thứ tự bài test ở đầu câu (Ví dụ: "16. ", "36. ", "36- ", "36 ")
- * - Chuyển đổi các ký tự đặc biệt phổ biến tránh làm nhiễu biểu thức so sánh
- */
 export const cleanText = (text) => {
     if (!text) return "";
     return text.toLowerCase()
                .trim()
-               .replace(/^\d+[\.\s\-]+/g, "") // Gọt sạch "16. ", "36. " ở đầu câu
-               .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ") // Thay thế ký tự đặc biệt thành khoảng trắng
-               .replace(/\s+/g, " "); // Thu gọn chuỗi khoảng trắng liền nhau thành 1 khoảng trắng đơn
+               .replace(/^\d+[\.\s\-]+/g, "") // Gọt sạch số thứ tự kịch bản test (16., 36.,...)
+               .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ") // Biến ký tự đặc biệt thành khoảng trắng
+               .replace(/\s+/g, " ");
 };
 
-/**
- * Tầng xử lý ngôn ngữ tự nhiên nội bộ (Không sử dụng API bên ngoài)
- * Phân tích cú pháp câu hỏi của khách hàng để bóc tách Ý định (Intent) và Thực thể (Entities)
- */
 export const processSemanticAI = async (userId, rawMessage) => {
     const message = cleanText(rawMessage);
     
-    // Khởi tạo cấu trúc dữ liệu trả ra mặc định khớp với Controller dữ liệu của bạn
     let intent = 'DEFAULT';
     let entities = {
         modelName: null,
         variantName: null,
-        feature: null
+        feature: null,
+        color: null,
+        vin: null,
+        minBudget: null, // Phục vụ khoảng giá số học động từ X đến Y
+        maxBudget: null, 
+        seats: null,
+        carType: null
     };
 
     // =========================================================
-    // 1. MA TRẬN PHÂN LOẠI Ý ĐỊNH BAO QUÁT (INTENT CLUSTERING)
+    // 1. CHẨN ĐOÁN INTENT BẰNG TRỌNG SỐ ĐIỂM MATRAN (SCORE MATRIX)
     // =========================================================
-    const intentKeywords = {
-        // Ý định tra cứu giá xe / báo giá công bố
-        'PRICE_QUERY': [
-            'giá', 'gia', 'bao nhiêu', 'bao nhieu', 'báo giá', 'bao gia', 
-            'mức giá', 'nhiêu tiền', 'đắt không', 'dat khong', 'hết bao nhiêu', 
-            'het bao nhieu', 'tốn bao nhiêu', 'chi phí mua', 'tiền mua', 'bán nhiêu'
-        ],
-        // Ý định tư vấn ngân hàng, vay vốn, tính gốc lãi trả góp
-        'INSTALLMENT_QUERY': [
-            'trả góp', 'tra gop', 'vay', 'ngân hàng', 'ngan hang', 'lãi suất', 
-            'lai suat', 'cần tiền mua', 'can tien mua', 'gói vay', 'tín dụng', 
-            'thủ tục mua', 'trả trước bao nhiêu', 'tra truoc bao nhieu', 'bảng tính vay'
-        ],
-        // Ý định check tình trạng kho bãi, số lượng xe sẵn sàng giao ngay
-        'STOCK_QUERY': [
-            'kho', 'bãi', 'sẵn không', 'san khong', 'còn xe', 'con xe', 
-            'giao ngay', 'giao luon', 'có xe', 'co xe', 'đại lý', 'sẵn hàng', 'giao tuần này'
-        ],
-        // Ý định hỏi về thông số kỹ thuật, trang bị, option hoặc các tính năng của xe
-        'SPECS_QUERY': [
-            'thông số', 'thong so', 'tính năng', 'tinh nang', 'động cơ', 'hộp số', 
-            'mã lực', 'specs', 'thiết kế', 'option', 'máy xăng', 'máy dầu',
-            'trang bị', 'trang bi', 'tích hợp', 'phanh tay', 'cảm biến', 'lốp', 'vành', 'lazang',
-            // Thêm các từ khóa option thực tế để kích hoạt ngay intent SPECS_QUERY khi khách hỏi trực tiếp
-            'cửa sổ trời', 'cua so troi', 'camera 360', 'cam 360', 'màn hình', 'man hinh', 'ghế da', 'ghe da'
-        ],
-        // Ý định chẩn đoán hư hỏng, hỗ trợ kỹ thuật và bắt lỗi vận hành (Sử dụng Model CarProblem)
-        'TECHNICAL_SUPPORT': [
-            'lỗi', 'loi', 'hỏng', 'hong', 'sự cố', 'su co', 'không nổ được', 'khong no duoc',
-            'kêu', 'keu', 'khói', 'khoi', 'chảy dầu', 'chay dau', 'báo lỗi', 'bao loi',
-            'vô lăng nặng', 'vo lang nang', 'nhiệt độ cao', 'nhiet do cao', 'chẩn đoán', 'bị sao', 'bi sao'
-        ]
+    const intentScores = {
+        'PRICE_QUERY': 0,
+        'INSTALLMENT_QUERY': 0,
+        'STOCK_QUERY': 0,
+        'COLOR_QUERY': 0,
+        'SPECS_QUERY': 0,
+        'TECHNICAL_SUPPORT': 0,
+        'NEWS_QUERY': 0
     };
 
-    // Bước quét 1: Kiểm tra từ khóa mồi nhóm Intent
-    for (const [key, keywords] of Object.entries(intentKeywords)) {
-        if (keywords.some(keyword => message.includes(keyword))) {
-            intent = key;
-            break;
+    const keywordWeights = {
+        'PRICE_QUERY': ['giá', 'gia', 'bao nhiêu', 'bao nhieu', 'báo giá', 'bao gia', 'mức giá', 'nhiêu tiền', 'nhieu tien', 'đắt', 'dat', 'tốn', 'ton', 'chi phí', 'tiền', 'tien', 'bn', 'nhiu'],
+        'INSTALLMENT_QUERY': ['trả góp', 'tra gop', 'vay', 'ngân hàng', 'lãi suất', 'gói vay', 'tín dụng', 'thủ tục mua', 'trả trước'],
+        'STOCK_QUERY': ['kho', 'bãi', 'sẵn không', 'san khong', 'sẵn có', 'còn xe', 'con xe', 'giao ngay', 'giao luon', 'có xe', 'co xe', 'đại lý', 'sẵn hàng', 'hàng không', 'nhập kho', 'để qua xem'],
+        'COLOR_QUERY': ['màu gì', 'mau gi', 'mấy màu', 'may mau', 'ảnh xe', 'anh xe', 'hình ảnh', 'hinh anh', 'mã hex', 'ma hex', 'bảng màu', 'list màu', 'phối màu'],
+        'SPECS_QUERY': ['thông số', 'thong so', 'tính năng', 'tinh nang', 'động cơ', 'hộp số', 'mã lực', 'specs', 'thiết kế', 'option', 'máy xăng', 'máy dầu', 'chạy bằng', 'chạy xăng', 'chạy dầu', 'chạy điện', 'cầu trước', 'hệ dẫn động', 'trang bị', 'tích hợp', 'kết nối', 'adas', 'an toàn'],
+        'TECHNICAL_SUPPORT': ['lỗi', 'loi', 'hỏng', 'hong', 'sự cố', 'su co', 'không nổ', 'kêu', 'khói', 'chảy dầu', 'báo lỗi', 'vô lăng', 'nhiệt độ', 'chẩn đoán', 'bị sao', 'bi benh gi', 'giật số', 'khựng máy', 'cá vàng', 'trơn trượt', 'vòng tua', 'u3000', 'abs', 'dps6', 'giật'],
+        'NEWS_QUERY': ['tin tức', 'tin tuc', 'bài viết', 'khuyến mãi', 'sự kiện', 'khai xuân', 'thiệp mời', 'ra mắt', 'showroom']
+    };
+
+    // Cộng dồn điểm dựa trên mật độ từ khóa xuất hiện
+    for (const [intentName, keywords] of Object.entries(keywordWeights)) {
+        keywords.forEach(kw => {
+            if (message.includes(kw)) {
+                intentScores[intentName] += 1;
+            }
+        });
+    }
+
+    // Lọc Intent có điểm cao nhất
+    let maxScore = 0;
+    for (const [intentName, score] of Object.entries(intentScores)) {
+        if (score > maxScore) {
+            maxScore = score;
+            intent = intentName;
         }
     }
 
-    // Bước quét 2: Đánh bẫy ngữ cảnh câu hỏi nghi vấn dạng "có... không" hoặc "có... ko" 
-    // Nếu hệ thống vẫn đang ở 'DEFAULT' mà người dùng dùng cấu hình câu hỏi này thì tự động gom về hỏi option (SPECS_QUERY)
-    if (intent === 'DEFAULT' && message.includes("có") && (message.includes("không") || message.includes("ko"))) {
-        intent = 'SPECS_QUERY';
+    // Bẫy phủ định & tư vấn nhu cầu khi điểm số bằng 0 hoặc mặc định
+    if (intent === 'DEFAULT' || maxScore === 0) {
+        if (message.includes("có") && (message.includes("không") || message.includes("ko"))) {
+            intent = 'SPECS_QUERY';
+        } else if (/(tài chính|kinh phí|tầm|khoảng|dưới|triệu|tỷ|ty|người|chỗ|gia đình|đi phố|off-road|địa hình|bán tải|phượt|chở hàng|tr)/i.test(message)) {
+            intent = 'ADVISORY_QUERY';
+        }
     }
 
     // =========================================================
-    // 2. NHẬN DIỆN THỰC THỂ DÒNG XE TỰ ĐỘNG (DATABASE-DRIVEN ENTITY)
+    // 2. KHỚP DÒNG XE TỰ ĐỘNG TỪ DB (DATABASE-DRIVEN FUZZY)
     // =========================================================
     try {
-        // Lấy danh sách tên dòng xe thực tế đang quản lý trong database
         const allModels = await VehicleModel.find({}, 'name');
         let bestMatchModel = null;
-        let highestScore = 0;
+        let highestModelScore = 0;
 
         for (const model of allModels) {
             const modelNameLower = model.name.toLowerCase();
-            
-            // Tuyến 1: Khớp chuỗi con chính xác (Ưu tiên số 1 - Ví dụ: gõ "everest" trúng ngay "Ford Everest")
             if (message.includes(modelNameLower)) {
                 bestMatchModel = model.name;
-                highestScore = 1.0;
+                highestModelScore = 1.0;
                 break; 
             }
-            
-            // Tuyến 2: Khớp mờ từ viết tắt độc lập (Ví dụ: khách gõ "mach-e" vẫn khớp trúng dòng "Mustang Mach-E")
             const words = modelNameLower.split(' ');
             if (words.some(word => word.length > 2 && message.includes(word))) {
                 bestMatchModel = model.name;
-                highestScore = 0.9;
+                highestModelScore = 0.9;
                 break;
             }
-
-            // Tuyến 3: So sánh khoảng cách chuỗi (Fuzzy Match) đề phòng người dùng gõ sai chính tả nhẹ (Ví dụ: "everes", "rannger")
             const score = stringSimilarity.compareTwoStrings(message, modelNameLower);
-            if (score > highestScore && score > 0.20) { // Đặt ngưỡng bao quát rộng 0.20
-                highestScore = score;
+            if (score > highestModelScore && score > 0.15) {
+                highestModelScore = score;
                 bestMatchModel = model.name;
             }
         }
-
-        if (bestMatchModel) {
-            entities.modelName = bestMatchModel;
-        }
+        if (bestMatchModel) entities.modelName = bestMatchModel;
     } catch (err) {
-        console.error("❌ Lỗi đồng bộ dữ liệu NLP tại VehicleModel:", err);
+        console.error("❌ Lỗi trích xuất dòng xe:", err);
     }
 
     // =========================================================
-    // 3. BÓC TÁCH PHIÊN BẢN XE (VARIANT EXTRACTION)
+    // 3. BÓC TÁCH PHIÊN BẢN (VARIANT)
     // =========================================================
-    const commonVariants = [
-        'titanium x', 'titanium', 'wildtrak', 'sport', 'premium', 
-        'xls', 'xlt', 'ambient', 'raptor', 'platinum', 'trend'
-    ];
-    
+    const commonVariants = ['titanium x', 'titanium', 'wildtrak', 'sport', 'premium', 'xls', 'xlt', 'ambient', 'raptor', 'platinum', 'trend'];
     for (const v of commonVariants) {
         if (message.includes(v)) {
-            // Chuyển chữ hoa (.toUpperCase()) để khớp chính xác cấu hình lưu trữ của bảng Variant trong DB của bạn
             entities.variantName = v.toUpperCase(); 
             break;
         }
     }
 
     // =========================================================
-    // 4. BÓC TÁCH TÍNH NĂNG TỰ ĐỘNG (FEATURE EXTRACTION)
+    // 4. MA TRẬN ÁNH XẠ TÍNH NĂNG CON (MAPPING TO BOOLEAN SCHEMAS)
     // =========================================================
-    // Từ khóa người dùng gõ -> Tên field thuộc tính trong cấu trúc Schema "Variant.features" của bạn.
-    // Bạn hãy chỉnh sửa các giá trị chuỗi bên tay phải (ví dụ: 'sunroof', 'camera360') 
-    // sao cho khớp 100% với tên trường thuộc tính kiểu Boolean trong DB của bạn nhé.
     const featureMap = {
-        'cửa sổ trời': 'sunroof',
-        'cua so troi': 'sunroof',
-        'camera 360': 'camera360',
-        'cam 360': 'camera360',
-        'màn hình': 'screen',
-        'man hinh': 'screen',
-        'ghế da': 'leatherSeats',
-        'ghe da': 'leatherSeats',
-        'phanh tay điện tử': 'electronicParkingBrake',
-        'phanh tay': 'electronicParkingBrake',
-        'sạc không dây': 'wirelessCharger',
-        'sac khong day': 'wirelessCharger'
+        'cửa sổ trời': 'sunroof', 'sunroof': 'sunroof', 'cua so troi': 'sunroof',
+        'camera 360': 'camera360', 'cam 360': 'camera360', 'camera360': 'camera360',
+        'màn hình': 'screen', 'man hinh': 'screen',
+        'ghế da': 'leatherSeats', 'ghe da': 'leatherSeats',
+        'sạc không dây': 'wirelessCharging', 'wirelesscharging': 'wirelessCharging', 'wireless charging': 'wirelessCharging',
+        'phanh tự động': 'autoEmergencyBrake', 'autoemergencybrake': 'autoEmergencyBrake', 'phanh tu dong': 'autoEmergencyBrake',
+        'giữ làn': 'laneKeepAssist', 'lanekeepassist': 'laneKeepAssist', 'giu lan': 'laneKeepAssist',
+        'thích ứng': 'adaptiveCruise', 'adaptivecruise': 'adaptiveCruise', 'thich ung': 'adaptiveCruise',
+        'điểm mù': 'blindSpot', 'blindspot': 'blindSpot', 'diem mu': 'blindSpot',
+        'cốp điện': 'powerTailgate', 'powertailgate': 'powerTailgate', 'cop dien': 'powerTailgate',
+        'fordpass': 'fordPass', 'ford pass': 'fordPass',
+        'sưởi ghế': 'heatedSeats', 'suoi ghe': 'heatedSeats', 'làm mát ghế': 'cooledSeats', 'lam mat ghe': 'cooledSeats',
+        'nhận diện biển báo': 'trafficSignRecognition', 'trafficsignrecognition': 'trafficSignRecognition', 'nhan dien bien bao': 'trafficSignRecognition',
+        'adas': 'adas'
     };
-
-    for (const [userKeyword, dbFieldName] of Object.entries(featureMap)) {
-        if (message.includes(userKeyword)) {
-            entities.feature = dbFieldName;
-            break; // Tìm thấy tính năng đầu tiên khớp thì dừng bộ lọc
+    for (const [k, v] of Object.entries(featureMap)) {
+        if (message.includes(k)) {
+            entities.feature = v;
+            break;
         }
     }
+
+    // =========================================================
+    // 5. BÓC TÁCH MÀU SẮC & SỐ KHUNG VIN
+    // =========================================================
+    const colorsList = ['đen', 'den', 'đỏ', 'do', 'trắng', 'trang', 'bạc', 'bac', 'xám', 'xam', 'xanh'];
+    for (const c of colorsList) {
+        if (new RegExp(`\\b${c}\\b|màu ${c}|xe màu ${c}`, 'i').test(message)) {
+            if (c === 'den') entities.color = 'đen';
+            else if (c === 'do') entities.color = 'đỏ';
+            else if (c === 'trang') entities.color = 'trắng';
+            else if (c === 'bac') entities.color = 'bạc';
+            else if (c === 'xam') entities.color = 'xám';
+            else entities.color = c;
+            break;
+        }
+    }
+
+    const vinMatch = message.match(/[a-z0-9]{10,17}/i);
+    if (vinMatch) {
+        const potentialVin = vinMatch[0].toUpperCase();
+        if (!commonVariants.map(v=>v.toUpperCase()).includes(potentialVin) && !['EVEREST','RANGER','TERRITORY','EXPLORER','TRANSIT','MUSTANG'].some(x => potentialVin.includes(x))) {
+            entities.vin = potentialVin;
+        }
+    }
+
+    // =========================================================
+    // 6. XỬ LÝ KHOẢNG GIÁ SỐ HỌC ĐỘNG & NHU CẦU (NHÓM 5)
+    // =========================================================
+    const allNumbers = message.match(/\d+/g);
+    if (allNumbers && allNumbers.length >= 2 && /(đến|den|tới|toi|-)/i.test(message)) {
+        let val1 = parseInt(allNumbers[0]);
+        let val2 = parseInt(allNumbers[1]);
+        let unitMultiplier = message.includes("tỷ") || message.includes("ty") ? 1000000000 : 1000000;
+        entities.minBudget = val1 * unitMultiplier;
+        entities.maxBudget = val2 * unitMultiplier;
+    } else if (allNumbers && allNumbers.length === 1) {
+        let val = parseInt(allNumbers[0]);
+        let unitMultiplier = message.includes("tỷ") || message.includes("ty") ? 1000000000 : 1000000;
+        let totalBudget = val * unitMultiplier;
+        
+        if (message.includes("dưới") || message.includes("duoi")) {
+            entities.maxBudget = totalBudget;
+        } else if (message.includes("trên") || message.includes("tren")) {
+            entities.minBudget = totalBudget;
+        } else {
+            entities.minBudget = totalBudget - 150000000;
+            entities.maxBudget = totalBudget + 150000000;
+        }
+    } else if (message.includes("dưới 1 tỷ") || message.includes("duoi 1 ty")) {
+        entities.maxBudget = 1000000000;
+    }
+
+    if (message.includes("5 chỗ") || message.includes("5 người") || message.includes("5 nguoi")) entities.seats = 5;
+    if (message.includes("7 chỗ") || message.includes("7 người") || message.includes("nhà đông người")) entities.seats = 7;
+
+    if (message.includes("điện") || message.includes("dien")) entities.carType = "EV";
+    if (message.includes("bán tải") || message.includes("ban tai") || message.includes("pick-up") || message.includes("công trường")) entities.carType = "PICKUP";
+    if (message.includes("cuv") || message.includes("gầm cao") || message.includes("đi phố")) entities.carType = "CUV";
+    if (message.includes("off-road") || message.includes("địa hình") || message.includes("phượt")) entities.carType = "SUV_OFFROAD";
 
     return { intent, entities };
 };
