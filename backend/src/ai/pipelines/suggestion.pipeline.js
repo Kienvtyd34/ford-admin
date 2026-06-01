@@ -3,8 +3,14 @@ import Variant from "../../models/Variant.js";
 export default async (entities) => {
   const query = {};
 
-  if (entities.budget) query.basePrice = { $lte: entities.budget };
-  if (entities.seats) query["specs.seats"] = entities.seats;
+  // 🔥 FIX: bắt buộc có model hoặc seats
+  if (entities.model?._id) {
+    query.modelId = entities.model._id;
+  }
+
+  if (entities.seats) {
+    query["specs.seats"] = entities.seats;
+  }
 
   const data = await Variant.find(query).populate("modelId");
 
@@ -18,7 +24,9 @@ export default async (entities) => {
   return {
     intent: "SUGGEST",
     message: data
-      .map(v => `🚗 ${v.modelId?.name || "Xe"} - ${v.basePrice.toLocaleString("vi-VN")}`)
+      .map(v =>
+        `🚗 ${v.modelId?.name || "Xe"} - ${v.basePrice.toLocaleString("vi-VN")}`
+      )
       .join("\n"),
   };
 };

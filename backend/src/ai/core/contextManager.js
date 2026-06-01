@@ -1,8 +1,10 @@
 const store = new Map();
 
 export const saveContext = (userId, data) => {
+  const old = store.get(userId) || {};
+
   store.set(userId, {
-    ...store.get(userId),
+    ...old,
     ...data,
     updatedAt: Date.now(),
   });

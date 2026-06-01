@@ -7,10 +7,12 @@ import { formatResponse } from "../utils/formatResponse.js";
 
 export const orchestrator = async (userId, message) => {
   try {
-    const intent = intentEngine(message);
-    const entities = await entityEngine(message);
-
     const context = contextManager.getContext(userId);
+
+    const intent = intentEngine(message);
+
+    // 🔥 FIX: truyền context vào entityEngine
+    const entities = await entityEngine(message, context);
 
     const merged = {
       ...(context?.entities || {}),
@@ -24,9 +26,7 @@ export const orchestrator = async (userId, message) => {
 
     const result = await router(intent.intent, merged, message);
 
-    if (result && result.intent !== "ROUTER_ERROR") {
-      return formatResponse(result);
-    }
+    if (result) return formatResponse(result);
 
     const rag = await ragEngine(message);
 
@@ -39,8 +39,7 @@ export const orchestrator = async (userId, message) => {
   } catch (err) {
     return formatResponse({
       intent: "SYSTEM_ERROR",
-      message: "❌ System overload",
-      error: err.message,
+      message: "❌ System error",
     });
   }
 };
