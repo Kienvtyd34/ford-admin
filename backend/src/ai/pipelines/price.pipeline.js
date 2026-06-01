@@ -1,29 +1,38 @@
 import Variant from "../../models/Variant.js";
 
 export default async (entities) => {
-  if (!entities.model) {
+  try {
+    if (!entities?.model?._id) {
+      return {
+        intent: "PRICE",
+        message: "🚗 Bạn muốn xem giá Ford Everest, Ranger hay Territory?",
+      };
+    }
+
+    const variants = await Variant.find({
+      modelId: entities.model._id,
+    }).populate("modelId");
+
+    if (!variants.length) {
+      return {
+        intent: "PRICE",
+        message: "❌ Không tìm thấy phiên bản phù hợp",
+      };
+    }
+
     return {
       intent: "PRICE",
-      message: "🚗 Bạn muốn xem giá Ford Everest, Ranger hay Territory?",
+      message: variants
+        .map(v =>
+          `🚗 ${v.modelId?.name} ${v.variantName} - ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
+        )
+        .join("\n"),
     };
-  }
 
-  const variants = await Variant.find({
-    modelId: entities.model._id,
-  });
-
-  if (!variants.length) {
+  } catch (err) {
     return {
       intent: "PRICE",
-      message: "❌ Không tìm thấy phiên bản phù hợp",
+      message: "❌ Lỗi hệ thống giá xe",
     };
   }
-
-  const selected = variants[0];
-
-  return {
-    intent: "PRICE",
-    message: `🚗 ${entities.model.name}
-💰 Từ: ${selected.basePrice.toLocaleString("vi-VN")} VNĐ`,
-  };
 };

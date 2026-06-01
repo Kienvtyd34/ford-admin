@@ -6,35 +6,52 @@ import { normalize } from "../utils/normalize.js";
 export const entityEngine = async (message, context = null) => {
   const text = normalize(message);
 
-  const models = await VehicleModel.find();
-  const variants = await Variant.find().populate("modelId");
+  const [models, variants] = await Promise.all([
+    VehicleModel.find(),
+    Variant.find().populate("modelId"),
+  ]);
 
   let model = null;
   let variant = null;
 
-  // 1. search model
+  // ===== MODEL MATCH =====
   const modelFuse = new Fuse(models, {
-    keys: ["name", "aliases"],
-    threshold: 0.4,
+    keys: ["name", "aliases", "brand"],
+    threshold: 0.35,
   });
 
   const m = modelFuse.search(text);
   if (m.length) model = m[0].item;
 
-  // 2. fallback CONTEXT MODEL (🔥 FIX QUAN TRỌNG)
+  // 🔥 FIX: fallback context
   if (!model && context?.entities?.model) {
     model = context.entities.model;
   }
 
-  // 3. variant search
+  // 🔥 FIX: keyword hard mapping (QUAN TRỌNG)
+  const keywordMap = [
+    { key: "everest", name: "Everest" },
+    { key: "ranger", name: "Ranger" },
+    { key: "territory", name: "Territory" },
+  ];
+
+  for (const k of keywordMap) {
+    if (text.includes(k.key)) {
+      const found = models.find(m => m.name.includes(k.name));
+      if (found) model = found;
+    }
+  }
+
+  // ===== VARIANT MATCH =====
   const variantFuse = new Fuse(variants, {
     keys: ["variantName", "aliases"],
-    threshold: 0.35,
+    threshold: 0.3,
   });
 
   const v = variantFuse.search(text);
   if (v.length) variant = v[0].item;
 
+  // ===== SEATS =====
   let seats = null;
   if (text.includes("7 cho")) seats = 7;
   if (text.includes("5 cho")) seats = 5;
@@ -43,6 +60,7 @@ export const entityEngine = async (message, context = null) => {
     model,
     variant,
     seats,
+    raw: text,
   };
 };
 
