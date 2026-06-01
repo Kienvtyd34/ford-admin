@@ -18,18 +18,10 @@ export const handleChatInteraction = async (req, res) => {
         // 1. Phân tích ngữ cảnh câu chat hiện tại bằng hệ thống NLP nâng cao
         const { intent, entities } = await processSemanticAI(userId, message);
         
-        // 2. 🧩 CƠ CHẾ KẾ THỪA VÀ NGẮT ĐOẠN CHAT THÔNG MINH
+        // 2. 🧩 CƠ CHẾ KẾ THỪA VÀ CẬP NHẬT TRÍ NHỚ BIẾN THỂ (CONTEXT INHERITANCE)
         if (!chatMemory[userId]) {
             chatMemory[userId] = { modelName: null, variantName: null, color: null };
         }
-
-        // --- PHẦN BỔ SUNG: NGẮT ĐOẠN CHAT THÔNG MINH ---
-        // Nếu người dùng nhắc tới một model mới khác với model trong bộ nhớ -> Reset bộ nhớ để tránh nhầm lẫn
-        if (entities.modelName && chatMemory[userId].modelName && 
-            entities.modelName.toLowerCase() !== chatMemory[userId].modelName.toLowerCase()) {
-            chatMemory[userId] = { modelName: entities.modelName, variantName: null, color: null };
-        }
-        // ----------------------------------------------
 
         // Kế thừa dữ liệu nếu câu hiện tại bị khuyết thiếu thực thể
         if (!entities.modelName && chatMemory[userId].modelName) {
@@ -92,7 +84,7 @@ export const handleChatInteraction = async (req, res) => {
                 break;
             }
 
-            // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU
+            // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
             case 'SPECS_QUERY': {
                 const variant = await Variant.findOne(variantQuery).populate('modelId');
                 if (!variant) {
@@ -103,12 +95,14 @@ export const handleChatInteraction = async (req, res) => {
                 const modelName = variant.modelId?.name || "Territory";
 
                 if (entities.feature) {
+                    // Tuyến 1: Hệ thống hỗ trợ lái an toàn ADAS
                     if (entities.feature === 'adas') {
                         const hasAdas = variant.features?.adas;
                         reply = hasAdas
                             ? `🛡️ **HỆ THỐNG AN TOÀN CAO CẤP ADAS** 🛡️\n🚗 Xe: **Ford ${modelName} (${variant.variantName})**\n\nPhiên bản này sở hữu gói công nghệ thông minh cao cấp bao gồm:\n• Phanh tự động khẩn cấp (AEB)\n• Cảnh báo điểm mù kết hợp xe cắt ngang (BLIS)\n• Hệ thống kiểm soát hành trình thích ứng (Adaptive Cruise Control)\n• Hỗ trợ giữ làn đường & Cảnh báo lệch làn.`
                             : `❌ Hệ thống xác nhận phiên bản **Ford ${modelName} (${variant.variantName})** chưa được tích hợp gói hỗ trợ an toàn nâng cao ADAS từ nhà máy.`;
                     }
+                    // Tuyến 2: Nhiên liệu (Lấy trực tiếp từ tầng ngoài cùng của variant: variant.fuelType)
                     else if (entities.feature.startsWith('fuel_')) {
                         const targetFuel = entities.feature.split('_')[1] === 'gasoline' ? 'Xăng' : 'Dầu';
                         const currentFuel = variant.fuelType || 'Xăng';
@@ -119,6 +113,7 @@ export const handleChatInteraction = async (req, res) => {
                                 `🚗 Mẫu xe **Ford ${modelName} [${variant.variantName}]** sử dụng động cơ vận hành bằng **${currentFuel}**.\n` +
                                 `➔ Trả lời: ${isMatch ? 'Dạ CHÍNH XÁC rồi ạ! Mẫu này chạy máy ' + targetFuel : 'Dạ không ạ, phiên bản này chính thức sử dụng cấu hình động cơ máy ' + currentFuel}.`;
                     }
+                    // Tuyến 3: Hệ dẫn động (Lấy trực tiếp từ tầng ngoài cùng: variant.driveTrain)
                     else if (entities.feature.startsWith('drive_')) {
                         const targetDrive = entities.feature.split('_')[1].toUpperCase();
                         const currentDrive = variant.driveTrain || 'FWD';
@@ -129,6 +124,7 @@ export const handleChatInteraction = async (req, res) => {
                                 `🚗 Phiên bản **Ford ${modelName} (${variant.variantName})** sử dụng hệ thống dẫn động: **${currentDrive}**.\n` +
                                 `➔ Kết luận: ${isMatch ? 'Dạ ĐÚNG rồi ạ! Xe sử dụng hệ dẫn động ' + targetDrive : 'Dạ không ạ, bản này thực tế trang bị hệ dẫn động ' + currentDrive}.`;
                     }
+                    // Tuyến 4: Kiểm tra trạng thái Option Boolean con nằm trong object features
                     else {
                         const hasFeature = variant.features?.[entities.feature];
                         const featureLabels = {
@@ -148,6 +144,7 @@ export const handleChatInteraction = async (req, res) => {
                         }
                     }
                 } else {
+                    // Trả về thông số cấu hình tổng quan (Lấy đúng cấu trúc specs lồng trong và trường ngoài)
                     reply = `ℹ️ **THÔNG SỐ VẬN HÀNH CHUYÊN SÂU: FORD ${modelName.toUpperCase()}** ℹ️\n` +
                             `──────────────────\n` +
                             `• 🔹 **Phiên bản chính xác:** ${variant.variantName}\n` +
@@ -181,6 +178,7 @@ export const handleChatInteraction = async (req, res) => {
                     break;
                 }
 
+                // Thực thi lệnh kết chuỗi dữ liệu (Aggregate) nâng cao khớp aliases
                 let aggregatePipeline = [
                     { $match: { status: "Trong kho" } },
                     { $lookup: { from: "vehiclecolors", localField: "colorId", foreignField: "_id", as: "colorInfo" } },
@@ -231,6 +229,7 @@ export const handleChatInteraction = async (req, res) => {
                 break;
             }
 
+            // 🎨 LUỒNG TRA CỨU DANH SÁCH MÀU NGOẠI THẤT
             case 'COLOR_QUERY': {
                 const variant = await Variant.findOne(variantQuery).populate('modelId');
                 if (!variant) {
@@ -248,6 +247,7 @@ export const handleChatInteraction = async (req, res) => {
                 break;
             }
 
+            // 🏦 HỖ TRỢ GIẢI PHÁP TÀI CHÍNH TRẢ GÓP NGÂN HÀNG
             case 'INSTALLMENT_QUERY': {
                 const variant = await Variant.findOne(variantQuery).populate('modelId');
                 const price = variant?.basePrice || 889000000;
@@ -263,6 +263,7 @@ export const handleChatInteraction = async (req, res) => {
                 break;
             }
 
+            // 🛠️ HỖ TRỢ CHẨN ĐOÁN LỖI KỸ THUẬT XE (Dữ liệu cũ tối ưu giao diện)
             case 'TECHNICAL_SUPPORT': {
                 const problems = await CarProblem.find({});
                 let matched = null; let maxScore = 0;
@@ -291,6 +292,7 @@ export const handleChatInteraction = async (req, res) => {
                 break;
             }
 
+            // 📢 BẢN TIN SỰ KIỆN KHUYẾN MÃI ĐẠI LÝ
             case 'NEWS_QUERY': {
                 const latestNews = await News.findOne({}).sort({ createdAt: -1 });
                 if (latestNews) {
