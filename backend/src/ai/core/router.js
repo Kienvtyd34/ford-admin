@@ -8,33 +8,24 @@ import tech from "../pipelines/tech.pipeline.js";
 export const router = async (intent, entities, message) => {
   try {
     switch (intent) {
-      case "PRICE":
-        return await price(entities);
-
-      case "SUGGEST":
-        return await suggestion(entities);
-
-      case "COMPARE":
-        return await compare(entities);
-
-      case "FEATURE":
-        return await feature(entities);
-
-      case "INVENTORY":
-        return await inventory(entities);
-
-      case "TECH":
-        return await tech(message);
+      case "PRICE": return await price(entities);
+      case "SUGGEST": return await suggestion(entities);
+      case "COMPARE": return await compare(entities);
+      case "FEATURE": return await feature(entities);
+      case "INVENTORY": return await inventory(entities);
+      case "TECH": return await tech(message);
 
       default:
-        return null;
+        return {
+          intent: "UNKNOWN",
+          message: "🤖 Tôi chưa hiểu rõ yêu cầu, bạn có thể nói rõ hơn không?",
+        };
     }
   } catch (err) {
-    console.error("ROUTER_ERROR:", err);
-
     return {
-      intent: "ERROR",
-      message: "⚠️ Hệ thống đang xử lý quá tải, vui lòng thử lại",
+      intent: "ROUTER_ERROR",
+      message: "❌ Router error",
+      error: err.message,
     };
   }
 };
