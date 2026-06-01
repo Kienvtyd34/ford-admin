@@ -1,16 +1,22 @@
+import Fuse from "fuse.js";
 import VehicleModel from "../../models/VehicleModel.js";
 import Variant from "../../models/Variant.js";
 import { normalize } from "../utils/normalize.js";
 
-const tokenize = (str) =>
-  normalize(str).split(" ").filter(Boolean);
+const buildFuse = (data, keys) =>
+  new Fuse(data, {
+    keys,
+    threshold: 0.3,
+    ignoreLocation: true,
+  });
 
 export const entityEngine = async (message) => {
   const text = normalize(message);
-  const tokens = tokenize(message);
 
-  const models = await VehicleModel.find();
-  const variants = await Variant.find().populate("modelId");
+  const [models, variants] = await Promise.all([
+    VehicleModel.find(),
+    Variant.find().populate("modelId"),
+  ]);
 
   const out = {
     model: null,
@@ -19,40 +25,43 @@ export const entityEngine = async (message) => {
     seats: null,
   };
 
-  // ================= MODEL MATCH (FIX REAL DB) =================
-  for (const m of models) {
-    const nameTokens = tokenize(m.name);
+  // ======================
+  // MODEL MATCH (FIXED)
+  // ======================
+  const modelFuse = buildFuse(models, ["name", "slug", "aliases"]);
 
-    const hit =
-      nameTokens.some(t => text.includes(t)) ||
-      tokens.some(t => m.name.toLowerCase().includes(t));
+  let m = modelFuse.search(text);
 
-    if (hit) {
-      out.model = m;
-      break;
-    }
+  if (!m.length) {
+    // fallback: manual contains (VERY IMPORTANT FIX)
+    m = models
+      .filter(v => text.includes(normalize(v.name)))
+      .map(v => ({ item: v }));
   }
 
-  // ================= VARIANT MATCH =================
-  for (const v of variants) {
-    const nameTokens = tokenize(v.variantName);
+  if (m.length) out.model = m[0].item;
 
-    const hit =
-      nameTokens.some(t => text.includes(t)) ||
-      tokens.some(t => v.variantName.toLowerCase().includes(t));
+  // ======================
+  // VARIANT MATCH
+  // ======================
+  const variantFuse = buildFuse(variants, [
+    "variantName",
+    "aliases",
+    "modelId.name",
+  ]);
 
-    if (hit) {
-      out.variant = v;
-      out.model = v.modelId;
-      break;
-    }
-  }
+  const v = variantFuse.search(text);
+  if (v.length) out.variant = v[0].item;
 
-  // ================= SEATS =================
-  if (text.includes("7 cho")) out.seats = 7;
-  if (text.includes("5 cho")) out.seats = 5;
+  // ======================
+  // SEATS FIX (your DB has specs.seats)
+  // ======================
+  if (text.includes("7 cho") || text.includes("7 chỗ")) out.seats = 7;
+  if (text.includes("5 cho") || text.includes("5 chỗ")) out.seats = 5;
 
-  // ================= BUDGET =================
+  // ======================
+  // BUDGET FIX
+  // ======================
   const budget = text.match(/(\d+)\s*(ty|trieu)/i);
   if (budget) {
     let val = Number(budget[1]);

@@ -1,26 +1,22 @@
-import CarProblem from "../../models/CarProblem.js";
-import { normalize } from "../utils/normalize.js";
-
 export default async (message) => {
-  const text = normalize(message);
+  const text = message.toLowerCase();
 
-  const problems = await CarProblem.find();
+  if (text.includes("rung")) {
+    return {
+      intent: "TECH",
+      message: "🔧 Xe bị rung có thể do lốp hoặc động cơ. Bạn đang chạy tốc độ bao nhiêu?",
+    };
+  }
 
-  for (const p of problems) {
-    const hit = p.symptoms.some(s =>
-      text.includes(normalize(s))
-    );
-
-    if (hit) {
-      return {
-        intent: "TECH",
-        message: `⚠️ ${p.title}\n\n🛠 Nguyên nhân:\n${p.causes.join("\n")}\n\n✅ Giải pháp:\n${p.solutions.join("\n")}`,
-      };
-    }
+  if (text.includes("khong mát")) {
+    return {
+      intent: "TECH",
+      message: "❄️ Điều hòa không mát có thể do gas hoặc lọc gió.",
+    };
   }
 
   return {
     intent: "TECH",
-    message: "⚠️ Tôi chưa xác định được lỗi cụ thể. Bạn mô tả rõ hơn giúp tôi.",
+    message: "🔧 Đang kiểm tra lỗi kỹ thuật...",
   };
 };

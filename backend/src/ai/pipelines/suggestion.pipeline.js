@@ -1,24 +1,25 @@
 import Variant from "../../models/Variant.js";
 
 export default async (entities) => {
-  const q = {};
+  const query = {};
 
-  if (entities.budget) q.basePrice = { $lte: entities.budget };
-  if (entities.seats) q["specs.seats"] = entities.seats;
+  if (entities.budget) query.basePrice = { $lte: entities.budget };
+  if (entities.seats) query["specs.seats"] = entities.seats;
 
-  const data = await Variant.find(q).populate("modelId");
+  const data = await Variant.find(query).populate("modelId");
 
   if (!data.length) {
     return {
       intent: "SUGGEST",
-      message: "❌ Không tìm thấy xe phù hợp",
+      message: "🚗 Không tìm thấy xe phù hợp",
     };
   }
 
   return {
     intent: "SUGGEST",
-    message: data.map(v =>
-      `🚗 ${v.modelId?.name} ${v.variantName}\n💰 ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
-    ).join("\n\n"),
+    message: data
+      .slice(0, 5)
+      .map(v => `🚗 ${v.modelId.name} - ${v.basePrice.toLocaleString("vi-VN")}`)
+      .join("\n"),
   };
 };

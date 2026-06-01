@@ -1,10 +1,14 @@
 import Variant from "../../models/Variant.js";
 
 export default async (entities) => {
-  if (!entities?.model?._id) {
+  if (!entities.model) {
+    const all = await Variant.find().populate("modelId");
+
     return {
       intent: "PRICE",
-      message: "🚗 Bạn muốn xem giá Ford Everest, Ranger hay Territory?",
+      message:
+        "🚗 Bạn muốn xem dòng nào?\n" +
+        [...new Set(all.map(v => v.modelId.name))].join("\n"),
     };
   }
 
@@ -15,16 +19,15 @@ export default async (entities) => {
   if (!variants.length) {
     return {
       intent: "PRICE",
-      message: "❌ Không tìm thấy phiên bản xe",
+      message: "❌ Không tìm thấy phiên bản",
     };
   }
 
-  const min = Math.min(...variants.map(v => v.basePrice));
-  const max = Math.max(...variants.map(v => v.basePrice));
+  const v = variants[0];
 
   return {
     intent: "PRICE",
     message: `🚗 ${entities.model.name}
-💰 Giá: ${min.toLocaleString("vi-VN")} - ${max.toLocaleString("vi-VN")} VNĐ`,
+💰 Từ: ${v.basePrice.toLocaleString("vi-VN")} VNĐ`,
   };
 };

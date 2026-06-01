@@ -1,28 +1,28 @@
+import { normalize } from "../utils/normalize.js";
+
 export const intentEngine = (message = "") => {
-  const text = message.toLowerCase();
+  const text = normalize(message);
 
   const rules = [
-    { intent: "PRICE", keys: ["gia", "bao nhieu", "giá"] },
-    { intent: "COMPARE", keys: ["so sanh", "khac nhau", "vs"] },
-    { intent: "FEATURE", keys: ["co khong", "tinh nang", "camera", "adas"] },
-    { intent: "SUGGEST", keys: ["nen mua", "phu hop", "du lich", "gia dinh"] },
+    { intent: "PRICE", keys: ["gia", "giá", "bao nhieu", "bao nhiêu"] },
+    { intent: "COMPARE", keys: ["so sanh", "khac nhau"] },
+    { intent: "FEATURE", keys: ["tinh nang", "co khong", "option"] },
+    { intent: "SUGGEST", keys: ["nen mua", "phu hop", "xe 7 cho", "gia dinh"] },
     { intent: "INVENTORY", keys: ["con xe", "giao ngay", "ton kho"] },
-    { intent: "TECH", keys: ["loi", "hong", "abs", "den", "trơn trượt"] },
+    { intent: "TECH", keys: ["loi", "hong", "khong mát", "rung", "u3000"] },
   ];
 
-  let best = { intent: "FALLBACK", score: 0 };
+  let best = { intent: "UNKNOWN", score: 0 };
 
   for (const r of rules) {
     let score = 0;
-    for (const k of r.keys) {
-      if (text.includes(k)) score++;
-    }
+    for (const k of r.keys) if (text.includes(k)) score++;
     if (score > best.score) best = { intent: r.intent, score };
   }
 
   return {
     intent: best.intent,
-    confidence: best.score > 0 ? best.score / 3 : 0,
+    confidence: Math.min(best.score / 3, 1),
   };
 };
 

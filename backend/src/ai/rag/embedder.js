@@ -1,6 +1,6 @@
-export const embedder = async (text) => {
-  const crypto = await import("crypto");
+import crypto from "crypto";
 
+export const embedder = async (text) => {
   const hash = crypto
     .createHash("sha256")
     .update(text)
@@ -15,3 +15,5 @@ export const embedder = async (text) => {
 
   return vector;
 };
+
+export default embedder;
