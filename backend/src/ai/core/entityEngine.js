@@ -1,10 +1,16 @@
-const normalize = (s) =>
-  s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+import VehicleModel from "../../models/VehicleModel.js";
+import Variant from "../../models/Variant.js";
+import { normalize } from "../utils/normalize.js";
+
+const tokenize = (str) =>
+  normalize(str).split(" ").filter(Boolean);
 
 export const entityEngine = async (message) => {
   const text = normalize(message);
+  const tokens = tokenize(message);
 
   const models = await VehicleModel.find();
+  const variants = await Variant.find().populate("modelId");
 
   const out = {
     model: null,
@@ -13,31 +19,40 @@ export const entityEngine = async (message) => {
     seats: null,
   };
 
-  // 🔥 FIX MODEL MATCH STRONG
+  // ================= MODEL MATCH (FIX REAL DB) =================
   for (const m of models) {
-    const names = [m.name, ...(m.aliases || [])];
+    const nameTokens = tokenize(m.name);
 
-    if (names.some(n => text.includes(normalize(n)))) {
+    const hit =
+      nameTokens.some(t => text.includes(t)) ||
+      tokens.some(t => m.name.toLowerCase().includes(t));
+
+    if (hit) {
       out.model = m;
       break;
     }
   }
 
-  const variants = await Variant.find().populate("modelId");
-
+  // ================= VARIANT MATCH =================
   for (const v of variants) {
-    const names = [v.variantName, ...(v.aliases || [])];
+    const nameTokens = tokenize(v.variantName);
 
-    if (names.some(n => text.includes(normalize(n)))) {
+    const hit =
+      nameTokens.some(t => text.includes(t)) ||
+      tokens.some(t => v.variantName.toLowerCase().includes(t));
+
+    if (hit) {
       out.variant = v;
       out.model = v.modelId;
       break;
     }
   }
 
+  // ================= SEATS =================
   if (text.includes("7 cho")) out.seats = 7;
   if (text.includes("5 cho")) out.seats = 5;
 
+  // ================= BUDGET =================
   const budget = text.match(/(\d+)\s*(ty|trieu)/i);
   if (budget) {
     let val = Number(budget[1]);

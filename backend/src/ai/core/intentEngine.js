@@ -2,15 +2,15 @@ export const intentEngine = (message = "") => {
   const text = message.toLowerCase();
 
   const rules = [
-    { intent: "PRICE", keys: ["gia", "bao nhieu", "price"] },
+    { intent: "PRICE", keys: ["gia", "bao nhieu", "giá"] },
     { intent: "COMPARE", keys: ["so sanh", "khac nhau", "vs"] },
-    { intent: "FEATURE", keys: ["tinh nang", "co khong", "adas", "camera"] },
-    { intent: "SUGGEST", keys: ["phu hop", "nen mua", "gia dinh", "du lich"] },
-    { intent: "INVENTORY", keys: ["ton kho", "con xe", "giao ngay"] },
-    { intent: "TECH", keys: ["loi", "hong", "khong mát", "rung"] },
+    { intent: "FEATURE", keys: ["co khong", "tinh nang", "camera", "adas"] },
+    { intent: "SUGGEST", keys: ["nen mua", "phu hop", "du lich", "gia dinh"] },
+    { intent: "INVENTORY", keys: ["con xe", "giao ngay", "ton kho"] },
+    { intent: "TECH", keys: ["loi", "hong", "abs", "den", "trơn trượt"] },
   ];
 
-  let best = { intent: "UNKNOWN", score: 0 };
+  let best = { intent: "FALLBACK", score: 0 };
 
   for (const r of rules) {
     let score = 0;
@@ -21,8 +21,8 @@ export const intentEngine = (message = "") => {
   }
 
   return {
-    intent: best.score > 0 ? best.intent : "FALLBACK",
-    confidence: Math.min(best.score / 3, 1),
+    intent: best.intent,
+    confidence: best.score > 0 ? best.score / 3 : 0,
   };
 };
 
