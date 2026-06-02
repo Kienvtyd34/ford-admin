@@ -244,19 +244,31 @@ export const handleChatInteraction = async (req, res) => {
 
             // 🎨 LUỒNG TRA CỨU DANH SÁCH MÀU NGOẠI THẤT
             case 'COLOR_QUERY': {
-                const variant = await Variant.findOne(variantQuery).populate('modelId');
+
+                console.log("ENTITIES:", entities);
+                console.log("VARIANT QUERY:", variantQuery);
+
+                const variant = await Variant.findOne(variantQuery)
+                    .populate('modelId');
+
+                console.log("FOUND VARIANT:", variant);
+
                 if (!variant) {
                     reply = `🎨 Dữ liệu bảng màu phối của dòng xe này đang được cập nhật lại từ phòng thiết kế.`;
                     break;
                 }
-                const modelName = variant.modelId?.name || "Territory";
-                const dbColors = await VehicleColor.find({ variantId: variant._id });
-                const names = dbColors.map(c => c.name).join(', ') || 'Trắng Ngọc Trai, Đen Đậm, Đỏ Ruby, Bạc Metallic';
-                
-                reply = `🎨 **DANH SÁCH MÀU SẮC NGOẠI THẤT CHÍNH HÃNG** 🎨\n\n` +
-                        `Phiên bản **Ford ${modelName} (${variant.variantName})** sở hữu các gam màu ngoại thất thiết kế bao gồm:\n` +
-                        `➔ 📍 **Màu sắc thực tế:** [ ${names} ]\n\n` +
-                        `Anh/chị thích phối màu nào nhất ở trên, nhắn lại tên màu bot gửi ảnh thực xe qua ngay nhé!`;
+
+                const dbColors = await VehicleColor.find({
+                    variantId: variant._id
+                });
+
+                console.log("COLORS:", dbColors);
+
+                const names = dbColors.map(c => c.name).join(', ');
+
+                reply =
+                    `🎨 Màu hiện có: ${names}`;
+
                 break;
             }
 
