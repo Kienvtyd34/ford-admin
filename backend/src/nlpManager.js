@@ -79,6 +79,21 @@ export const processSemanticAI = async (userId, rawMessage) => {
         console.error("❌ Lỗi trích xuất dòng xe tại NLP:", err);
     }
 
+    try {
+        const allVariants = await Variant.find({});
+        for (const v of allVariants) {
+            const searchTargets = [v.variantName, ...(v.aliases || [])];
+            for (const target of searchTargets) {
+                if (message.includes(target.toLowerCase())) {
+                    entities.variantName = v.variantName; // Gán tên chuẩn từ DB
+                    break;
+                }
+            }
+            if (entities.variantName) break;
+        }
+    } catch (err) {
+        console.error("❌ Lỗi trích xuất variant tại NLP:", err);
+    }
     // =========================================================
     // 3. BÓC TÁCH PHIÊN BẢN (KHỚP THEO CÁC ALIASES PHỔ BIẾN)
     // =========================================================

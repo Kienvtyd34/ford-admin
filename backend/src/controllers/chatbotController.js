@@ -325,6 +325,50 @@ export const handleChatInteraction = async (req, res) => {
                 reply = "Dạ em là trợ lý số tự động Ford Quế Võ. Anh/chị cần em hỗ trợ check giá, thông số kỹ thuật hay tồn kho dòng xe nào ạ?";
                 break;
             }
+            case 'STOCK_QUERY': {
+                // 1. Xác định chính xác variantId dựa trên entities đã tìm thấy
+                let variantFilter = {};
+                if (variantQuery.modelId) variantFilter.modelId = variantQuery.modelId;
+                
+                // Tìm Variant để lấy ID chuẩn
+                const variant = await Variant.findOne({ 
+                    $or: [
+                        { variantName: { $regex: new RegExp(entities.variantName, "i") } },
+                        { aliases: { $regex: new RegExp(entities.variantName, "i") } }
+                    ],
+                    ...variantFilter
+                });
+
+                if (!variant) {
+                    reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
+                    break;
+                }
+
+                // 2. Truy vấn Inventory bằng variantId đã tìm thấy (Cực kỳ chính xác)
+                const stockItems = await Inventory.find({ 
+                    variantId: variant._id, 
+                    status: "Trong kho" 
+                }).populate({
+                    path: 'colorId',
+                    select: 'name'
+                });
+
+                const count = stockItems.length;
+
+                if (count > 0) {
+                    const displayColor = entities.color ? `màu ${entities.color}` : "tất cả các màu";
+                    reply = `📦 **CẬP NHẬT TỒN KHO** 📦\n` +
+                            `──────────────────\n` +
+                            `🚗 **Dòng xe:** ${variant.variantName}\n` +
+                            `🎨 **Tùy chọn:** ${displayColor}\n` +
+                            `📊 **Số lượng sẵn sàng:** Hiện đang còn **${count}** xe tại kho Quế Võ.\n` +
+                            `──────────────────\n` +
+                            `Anh/chị muốn xem ảnh thực tế của phiên bản này không ạ?`;
+                } else {
+                    reply = `📭 **Thông báo bãi xe:** Phiên bản **${variant.variantName}** hiện tại đang tạm hết hàng trong kho. Anh/chị để lại SĐT, khi nào xe về em báo ngay nhé!`;
+                }
+                break;
+            }
         }
 
         return res.json({ text: reply });
