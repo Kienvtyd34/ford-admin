@@ -170,24 +170,26 @@ export const getVehicleDetails = async (req, res) => {
 export const addVehicle = async (req, res) => {
   try {
 
+    console.log("=== ADD VEHICLE ===");
+    console.log("BODY:", req.body);
+    console.log("FILES:", req.files);
+
     let data = { ...req.body };
 
-    // IMAGE SPEC
     if (req.files?.imageUrl?.[0]) {
-
       data.imageUrl =
         req.files.imageUrl[0].path ||
         req.files.imageUrl[0].secure_url;
     }
 
-    // GALLERY
     if (req.files?.images?.length > 0) {
-
       data.images =
         req.files.images.map(
           file => file.path || file.secure_url
         );
     }
+
+    console.log("DATA CREATE:", data);
 
     const newVehicle =
       await VehicleModel.create(data);
@@ -199,7 +201,8 @@ export const addVehicle = async (req, res) => {
 
   } catch (err) {
 
-    console.log("ADD VEHICLE ERROR:", err);
+    console.log("ADD VEHICLE ERROR:");
+    console.log(err);
 
     res.status(500).json({
       success: false,

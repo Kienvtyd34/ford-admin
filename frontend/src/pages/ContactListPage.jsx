@@ -104,6 +104,7 @@ const AdminDashboard = () => {
                 <tr>
                   <th className="p-3">Khách</th>
                   <th className="p-3">Xe</th>
+                  <th className="p-3">VIN</th>
                   <th className="p-3">Cọc</th>
                   <th className="p-3">Trạng thái</th>
                   <th className="p-3">Giao xe</th>
@@ -121,10 +122,15 @@ const AdminDashboard = () => {
                     </td>
 
                     <td className="p-3">
-                      {b.vehicle?.name}<br />
+                      {b.vehicle?.variantId?.modelId?.name || "---"}
+                      <br />
                       <span className="text-xs text-gray-500">
                         {b.variantName} - {b.colorName}
                       </span>
+                    </td>
+
+                    <td className="p-3 font-mono text-xs">
+                      {b.vin || "---"}
                     </td>
 
                     <td className="p-3 text-red-600 font-bold">

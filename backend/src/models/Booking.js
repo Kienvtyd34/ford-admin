@@ -1,39 +1,53 @@
 import mongoose from 'mongoose';
 
 const bookingSchema = new mongoose.Schema({
-    user: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User', 
-        required: true 
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
 
-    // 🔥 GIỮ NGUYÊN TÊN vehicle NHƯNG ĐỔI REF
-    vehicle: { 
-        type: mongoose.Schema.Types.ObjectId, 
-        ref: 'Inventory', // ✅ FIX
-        required: true 
+    vehicle: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Inventory',
+        required: true
     },
 
-    variantName: { type: String, required: true },
-    colorName: { type: String, required: true },
-
-    depositAmount: { type: Number, default: 2000 },
-    
-    paymentStatus: { 
-        type: String, 
-        enum: ['Pending', 'Processing', 'Paid', 'Failed', 'Cancelled'], 
-        default: 'Pending' 
+    vin: {
+        type: String,
+        required: true
     },
 
-    paymentBillUrl: { 
-        type: String, 
-        default: null 
+    variantName: {
+        type: String,
+        required: true
     },
 
-    orderStatus: { 
-        type: String, 
-        enum: ['Processing', 'Confirmed', 'Completed'], 
-        default: 'Processing' 
+    colorName: {
+        type: String,
+        required: true
+    },
+
+    depositAmount: {
+        type: Number,
+        default: 2000
+    },
+
+    paymentStatus: {
+        type: String,
+        enum: ['Pending', 'Processing', 'Paid', 'Failed', 'Cancelled'],
+        default: 'Pending'
+    },
+
+    paymentBillUrl: {
+        type: String,
+        default: null
+    },
+
+    orderStatus: {
+        type: String,
+        enum: ['Processing', 'Confirmed', 'Completed'],
+        default: 'Processing'
     },
 
     confirmedBy: {
@@ -43,6 +57,7 @@ const bookingSchema = new mongoose.Schema({
     },
 
     notes: String
+
 }, { timestamps: true });
 
 export default mongoose.model('Booking', bookingSchema);

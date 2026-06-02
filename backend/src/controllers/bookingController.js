@@ -1,4 +1,5 @@
 import Booking from '../models/Booking.js';
+import Inventory from '../models/Inventory.js';
 
 // 🔥 IMPORT MODEL ĐỂ TRÁNH MissingSchema
 import '../models/User.js';
@@ -11,26 +12,80 @@ import '../models/VehicleColor.js';
 // ===== CREATE (GIỮ NGUYÊN vehicleId) =====
 export const createBooking = async (req, res) => {
     try {
-        const { vehicleId, variantName, colorName, notes } = req.body;
 
-        const newBooking = new Booking({
-            user: req.user._id,
-            vehicle: vehicleId, // ✅ giữ nguyên API
+        const {
+            vehicleId,
             variantName,
             colorName,
+            notes
+        } = req.body;
+
+        const inventoryCar = await Inventory.findOne({
+    status: 'Trong kho'
+})
+.populate({
+    path: 'variantId',
+    populate: {
+        path: 'modelId'
+    }
+})
+.populate('colorId');
+
+const matchedCars = await Inventory.find({
+    status: 'Trong kho'
+})
+.populate('variantId')
+.populate('colorId');
+
+const selectedCar = matchedCars.find(car =>
+    car.variantId?.name === variantName &&
+    car.colorId?.name === colorName
+);
+
+if (!selectedCar) {
+    return res.status(400).json({
+        success: false,
+        message: 'Không tìm thấy xe phù hợp trong kho'
+    });
+}
+
+
+        selectedCar.status = 'Đã đặt cọc';
+
+        await selectedCar.save();
+
+        const booking = await Booking.create({
+
+            user: req.user._id,
+
+            vehicle: selectedCar._id,
+
+            vin: selectedCar.vin,
+
+            variantName,
+
+            colorName,
+
             notes,
+
             paymentStatus: 'Pending'
+
         });
 
-        const savedBooking = await newBooking.save();
-
-        res.status(201).json({ success: true, data: savedBooking });
+        res.status(201).json({
+            success: true,
+            data: booking
+        });
 
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message });
+
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+
     }
 };
-
 
 // ===== MY BOOKINGS =====
 export const getMyBookings = async (req, res) => {

@@ -8,6 +8,10 @@ const FALLBACK_IMG =
 const AdminVehicle = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isAddModelOpen, setIsAddModelOpen] = useState(false);
+  const [isAddVariantOpen, setIsAddVariantOpen] = useState(false);
+  const [isEditVariantOpen, setIsEditVariantOpen] = useState(false);
+  const [currentModelId, setCurrentModelId] = useState(null);
 
   // ================= MODEL =================
   const [isEditingModel, setIsEditingModel] =
@@ -136,6 +140,69 @@ const AdminVehicle = () => {
     setIsEditingModel(true);
   };
 
+  const handleCreateModel = async (e) => {
+  e.preventDefault();
+
+  try {
+    setLoading(true);
+
+    const formData = new FormData();
+
+    formData.append('name', modelForm.name);
+    formData.append('type', modelForm.type);
+    formData.append('seats', modelForm.seats);
+    formData.append('aliases', modelForm.aliases);
+    formData.append(
+      'description',
+      modelForm.description
+    );
+    formData.append(
+      'isHot',
+      modelForm.isHot
+    );
+
+    if (mainImage) {
+      formData.append(
+        'images',
+        mainImage
+      );
+    }
+
+    if (specImage) {
+      formData.append(
+        'imageUrl',
+        specImage
+      );
+    }
+
+    await api.post(
+      '/vehicles',
+      formData,
+      {
+        headers: {
+          'Content-Type':
+            'multipart/form-data'
+        }
+      }
+    );
+
+    alert('Thêm xe thành công');
+
+    setIsEditingModel(false);
+
+    fetchVehicles();
+  } catch (err) {
+    console.error(err);
+
+    alert(
+      err.response?.data?.error ||
+        'Lỗi thêm xe'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
   // ================= UPDATE MODEL =================
   const handleUpdateModel = async (e) => {
     e.preventDefault();
@@ -236,151 +303,213 @@ const AdminVehicle = () => {
 
   // ================= EDIT VARIANT =================
   const handleEditVariant = (variant) => {
-    setEditingVariant(variant);
+  setEditingVariant(variant);
+  setVariantForm({
+    variantName: variant.variantName || '',
+    aliases: variant.aliases?.join(', ') || '',
+    basePrice: variant.basePrice || '',
+    transmission: variant.transmission || '',
+    driveTrain: variant.driveTrain || '',
+    fuelType: variant.fuelType || '',
+    // SPECS
+    engine: variant.specs?.engine || '',
+    horsepower: variant.specs?.horsepower || '',
+    torque: variant.specs?.torque || '',
+    fuelConsumption: variant.specs?.fuelConsumption || '',
+    seats: variant.specs?.seats || '',
+    wheelSize: variant.specs?.wheelSize || '',
+    fuelTank: variant.specs?.fuelTank || '',
+    groundClearance: variant.specs?.groundClearance || '',
+    wheelbase: variant.specs?.wheelbase || '',
+    length: variant.specs?.length || '',
+    width: variant.specs?.width || '',
+    height: variant.specs?.height || '',
+    // FEATURES
+    ...variant.features, // Tự động lấy tất cả các thuộc tính boolean
+    isHot: variant.isHot || false
+  });
+};
+const handleCreateVariant = async () => {
+  try {
 
-    setVariantForm({
+    const payload = {
+      modelId: currentModelId,
+
       variantName:
-        variant.variantName || '',
+        variantForm.variantName,
 
-      aliases:
-        variant.aliases?.join(', ') || '',
+      aliases: variantForm.aliases
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean),
 
-      basePrice:
-        variant.basePrice || '',
+      basePrice: Number(
+        variantForm.basePrice
+      ),
 
       transmission:
-        variant.transmission || '',
+        variantForm.transmission,
 
       driveTrain:
-        variant.driveTrain || '',
+        variantForm.driveTrain,
 
       fuelType:
-        variant.fuelType || '',
+        variantForm.fuelType,
 
-      // ================= SPECS =================
-      engine:
-        variant?.specs?.engine || '',
+      specs: {
+        engine: variantForm.engine,
+        horsepower:
+          Number(
+            variantForm.horsepower
+          ) || 0,
+        torque:
+          Number(
+            variantForm.torque
+          ) || 0,
+        fuelConsumption:
+          variantForm.fuelConsumption,
+        seats:
+          Number(
+            variantForm.seats
+          ) || 0,
+        wheelSize:
+          Number(
+            variantForm.wheelSize
+          ) || 0,
+        fuelTank:
+          Number(
+            variantForm.fuelTank
+          ) || 0,
+        groundClearance:
+          Number(
+            variantForm.groundClearance
+          ) || 0,
+        wheelbase:
+          Number(
+            variantForm.wheelbase
+          ) || 0,
+        length:
+          Number(
+            variantForm.length
+          ) || 0,
+        width:
+          Number(
+            variantForm.width
+          ) || 0,
+        height:
+          Number(
+            variantForm.height
+          ) || 0
+      },
 
-      horsepower:
-        variant?.specs?.horsepower || '',
+      features: {
+        turbo: !!variantForm.turbo,
+        abs: !!variantForm.abs,
+        adas: !!variantForm.adas,
+        camera360:
+          !!variantForm.camera360,
+        sunroof:
+          !!variantForm.sunroof
+      },
 
-      torque:
-        variant?.specs?.torque || '',
-
-      fuelConsumption:
-        variant?.specs
-          ?.fuelConsumption || '',
-
-      // ================= FEATURES =================
-      adas:
-        variant?.features?.adas || false,
-
-      turbo:
-        variant?.features?.turbo || false,
-
-      camera360:
-        variant?.features?.camera360 ||
-        false,
-
-      sunroof:
-        variant?.features?.sunroof ||
-        false,
-
-      abs:
-        variant?.features?.abs || false,
-
-      // ================= HOT =================
       isHot:
-        variant?.isHot || false
-    });
-  };
-
-  // ================= UPDATE VARIANT =================
-  const handleUpdateVariant =
-    async () => {
-      try {
-        await api.put(
-          `/vehicles/variants/${editingVariant._id}`,
-          {
-            variantName:
-              variantForm.variantName,
-
-            aliases:
-              variantForm.aliases
-                .split(',')
-                .map((v) => v.trim())
-                .filter(Boolean),
-
-            basePrice: Number(
-              variantForm.basePrice
-            ),
-
-            transmission:
-              variantForm.transmission,
-
-            driveTrain:
-              variantForm.driveTrain,
-
-            fuelType:
-              variantForm.fuelType,
-
-            // ================= SPECS =================
-            specs: {
-              engine:
-                variantForm.engine,
-
-              horsepower: Number(
-                variantForm.horsepower
-              ) || 0,
-
-              torque: Number(
-                variantForm.torque
-              ) || 0,
-
-              fuelConsumption:
-                variantForm.fuelConsumption
-            },
-
-            // ================= FEATURES =================
-            features: {
-              adas:
-                variantForm.adas,
-
-              turbo:
-                variantForm.turbo,
-
-              camera360:
-                variantForm.camera360,
-
-              sunroof:
-                variantForm.sunroof,
-
-              abs:
-                variantForm.abs
-            },
-
-            // ================= HOT =================
-            isHot:
-              variantForm.isHot
-          }
-        );
-
-        alert(
-          'Cập nhật phiên bản thành công'
-        );
-
-        setEditingVariant(null);
-
-        fetchVehicles();
-      } catch (err) {
-        console.error(err);
-
-        alert(
-          err.response?.data?.error ||
-            'Lỗi cập nhật phiên bản'
-        );
-      }
+        !!variantForm.isHot
     };
+
+    await api.post(
+      '/vehicles/variants',
+      payload
+    );
+
+    alert(
+      'Thêm phiên bản thành công'
+    );
+
+    setIsAddVariantOpen(false);
+
+    fetchVehicles();
+
+  } catch (err) {
+
+    console.error(err);
+
+    alert(
+      err.response?.data?.error ||
+      'Lỗi thêm phiên bản'
+    );
+  }
+};
+  // ================= UPDATE VARIANT =================
+  const handleUpdateVariant = async () => {
+  try {
+    const payload = {
+      variantName: variantForm.variantName,
+      aliases: variantForm.aliases.split(',').map(v => v.trim()).filter(Boolean),
+      basePrice: Number(variantForm.basePrice),
+      transmission: variantForm.transmission,
+      driveTrain: variantForm.driveTrain,
+      fuelType: variantForm.fuelType,
+      specs: {
+        engine: variantForm.engine,
+        horsepower: Number(variantForm.horsepower) || 0,
+        torque: Number(variantForm.torque) || 0,
+        fuelConsumption: variantForm.fuelConsumption,
+        seats: Number(variantForm.seats) || 0,
+        wheelSize: Number(variantForm.wheelSize) || 0,
+        fuelTank: Number(variantForm.fuelTank) || 0,
+        groundClearance: Number(variantForm.groundClearance) || 0,
+        wheelbase: Number(variantForm.wheelbase) || 0,
+        length: Number(variantForm.length) || 0,
+        width: Number(variantForm.width) || 0,
+        height: Number(variantForm.height) || 0,
+      },
+      features: {
+        turbo: !!variantForm.turbo,
+        abs: !!variantForm.abs,
+        adas: !!variantForm.adas,
+        adaptiveCruise: !!variantForm.adaptiveCruise,
+        blindSpot: !!variantForm.blindSpot,
+        laneKeepAssist: !!variantForm.laneKeepAssist,
+        autoEmergencyBrake: !!variantForm.autoEmergencyBrake,
+        rearCrossTrafficAlert: !!variantForm.rearCrossTrafficAlert,
+        trafficSignRecognition: !!variantForm.trafficSignRecognition,
+        camera360: !!variantForm.camera360,
+        reverseCamera: !!variantForm.reverseCamera,
+        parkingSensorFront: !!variantForm.parkingSensorFront,
+        parkingSensorRear: !!variantForm.parkingSensorRear,
+        sunroof: !!variantForm.sunroof,
+        wirelessCharging: !!variantForm.wirelessCharging,
+        powerTailgate: !!variantForm.powerTailgate,
+        autoHeadlamp: !!variantForm.autoHeadlamp,
+        autoWiper: !!variantForm.autoWiper,
+        ambientLight: !!variantForm.ambientLight,
+        leatherSeat: !!variantForm.leatherSeat,
+        ventilatedSeat: !!variantForm.ventilatedSeat,
+        heatedSeat: !!variantForm.heatedSeat,
+        powerDriverSeat: !!variantForm.powerDriverSeat,
+        powerPassengerSeat: !!variantForm.powerPassengerSeat,
+        appleCarplay: !!variantForm.appleCarplay,
+        androidAuto: !!variantForm.androidAuto,
+        sync4: !!variantForm.sync4,
+        fordPass: !!variantForm.fordPass,
+        premiumAudio: !!variantForm.premiumAudio,
+        powerSlidingDoor: !!variantForm.powerSlidingDoor,
+        powerRunningBoard: !!variantForm.powerRunningBoard,
+        luggageRack: !!variantForm.luggageRack,
+        foldableLastRow: !!variantForm.foldableLastRow,
+      },
+      isHot: variantForm.isHot
+    };
+
+    await api.put(`/vehicles/variants/${editingVariant._id}`, payload);
+    alert('Cập nhật phiên bản thành công');
+    setEditingVariant(null);
+    fetchVehicles();
+  } catch (err) {
+    console.error(err);
+    alert(err.response?.data?.error || 'Lỗi cập nhật phiên bản');
+  }
+};
 
   // ================= DELETE VARIANT =================
   const handleDeleteVariant =
@@ -551,9 +680,28 @@ const AdminVehicle = () => {
           QUẢN LÝ DÒNG XE FORD
         </h2>
 
-        <button className="bg-blue-900 text-white px-5 py-3 rounded-xl font-bold">
-          + THÊM XE
-        </button>
+        <button
+  onClick={() => {
+    setSelectedModel(null);
+
+    setModelForm({
+      name: '',
+      type: '',
+      seats: '',
+      aliases: '',
+      description: '',
+      isHot: false
+    });
+
+    setMainImage(null);
+    setSpecImage(null);
+
+    setIsEditingModel(true);
+  }}
+  className="bg-blue-900 text-white px-5 py-3 rounded-xl font-bold"
+>
+  + THÊM XE
+</button>
       </div>
 
       <div className="space-y-6">
@@ -606,6 +754,77 @@ const AdminVehicle = () => {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
                     Các phiên bản
                   </p>
+                  <button
+                    onClick={() => {
+                      setCurrentModelId(v._id);
+
+                      setEditingVariant(null);
+
+                      setVariantForm({
+                        variantName: '',
+                        aliases: '',
+                        basePrice: '',
+                        transmission: '',
+                        driveTrain: '',
+                        fuelType: '',
+
+                        engine: '',
+                        horsepower: '',
+                        torque: '',
+                        fuelConsumption: '',
+
+                        seats: '',
+                        wheelSize: '',
+                        fuelTank: '',
+                        groundClearance: '',
+                        wheelbase: '',
+                        length: '',
+                        width: '',
+                        height: '',
+
+                        turbo: false,
+                        abs: false,
+                        adas: false,
+                        adaptiveCruise: false,
+                        blindSpot: false,
+                        laneKeepAssist: false,
+                        autoEmergencyBrake: false,
+                        rearCrossTrafficAlert: false,
+                        trafficSignRecognition: false,
+                        camera360: false,
+                        reverseCamera: false,
+                        parkingSensorFront: false,
+                        parkingSensorRear: false,
+                        sunroof: false,
+                        wirelessCharging: false,
+                        powerTailgate: false,
+                        autoHeadlamp: false,
+                        autoWiper: false,
+                        ambientLight: false,
+                        leatherSeat: false,
+                        ventilatedSeat: false,
+                        heatedSeat: false,
+                        powerDriverSeat: false,
+                        powerPassengerSeat: false,
+                        appleCarplay: false,
+                        androidAuto: false,
+                        sync4: false,
+                        fordPass: false,
+                        premiumAudio: false,
+                        powerSlidingDoor: false,
+                        powerRunningBoard: false,
+                        luggageRack: false,
+                        foldableLastRow: false,
+
+                        isHot: false
+                      });
+
+                      setIsAddVariantOpen(true);
+                    }}
+                    className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-700"
+                  >
+                    + Thêm phiên bản
+                  </button>
 
                   {v.variants &&
                   v.variants.length > 0 ? (
@@ -702,8 +921,10 @@ const AdminVehicle = () => {
                 </button>
               </div>
             </div>
+            
           </div>
         ))}
+        
       </div>
 
       {/* ================= EDIT MODEL MODAL ================= */}
@@ -713,8 +934,9 @@ const AdminVehicle = () => {
           <div className="bg-white rounded-[2rem] w-full max-w-6xl max-h-[90vh] overflow-y-auto p-10">
             <div className="flex justify-between items-center mb-8 border-b pb-4">
               <h3 className="text-3xl font-black text-blue-900">
-                Chỉnh sửa:{' '}
-                {selectedModel?.name}
+                {selectedModel
+                  ? `Chỉnh sửa: ${selectedModel.name}`
+                  : 'Thêm dòng xe mới'}
               </h3>
 
               <button
@@ -728,7 +950,11 @@ const AdminVehicle = () => {
             </div>
 
             <form
-              onSubmit={handleUpdateModel}
+              onSubmit={
+                selectedModel
+                  ? handleUpdateModel
+                  : handleCreateModel
+              }
               className="space-y-8"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -774,10 +1000,6 @@ const AdminVehicle = () => {
                   >
                     <option value="SUV">
                       SUV
-                    </option>
-
-                    <option value="Sedan">
-                      Sedan
                     </option>
 
                     <option value="Pick-up">
@@ -903,7 +1125,7 @@ const AdminVehicle = () => {
 
       {/* ================= EDIT VARIANT MODAL ================= */}
 
-{editingVariant && (
+{(editingVariant || isAddVariantOpen) && (
 
   <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-5">
 
@@ -913,7 +1135,9 @@ const AdminVehicle = () => {
   <div className="flex justify-between items-center border-b pb-5 mb-8">
 
     <h3 className="text-3xl font-black text-blue-900">
-      Chỉnh sửa phiên bản
+      {editingVariant
+        ? 'Chỉnh sửa phiên bản'
+        : 'Thêm phiên bản mới'}
     </h3>
 
     <button
@@ -1258,10 +1482,16 @@ const AdminVehicle = () => {
     </button>
 
     <button
-      onClick={handleUpdateVariant}
+      onClick={
+        editingVariant
+          ? handleUpdateVariant
+          : handleCreateVariant
+      }
       className="px-10 py-3 bg-blue-900 text-white rounded-2xl font-bold"
     >
-      Cập nhật
+      {editingVariant
+        ? 'Cập nhật'
+        : 'Thêm phiên bản'}
     </button>
 
   </div>
@@ -1451,17 +1681,23 @@ const AdminVehicle = () => {
             </div>
 
           </div>
+          
         ))}
+        
 
       </div>
+      
 
     </div>
+    
 
   </div>
+  
 )}
 </>
     
   );
+  
   
 };
 
