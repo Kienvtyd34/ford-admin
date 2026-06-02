@@ -464,7 +464,7 @@ const VehicleDetail = () => {
                   shadow-red-100
                 "
               >
-                Đặt cọc xe 2.000₫
+                Đặt cọc xe 
               </button>
 
               <button

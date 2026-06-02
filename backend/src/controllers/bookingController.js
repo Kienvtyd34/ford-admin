@@ -38,10 +38,9 @@ const matchedCars = await Inventory.find({
 .populate('colorId');
 
 const selectedCar = matchedCars.find(car =>
-    car.variantId?.name === variantName &&
+    car.variantId?.variantName === variantName &&
     car.colorId?.name === colorName
 );
-
 if (!selectedCar) {
     return res.status(400).json({
         success: false,
