@@ -832,6 +832,7 @@ export const confirmDelivery = async (req, res) => {
   try {
 
     const { bookingId } = req.params;
+
     const { confirmedBy } = req.body;
 
     const booking = await Booking.findById(bookingId);
@@ -839,26 +840,16 @@ export const confirmDelivery = async (req, res) => {
     if (!booking) {
       return res.status(404).json({
         success: false,
-        message: "Không tìm thấy đơn hàng"
+        message: "Không tìm thấy booking"
       });
     }
 
-    const item = await Inventory.findByIdAndUpdate(
+    await Inventory.findByIdAndUpdate(
       booking.vehicle,
       {
         status: "Đã bán"
-      },
-      {
-        new: true
       }
     );
-
-    if (!item) {
-      return res.status(400).json({
-        success: false,
-        message: "Không tìm thấy xe trong kho"
-      });
-    }
 
     booking.orderStatus = "Completed";
     booking.paymentStatus = "Paid";
@@ -867,13 +858,10 @@ export const confirmDelivery = async (req, res) => {
     await booking.save();
 
     res.json({
-      success: true,
-      message: "Giao xe thành công"
+      success: true
     });
 
   } catch (err) {
-
-    console.error("CONFIRM DELIVERY ERROR:", err);
 
     res.status(500).json({
       success: false,
