@@ -18,33 +18,40 @@ export const handleChatInteraction = async (req, res) => {
         // 1. Phân tích ngữ cảnh
         const { intent, entities } = await processSemanticAI(userId, message);
         
-        // 2. QUẢN LÝ TRÍ NHỚ (CONTEXT MEMORY)
+        // 2. CƠ CHẾ QUẢN LÝ TRÍ NHỚ THÔNG MINH
         if (!chatMemory[userId]) {
             chatMemory[userId] = { modelName: null, variantName: null, color: null };
         }
 
-        // Ưu tiên cập nhật thông tin mới nhất từ NLP vào bộ nhớ
-        if (entities.modelName) chatMemory[userId].modelName = entities.modelName;
+        // Logic ghi đè thông minh: 
+        // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
+        if (entities.modelName) {
+            chatMemory[userId].modelName = entities.modelName;
+            chatMemory[userId].variantName = null; // Quan trọng: Reset variant cũ khi đổi model
+        }
+        
+        // Cập nhật các thông tin khác nếu có
         if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
         if (entities.color) chatMemory[userId].color = entities.color;
-
-        // Nếu NLP không tìm thấy thực thể trong câu hiện tại, mới kế thừa từ bộ nhớ
-        entities.modelName = entities.modelName || chatMemory[userId].modelName;
-        entities.variantName = entities.variantName || chatMemory[userId].variantName;
-        entities.color = entities.color || chatMemory[userId].color;
 
         // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN
         let variantQuery = {};
 
-        if (entities.modelName) {
-            const model = await VehicleModel.findOne({ name: { $regex: new RegExp(entities.modelName, "i") } });
-            if (model) variantQuery.modelId = model._id;
+        // Tìm model theo modelName trong trí nhớ
+        if (chatMemory[userId].modelName) {
+            const model = await VehicleModel.findOne({ 
+                name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
+            });
+            if (model) {
+                variantQuery.modelId = model._id;
+            }
         }
 
-        if (entities.variantName) {
+        // Tìm variant theo variantName trong trí nhớ
+        if (chatMemory[userId].variantName) {
             variantQuery.$or = [
-                { variantName: { $regex: new RegExp(entities.variantName, "i") } },
-                { aliases: { $regex: new RegExp(entities.variantName, "i") } }
+                { variantName: { $regex: new RegExp(chatMemory[userId].variantName, "i") } },
+                { aliases: { $regex: new RegExp(chatMemory[userId].variantName, "i") } }
             ];
         }
 
