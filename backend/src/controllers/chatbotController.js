@@ -175,6 +175,7 @@ export const handleChatInteraction = async (req, res) => {
 
             // 📦 LUỒNG KIỂM TRA TRẠNG THÁI TỒN KHO VÀ SỐ KHUNG (VIN)
             case 'STOCK_QUERY': {
+                // 1. Ưu tiên xử lý nếu có mã VIN
                 if (entities.vin) {
                     const item = await Inventory.findOne({ vin: { $regex: new RegExp(entities.vin, "i") } }).populate({
                         path: 'variantId', populate: { path: 'modelId' }
@@ -191,53 +192,31 @@ export const handleChatInteraction = async (req, res) => {
                     break;
                 }
 
-                // Thực thi lệnh kết chuỗi dữ liệu (Aggregate) nâng cao khớp aliases
-                let aggregatePipeline = [
-                    { $match: { status: "Trong kho" } },
-                    { $lookup: { from: "vehiclecolors", localField: "colorId", foreignField: "_id", as: "colorInfo" } },
-                    { $unwind: { path: "$colorInfo", preserveNullAndEmptyArrays: true } },
-                    { $lookup: { from: "variants", localField: "variantId", foreignField: "_id", as: "variantInfo" } },
-                    { $unwind: { path: "$variantInfo", preserveNullAndEmptyArrays: true } },
-                    { $lookup: { from: "vehiclemodels", localField: "variantInfo.modelId", foreignField: "_id", as: "modelInfo" } },
-                    { $unwind: { path: "$modelInfo", preserveNullAndEmptyArrays: true } }
-                ];
-
-                if (entities.modelName) aggregatePipeline.push({ $match: { "modelInfo.name": { $regex: new RegExp(entities.modelName, "i") } } });
-                if (entities.variantName) {
-                    aggregatePipeline.push({
-                        $match: {
-                            $or: [
-                                { "variantInfo.variantName": { $regex: new RegExp(entities.variantName, "i") } },
-                                { "variantInfo.aliases": { $regex: new RegExp(entities.variantName, "i") } }
-                            ]
-                        }
-                    });
+                // 2. Nếu không có VIN, thực hiện truy vấn tồn kho theo variant
+                const variant = await Variant.findOne(variantQuery);
+                if (!variant) {
+                    reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
+                    break;
                 }
-                if (entities.color) aggregatePipeline.push({ $match: { "colorInfo.name": { $regex: new RegExp(entities.color, "i") } } });
 
-                const stockItems = await Inventory.aggregate(aggregatePipeline);
+                const stockItems = await Inventory.find({ 
+                    variantId: variant._id, 
+                    status: "Trong kho" 
+                }).populate({ path: 'colorId', select: 'name' });
+
                 const count = stockItems.length;
 
                 if (count > 0) {
-                    const sample = stockItems[0];
-                    const displayModel = sample.modelInfo?.name || "Territory";
-                    const displayVariant = sample.variantInfo?.variantName ? `(${sample.variantInfo.variantName})` : "";
-                    const displayColor = entities.color ? `Màu ${entities.color}` : "Tất cả tùy chọn màu ngoại thất";
-
-                    reply = `📦 **CẬP NHẬT DỮ LIỆU TỒN KHO ĐẠI LÝ** 📦\n` +
+                    const displayColor = entities.color ? `màu ${entities.color}` : "tất cả các màu";
+                    reply = `📦 **CẬP NHẬT TỒN KHO** 📦\n` +
                             `──────────────────\n` +
-                            `• 🚗 **Dòng xe:** Ford ${displayModel} ${displayVariant}\n` +
-                            `• 🎨 **Tùy chọn màu sắc:** ${displayColor}\n` +
-                            `• 📊 **Số lượng sẵn sàng:** 🔥 **Hiện đang còn ${count} xe tại bãi bến** 🔥\n` +
+                            `🚗 **Dòng xe:** ${variant.variantName}\n` +
+                            `🎨 **Tùy chọn:** ${displayColor}\n` +
+                            `📊 **Số lượng sẵn sàng:** Hiện đang còn **${count}** xe tại kho Quế Võ.\n` +
                             `──────────────────\n` +
-                            `🎉 Xe đã qua kiểm định kỹ thuật đầu vào, hỗ trợ hoàn thiện thủ tục giao ngay cho anh/chị!`;
+                            `Anh/chị muốn xem ảnh thực tế của phiên bản này không ạ?`;
                 } else {
-                    const reqModel = entities.modelName || "Territory";
-                    const reqVariant = entities.variantName ? `bản ${entities.variantName}` : "";
-                    const reqColor = entities.color ? `màu ${entities.color}` : "";
-
-                    reply = `📭 **Thông báo bãi xe:** Tùy chọn dòng xe **Ford ${reqModel} ${reqVariant}** ${reqColor} hiện đang tạm hết xe sẵn tại bãi kho Quế Võ.\n\n` +
-                            `Anh/chị vui lòng để lại Số điện thoại, trợ lý kinh doanh sẽ check lịch xe tổng xuất xưởng về sớm nhất cho mình!`;
+                    reply = `📭 **Thông báo bãi xe:** Phiên bản **${variant.variantName}** hiện tại đang tạm hết hàng trong kho. Anh/chị để lại SĐT, khi nào xe về em báo ngay nhé!`;
                 }
                 break;
             }
@@ -335,50 +314,6 @@ export const handleChatInteraction = async (req, res) => {
 
             default: {
                 reply = "Dạ em là trợ lý số tự động Ford Quế Võ. Anh/chị cần em hỗ trợ check giá, thông số kỹ thuật hay tồn kho dòng xe nào ạ?";
-                break;
-            }
-            case 'STOCK_QUERY': {
-                // 1. Xác định chính xác variantId dựa trên entities đã tìm thấy
-                let variantFilter = {};
-                if (variantQuery.modelId) variantFilter.modelId = variantQuery.modelId;
-                
-                // Tìm Variant để lấy ID chuẩn
-                const variant = await Variant.findOne({ 
-                    $or: [
-                        { variantName: { $regex: new RegExp(entities.variantName, "i") } },
-                        { aliases: { $regex: new RegExp(entities.variantName, "i") } }
-                    ],
-                    ...variantFilter
-                });
-
-                if (!variant) {
-                    reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
-                    break;
-                }
-
-                // 2. Truy vấn Inventory bằng variantId đã tìm thấy (Cực kỳ chính xác)
-                const stockItems = await Inventory.find({ 
-                    variantId: variant._id, 
-                    status: "Trong kho" 
-                }).populate({
-                    path: 'colorId',
-                    select: 'name'
-                });
-
-                const count = stockItems.length;
-
-                if (count > 0) {
-                    const displayColor = entities.color ? `màu ${entities.color}` : "tất cả các màu";
-                    reply = `📦 **CẬP NHẬT TỒN KHO** 📦\n` +
-                            `──────────────────\n` +
-                            `🚗 **Dòng xe:** ${variant.variantName}\n` +
-                            `🎨 **Tùy chọn:** ${displayColor}\n` +
-                            `📊 **Số lượng sẵn sàng:** Hiện đang còn **${count}** xe tại kho Quế Võ.\n` +
-                            `──────────────────\n` +
-                            `Anh/chị muốn xem ảnh thực tế của phiên bản này không ạ?`;
-                } else {
-                    reply = `📭 **Thông báo bãi xe:** Phiên bản **${variant.variantName}** hiện tại đang tạm hết hàng trong kho. Anh/chị để lại SĐT, khi nào xe về em báo ngay nhé!`;
-                }
                 break;
             }
         }
