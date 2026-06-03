@@ -25,9 +25,7 @@ export const processSemanticAI = async (userId, rawMessage) => {
         seats: null
     };
 
-    // =========================================================
-    // 1. MA TRẬN PHÂN TÍCH Ý ĐỊNH (INTENT SCORE MATRIX)
-    // =========================================================
+    // 1. PHÂN TÍCH Ý ĐỊNH
     const intentScores = {
         'PRICE_QUERY': 0, 'INSTALLMENT_QUERY': 0, 'STOCK_QUERY': 0,
         'COLOR_QUERY': 0, 'SPECS_QUERY': 0, 'TECHNICAL_SUPPORT': 0, 'NEWS_QUERY': 0
@@ -52,77 +50,41 @@ export const processSemanticAI = async (userId, rawMessage) => {
         if (score > maxScore) { maxScore = score; intent = intentName; }
     }
 
-    if (intent === 'DEFAULT' || maxScore === 0) {
-        if (message.includes("có") && (message.includes("không") || message.includes("ko"))) intent = 'SPECS_QUERY';
-        else if (/(tài chính|kinh phí|tầm|khoảng|dưới|triệu|tỷ|ty|người|chỗ|gia đình)/i.test(message)) intent = 'ADVISORY_QUERY';
-    }
-
-    // =========================================================
-    // 2. KHỚP DÒNG XE TỰ ĐỘNG VÀ BAO QUÁT TÊN XE VẮN TẮT
-    // =========================================================
+    // 2. TRÍCH XUẤT DÒNG XE
     try {
         const allModels = await VehicleModel.find({}, 'name');
-        let bestModel = null;
-        let maxMatchLen = 0;
-
-        for (const model of allModels) {
-            const modelNameLower = model.name.toLowerCase();
-            if (modelNameLower.includes(message) || message.includes(modelNameLower)) {
-                if (model.name.length > maxMatchLen) {
-                    bestModel = model.name;
-                    maxMatchLen = model.name.length;
-                }
+        for (const model of allModels.sort((a, b) => b.name.length - a.name.length)) {
+            if (message.includes(model.name.toLowerCase())) {
+                entities.modelName = model.name;
+                break;
             }
         }
-        if (bestModel) entities.modelName = bestModel;
-    } catch (err) {
-        console.error("❌ Lỗi trích xuất dòng xe tại NLP:", err);
-    }
+    } catch (err) { console.error(err); }
 
+    // 3. TRÍCH XUẤT PHIÊN BẢN (KHỚP TỪ DB - ĐÃ BỎ BƯỚC HARDCODE GÂY LỖI)
     try {
         const allVariants = await Variant.find({});
+        // Sắp xếp theo độ dài tên để khớp từ khóa chính xác nhất (Everest Platinum > Platinum)
+        allVariants.sort((a, b) => b.variantName.length - a.variantName.length);
+        
         for (const v of allVariants) {
             const searchTargets = [v.variantName, ...(v.aliases || [])];
             for (const target of searchTargets) {
                 if (message.includes(target.toLowerCase())) {
-                    entities.variantName = v.variantName; // Gán tên chuẩn từ DB
+                    entities.variantName = v.variantName;
                     break;
                 }
             }
             if (entities.variantName) break;
         }
-    } catch (err) {
-        console.error("❌ Lỗi trích xuất variant tại NLP:", err);
-    }
-    // =========================================================
-    // 3. BÓC TÁCH PHIÊN BẢN (KHỚP THEO CÁC ALIASES PHỔ BIẾN)
-    // =========================================================
-    const commonVariants = ['titanium x', 'titanium', 'wildtrak', 'sport', 'premium awd', 'premium', 'xls', 'xlt', 'ambient', 'raptor', 'platinum', 'trend'];
-    for (const v of commonVariants) {
-        if (message.includes(v)) {
-            entities.variantName = v.toUpperCase(); 
-            break;
-        }
-    }
+    } catch (err) { console.error(err); }
 
-    // =========================================================
-    // 4. MAP CHUẨN ĐÚNG CÁC KEY BOOLEAN TRONG CƠ SỞ DỮ LIỆU
-    // =========================================================
+    // 4. MAP TÍNH NĂNG
     const featureMap = {
-        'cửa sổ trời': 'sunroof', 'sunroof': 'sunroof', 'cua so troi': 'sunroof',
-        'camera 360': 'camera360', 'cam 360': 'camera360', 'camera360': 'camera360',
-        'màn hình': 'screen', 'ghế da': 'leatherSeat', 'ghe da': 'leatherSeat',
-        'sạc không dây': 'wirelessCharging', 'wireless charging': 'wirelessCharging', 'sac khong day': 'wirelessCharging',
-        'phanh tự động': 'autoEmergencyBrake', 'phanh tu dong': 'autoEmergencyBrake',
-        'giữ làn': 'laneKeepAssist', 'giu lan': 'laneKeepAssist',
-        'thích ứng': 'adaptiveCruise', 'thich ung': 'adaptiveCruise',
-        'điểm mù': 'blindSpot', 'diem mu': 'blindSpot',
-        'cốp điện': 'powerTailgate', 'cop dien': 'powerTailgate',
-        'fordpass': 'fordPass', 'adas': 'adas',
-        'máy xăng': 'fuel_gasoline', 'chạy xăng': 'fuel_gasoline', 'chay xang': 'fuel_gasoline',
-        'máy dầu': 'fuel_diesel', 'chạy dầu': 'fuel_diesel', 'chay dau': 'fuel_diesel',
-        'cầu trước': 'drive_fwd', 'fwd': 'drive_fwd',
-        'hai cầu': 'drive_awd', 'awd': 'drive_awd', 'bốn bánh': 'drive_awd'
+        'cửa sổ trời': 'sunroof', 'camera 360': 'camera360', 'ghế da': 'leatherSeat',
+        'sạc không dây': 'wirelessCharging', 'phanh tự động': 'autoEmergencyBrake',
+        'giữ làn': 'laneKeepAssist', 'thích ứng': 'adaptiveCruise', 'điểm mù': 'blindSpot',
+        'cốp điện': 'powerTailgate', 'adas': 'adas', 'máy xăng': 'fuel_gasoline', 'máy dầu': 'fuel_diesel'
     };
     for (const [k, v] of Object.entries(featureMap)) {
         if (message.includes(k)) { entities.feature = v; break; }
