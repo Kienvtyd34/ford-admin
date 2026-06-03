@@ -37,17 +37,20 @@ export const handleChatInteraction = async (req, res) => {
         // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN
         let variantQuery = {};
 
-        // Tìm model theo modelName trong trí nhớ
+        // Chỉ tìm theo modelName nếu nó tồn tại trong memory
         if (chatMemory[userId].modelName) {
             const model = await VehicleModel.findOne({ 
                 name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
             });
             if (model) {
                 variantQuery.modelId = model._id;
+            } else {
+                // Nếu không tìm thấy model (do user gõ sai tên xe), reset memory để tránh lỗi
+                chatMemory[userId].modelName = null;
             }
         }
 
-        // Tìm variant theo variantName trong trí nhớ
+        // Nếu có variantName, mới thêm vào query
         if (chatMemory[userId].variantName) {
             variantQuery.$or = [
                 { variantName: { $regex: new RegExp(chatMemory[userId].variantName, "i") } },
