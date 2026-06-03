@@ -15,51 +15,40 @@ export const handleChatInteraction = async (req, res) => {
         const { message, userId = "default_user" } = req.body;
         if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
 
-        // 1. Phân tích ngữ cảnh câu chat hiện tại bằng hệ thống NLP nâng cao
+        // 1. Phân tích ngữ cảnh
         const { intent, entities } = await processSemanticAI(userId, message);
         
-        // 2. 🧩 CƠ CHẾ KẾ THỪA VÀ CẬP NHẬT TRÍ NHỚ BIẾN THỂ (CONTEXT INHERITANCE)
+        // 2. QUẢN LÝ TRÍ NHỚ (CONTEXT MEMORY)
         if (!chatMemory[userId]) {
             chatMemory[userId] = { modelName: null, variantName: null, color: null };
         }
 
-        // Kế thừa dữ liệu nếu câu hiện tại bị khuyết thiếu thực thể
-        if (!entities.modelName && chatMemory[userId].modelName) {
-            entities.modelName = chatMemory[userId].modelName;
-        }
-        if (!entities.variantName && chatMemory[userId].variantName) {
-            entities.variantName = chatMemory[userId].variantName;
-        }
-        if (!entities.color && chatMemory[userId].color) {
-            entities.color = chatMemory[userId].color;
-        }
-
-        // Cập nhật đè trạng thái mới nhất vào bộ nhớ RAM hệ thống
+        // Ưu tiên cập nhật thông tin mới nhất từ NLP vào bộ nhớ
         if (entities.modelName) chatMemory[userId].modelName = entities.modelName;
         if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
         if (entities.color) chatMemory[userId].color = entities.color;
 
-        // =========================================================
-        // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN MẠNG ALIASES VÀ MODEL CHUẨN XÁC
-        // =========================================================
-        let reply = "";
+        // Nếu NLP không tìm thấy thực thể trong câu hiện tại, mới kế thừa từ bộ nhớ
+        entities.modelName = entities.modelName || chatMemory[userId].modelName;
+        entities.variantName = entities.variantName || chatMemory[userId].variantName;
+        entities.color = entities.color || chatMemory[userId].color;
+
+        // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN
         let variantQuery = {};
 
-        // Xác thực ID dòng xe cha (VehicleModel)
         if (entities.modelName) {
             const model = await VehicleModel.findOne({ name: { $regex: new RegExp(entities.modelName, "i") } });
-            if (model) {
-                variantQuery.modelId = model._id;
-            }
+            if (model) variantQuery.modelId = model._id;
         }
 
-        // Truy vấn đa luồng: Khớp cả tên trực tiếp và mảng aliases của tài liệu Variant
         if (entities.variantName) {
             variantQuery.$or = [
                 { variantName: { $regex: new RegExp(entities.variantName, "i") } },
                 { aliases: { $regex: new RegExp(entities.variantName, "i") } }
             ];
         }
+
+        let reply = "";
 
         // =========================================================
         // 4. ĐIỀU PHỐI DỮ LIỆU ĐẦU RA (MAPPED TRỰC TIẾP SCHEMA GỐC)
