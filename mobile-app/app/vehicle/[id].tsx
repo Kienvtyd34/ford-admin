@@ -204,7 +204,7 @@ export default function VehicleDetail() {
             style={styles.btnOutline}
             onPress={() =>
               router.push({
-                pathname: '/test-drive',
+                pathname: '/testdrive',
                 params: {
                   vehicleId: vehicle._id,
                   variantName: selectedVariant?.variantName

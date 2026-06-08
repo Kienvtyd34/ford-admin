@@ -84,7 +84,7 @@ export default function ContactScreen() {
         </View>
 
         <View style={styles.requestTypeRow}>
-          {['Nhận báo giá', 'Đăng ký lái thử', 'Tư vấn trả góp'].map((type) => (
+          {['Nhận báo giá', 'Tư vấn trả góp'].map((type) => (
             <TouchableOpacity 
               key={type} 
               style={styles.radioItem}

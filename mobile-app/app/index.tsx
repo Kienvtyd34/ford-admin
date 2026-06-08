@@ -256,6 +256,24 @@ export default function HomeScreen() {
               }}
             />
 
+            <MenuLink
+              icon="car-sport-outline"
+              label="Đăng ký lái thử"
+              onPress={() => {
+                setIsMenuOpen(false);
+                router.push('/testdrive'); 
+              }}
+            />
+
+            <MenuLink
+            icon="chatbubble-ellipses-outline" 
+            label="Chatbot hỗ trợ"
+            onPress={() => {
+              setIsMenuOpen(false);
+              router.push('/chatbot'); 
+            }}
+          />
+
             {userInfo && (
 
               <TouchableOpacity
@@ -512,146 +530,73 @@ export default function HomeScreen() {
         }
 
         renderItem={({ item }) => {
+  // ================= IMAGE =================
+  const vehicleImage = item?.images?.length > 0 ? item.images[0] : item?.imageUrl || FALLBACK_IMG;
 
-          // ================= IMAGE =================
-          const vehicleImage =
-            item?.images?.length > 0
-              ? item.images[0]
-              : item?.imageUrl || FALLBACK_IMG;
+  // ================= PRICE =================
+  const firstVariant = item?.variants?.[0];
+  const vehiclePrice = firstVariant?.variantPrice || firstVariant?.basePrice || null;
 
-          // ================= PRICE =================
-          const firstVariant =
-            item?.variants?.[0];
+  // ================= SPECS =================
+  const engineSpec = firstVariant?.engine || item.specs?.engine || '2.0L';
+  const fuelSpec = firstVariant?.fuelType || item.specs?.fuelType || 'Xăng/Dầu';
 
-          const vehiclePrice =
-            firstVariant?.variantPrice ||
-            firstVariant?.basePrice ||
-            null;
+  return (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={styles.premiumCard}
+      onPress={() => router.push(`/vehicle/${item._id}`)}
+    >
+      <View style={styles.typeBadge}>
+        <Text style={styles.typeBadgeText}>{item.type}</Text>
+      </View>
 
-          return (
+      {item.isHot && (
+        <LinearGradient colors={['#FF416C', '#FF4B2B']} style={styles.hotBadge}>
+          <MaterialCommunityIcons name="fire" size={14} color="#fff" />
+          <Text style={styles.hotBadgeText}>HOT</Text>
+        </LinearGradient>
+      )}
 
-            <TouchableOpacity
-              activeOpacity={0.9}
-              style={styles.premiumCard}
-              onPress={() =>
-                router.push(`/vehicle/${item._id}`)
-              }
-            >
+      {/* IMAGE */}
+      <View style={styles.imageContainer}>
+        <Image source={{ uri: getHDImage(vehicleImage) }} style={styles.vehicleImg} />
+      </View>
 
-              <View style={styles.typeBadge}>
+      {/* CONTENT */}
+      <View style={styles.premiumContent}>
+        <Text style={styles.premiumName}>{item.name}</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>Giá từ:</Text>
+          <Text style={styles.premiumPrice}>
+            {vehiclePrice ? `${vehiclePrice.toLocaleString('vi-VN')} ₫` : 'Liên hệ'}
+          </Text>
+        </View>
 
-                <Text style={styles.typeBadgeText}>
-                  {item.type}
-                </Text>
+        <View style={styles.divider} />
 
-              </View>
+        {/* FOOTER */}
+        <View style={styles.cardFooter}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="engine-outline" size={16} color="#94a3b8" />
+              <Text style={styles.specText}>{engineSpec}</Text>
+            </View>
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="gas-station-outline" size={16} color="#94a3b8" />
+              <Text style={styles.specText}>{fuelSpec}</Text>
+            </View>
+          </View>
 
-              {item.isHot && (
-
-                <LinearGradient
-                  colors={['#FF416C', '#FF4B2B']}
-                  style={styles.hotBadge}
-                >
-
-                  <MaterialCommunityIcons
-                    name="fire"
-                    size={14}
-                    color="#fff"
-                  />
-
-                  <Text style={styles.hotBadgeText}>
-                    HOT
-                  </Text>
-
-                </LinearGradient>
-              )}
-
-              {/* IMAGE */}
-              <View style={styles.imageContainer}>
-
-                <Image
-                  source={{
-                    uri: getHDImage(vehicleImage)
-                  }}
-                  style={styles.vehicleImg}
-                />
-
-              </View>
-
-              {/* CONTENT */}
-              <View style={styles.premiumContent}>
-
-                <Text style={styles.premiumName}>
-                  {item.name}
-                </Text>
-
-                <View style={styles.priceRow}>
-
-                  <Text style={styles.priceLabel}>
-                    Giá từ:
-                  </Text>
-
-                  <Text style={styles.premiumPrice}>
-
-                    {vehiclePrice
-                      ? `${vehiclePrice.toLocaleString('vi-VN')} ₫`
-                      : 'Liên hệ'}
-
-                  </Text>
-
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.cardFooter}>
-
-                  <View style={styles.specItem}>
-
-                    <MaterialCommunityIcons
-                      name="engine-outline"
-                      size={16}
-                      color="#94a3b8"
-                    />
-
-                    <Text style={styles.specText}>
-                      {item.specs?.engine || '2.0L'}
-                    </Text>
-
-                  </View>
-
-                  <View style={styles.specItem}>
-
-                    <MaterialCommunityIcons
-                      name="gas-station-outline"
-                      size={16}
-                      color="#94a3b8"
-                    />
-
-                    <Text style={styles.specText}>
-                      {item.specs?.fuelType || 'Xăng/Dầu'}
-                    </Text>
-
-                  </View>
-
-                  <View style={styles.detailBtn}>
-
-                    <Text style={styles.detailBtnText}>
-                      Chi tiết
-                    </Text>
-
-                    <Ionicons
-                      name="chevron-forward"
-                      size={14}
-                      color="#002B5B"
-                    />
-
-                  </View>
-
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
+          <View style={styles.detailBtn}>
+            <Text style={styles.detailBtnText}>Chi tiết</Text>
+            <Ionicons name="chevron-forward" size={14} color="#002B5B" />
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}}
       />
     </SafeAreaView>
   );
