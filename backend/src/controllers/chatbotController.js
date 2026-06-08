@@ -1,3 +1,4 @@
+import stringSimilarity from 'string-similarity';
 import VehicleModel from '../models/VehicleModel.js';
 import Variant from '../models/Variant.js';
 import VehicleColor from '../models/VehicleColor.js';
@@ -6,33 +7,50 @@ import CarProblem from '../models/CarProblem.js';
 import News from '../models/News.js';
 import { processSemanticAI, cleanText } from '../nlpManager.js';
 
-const chatMemory = {}; // Trạng thái hội thoại[cite: 3]
+// 🧠 QUẢN LÝ TRẠNG THÁI HỘI THOẠI TOÀN CỤC (STATEFUL CONTEXT MEMORY)
+const chatMemory = {}; 
 
 export const handleChatInteraction = async (req, res) => {
     try {
         const { message, userId = "default_user" } = req.body;
         if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
 
+        // 1. Phân tích ngữ cảnh
         const { intent, entities } = await processSemanticAI(userId, message);
         
+        // 2. CƠ CHẾ QUẢN LÝ TRÍ NHỚ THÔNG MINH
         if (!chatMemory[userId]) {
             chatMemory[userId] = { modelName: null, variantName: null, color: null };
         }
 
-        // Logic cập nhật bộ nhớ[cite: 3]
+        // Logic ghi đè thông minh: 
+        // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
         if (entities.modelName) {
             chatMemory[userId].modelName = entities.modelName;
-            chatMemory[userId].variantName = null; 
+            chatMemory[userId].variantName = null; // Quan trọng: Reset variant cũ khi đổi model
         }
+        
+        // Cập nhật các thông tin khác nếu có
         if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
         if (entities.color) chatMemory[userId].color = entities.color;
 
+        // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN
         let variantQuery = {};
+
+        // Chỉ tìm theo modelName nếu nó tồn tại trong memory
         if (chatMemory[userId].modelName) {
-            const model = await VehicleModel.findOne({ name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } }).lean();
-            if (model) variantQuery.modelId = model._id;
-            else chatMemory[userId].modelName = null;
+            const model = await VehicleModel.findOne({ 
+                name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
+            });
+            if (model) {
+                variantQuery.modelId = model._id;
+            } else {
+                // Nếu không tìm thấy model (do user gõ sai tên xe), reset memory để tránh lỗi
+                chatMemory[userId].modelName = null;
+            }
         }
+
+        // Nếu có variantName, mới thêm vào query
         if (chatMemory[userId].variantName) {
             variantQuery.$or = [
                 { variantName: { $regex: new RegExp(chatMemory[userId].variantName, "i") } },
