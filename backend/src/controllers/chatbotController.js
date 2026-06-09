@@ -66,7 +66,7 @@ export const handleChatInteraction = async (req, res) => {
         switch (intent) {
             
             // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
-            case 'REQUIREMENT_CONSULTING': {
+            case 'CONSULTING_QUERY': {
                 const msg = message.toLowerCase();
                 if (msg.includes("phượt") || msg.includes("off-road") || msg.includes("địa hình")) {
                     reply = "Dạ, với nhu cầu phượt địa hình, em xin gợi ý Ford Ranger Raptor hoặc Everest với hệ thống treo chuyên dụng ạ. Anh/chị muốn xem báo giá bản nào không ạ?";
