@@ -26,9 +26,24 @@ export const handleChatInteraction = async (req, res) => {
         // Logic ghi đè thông minh: 
         // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
         if (entities.modelName) {
-            chatMemory[userId].modelName = entities.modelName;
-            chatMemory[userId].variantName = null; // Quan trọng: Reset variant cũ khi đổi model
-        }
+
+    if (
+        chatMemory[userId].modelName &&
+        chatMemory[userId].modelName !== entities.modelName
+    ) {
+
+        chatMemory[userId] = {
+            modelName: entities.modelName,
+            variantName: null,
+            color: null
+        };
+
+    } else {
+
+        chatMemory[userId].modelName =
+            entities.modelName;
+    }
+}
         
         // Cập nhật các thông tin khác nếu có
         if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
@@ -67,16 +82,55 @@ export const handleChatInteraction = async (req, res) => {
             
             // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
             case 'CONSULTING_QUERY': {
-                const msg = message.toLowerCase();
-                if (msg.includes("phượt") || msg.includes("off-road") || msg.includes("địa hình")) {
-                    reply = "Dạ, với nhu cầu phượt địa hình, em xin gợi ý Ford Ranger Raptor hoặc Everest với hệ thống treo chuyên dụng ạ. Anh/chị muốn xem báo giá bản nào không ạ?";
-                } else if (msg.includes("gầm cao") || msg.includes("đi phố") || msg.includes("cuv")) {
-                    reply = "Dạ, Ford Territory là lựa chọn tối ưu cho gầm cao đi phố, thiết kế hiện đại và rất tiết kiệm nhiên liệu. Anh/chị cần check thông số kỹ thuật em này không ạ?";
-                } else {
-                    reply = "Dạ, để tư vấn xe phù hợp nhất, anh/chị cho em biết mình ưu tiên đi gia đình, đi làm hay đi địa hình được không ạ?";
-                }
-                break;
-            }
+
+   if (
+      entities.seats === 7 ||
+      message.includes("rong rai") ||
+      message.includes("dong nguoi")
+   ) {
+
+      reply =
+      "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người với 7 chỗ ngồi rộng rãi, khoang hành lý lớn và nhiều công nghệ an toàn.";
+
+   }
+
+   else if (
+      entities.maxBudget &&
+      entities.maxBudget <= 1000000000
+   ) {
+
+      reply =
+      "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend, Titanium hoặc Sport.";
+
+   }
+
+   else if (
+      entities.minBudget >= 2000000000
+   ) {
+
+      reply =
+      "🚗 Với ngân sách khoảng 2 tỷ, Ford Mustang Mach-E Premium AWD hoặc Ranger Raptor là những lựa chọn cao cấp nhất.";
+
+   }
+
+   else if (
+      message.includes("di pho")
+   ) {
+
+      reply =
+      "🚗 Ford Territory là mẫu CUV rất phù hợp đi phố.";
+
+   }
+
+   else {
+
+      reply =
+      "Dạ, anh/chị cho em biết thêm nhu cầu sử dụng để em tư vấn chính xác hơn ạ.";
+
+   }
+
+   break;
+}
 
             // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
             case 'PRICE_QUERY': {
@@ -272,13 +326,33 @@ export const handleChatInteraction = async (req, res) => {
                 let matched = null; let maxScore = 0;
                 const cleanMsg = cleanText(message);
 
-                for (let p of problems) {
-                    if (!p.symptoms) continue;
-                    for (let s of p.symptoms) {
-                        const score = stringSimilarity.compareTwoStrings(cleanMsg, cleanText(s));
-                        if (score > maxScore) { maxScore = score; matched = p; }
-                    }
-                }
+for (let p of problems) {
+
+   for (let symptom of p.symptoms) {
+
+      const cleanSymptom =
+         cleanText(symptom);
+
+      if (
+         cleanMsg.includes(cleanSymptom)
+      ) {
+         matched = p;
+         maxScore = 999;
+         break;
+      }
+
+      const score =
+         stringSimilarity.compareTwoStrings(
+            cleanMsg,
+            cleanSymptom
+         );
+
+      if (score > maxScore) {
+         maxScore = score;
+         matched = p;
+      }
+   }
+}
 
                 if (maxScore > 0.18 && matched) {
                     reply = `🛠️ **CỐ VẤN DỊCH VỤ SỐ FORD QUẾ VÕ CHẨN ĐOÁN** 🛠️\n` +
