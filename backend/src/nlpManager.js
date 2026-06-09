@@ -45,108 +45,138 @@ export const processSemanticAI = async (userId, rawMessage) => {
 
   const keywordWeights = {
     PRICE_QUERY: [
-      "giá",
-      "bao nhiêu",
-      "báo giá",
-      "nhiêu tiền",
-      "bn",
-      "nhiu",
-      "giá lăn bánh",
-      "giá niêm yết"
-    ],
+ "gia",
+ "bao nhieu",
+ "bao gia",
+ "gia lan banh",
+ "gia niem yet",
+ "nhieu tien",
+ "bao tien"
+],
 
     INSTALLMENT_QUERY: [
-      "trả góp",
-      "vay",
-      "ngân hàng",
-      "lãi suất",
-      "trả trước"
-    ],
+ "tra gop",
+ "vay",
+ "ngan hang",
+ "lai suat",
+ "tra truoc"
+],
 
     STOCK_QUERY: [
-      "còn xe",
-      "có xe",
-      "sẵn xe",
-      "sẵn hàng",
-      "giao ngay",
-      "kho",
-      "bãi"
-    ],
+ "con xe",
+ "co xe",
+ "san xe",
+ "san hang",
+ "giao ngay",
+ "kho",
+ "bai"
+],
 
     COLOR_QUERY: [
-      "màu gì",
-      "mấy màu",
-      "bảng màu",
-      "màu đỏ",
-      "màu trắng",
-      "màu đen",
-      "màu bạc",
-      "màu xám"
-    ],
-
-    SPECS_QUERY: [
-      "thông số",
-      "động cơ",
-      "hộp số",
-      "mã lực",
-      "option",
-      "adas",
-      "an toàn",
-      "camera 360",
-      "cửa sổ trời",
-      "sạc không dây",
-      "fordpass",
-      "ghế sưởi",
-      "ghế làm mát",
-      "awd",
-      "fwd",
-      "4wd",
-      "4x4",
-      "máy xăng",
-      "máy dầu",
-      "xe điện"
-    ],
+ "mau gi",
+ "may mau",
+ "bang mau",
+ "mau do",
+ "mau trang",
+ "mau den",
+ "mau bac",
+ "mau xam",
+ "mau xanh"
+],
+SPECS_QUERY: [
+  "thong so",
+  "dong co",
+  "hop so",
+  "ma luc",
+  "option",
+  "adas",
+  "an toan",
+  "camera 360",
+  "cua so troi",
+  "sac khong day",
+  "fordpass",
+  "ghe suoi",
+  "ghe lam mat",
+  "awd",
+  "fwd",
+  "4wd",
+  "4x4",
+  "may xang",
+  "may dau",
+  "xe dien"
+],
 
     TECHNICAL_SUPPORT: [
-      "lỗi",
-      "hỏng",
-      "sự cố",
-      "không nổ",
-      "khói",
-      "chảy dầu",
-      "giật số",
-      "dps6",
-      "abs"
-    ],
+ "loi",
+ "hong",
+ "su co",
+ "khong no",
+ "khoi",
+ "chay dau",
+ "giat so",
+ "dps6",
+ "abs"
+],
 
     NEWS_QUERY: [
-      "tin tức",
-      "khuyến mãi",
-      "sự kiện",
-      "ưu đãi",
-      "ra mắt",
-      "launch",
-      "thế hệ mới"
-    ],
+ "tin tuc",
+ "khuyen mai",
+ "su kien",
+ "uu dai",
+ "ra mat",
+ "launch",
+ "the he moi"
+],
 
    CONSULTING_QUERY: [
-  "tu van",
-  "nen mua",
-  "xe nao",
-  "ford nao",
-  "phu hop",
-  "gia dinh",
-  "duoi",
-  "tren",
-  "tam",
-  "tai chinh",
-  "ngan sach",
-  "1 ty",
-  "2 ty",
-  "3 ty"
+
+ "tu van",
+
+ "nen mua",
+
+ "xe nao",
+
+ "ford nao",
+
+ "gia dinh",
+
+ "7 cho",
+
+ "5 cho",
+
+ "rong rai",
+
+ "dong nguoi",
+
+ "di du lich",
+
+ "di pho",
+
+ "tai chinh",
+
+ "ngan sach",
+
+ "duoi",
+
+ "tren",
+
+ "1 ty",
+
+ "2 ty",
+
+ "3 ty",
+
+ "cao cap",
+
+ "phu hop"
+
 ]
   };
 
+  for (const intent in keywordWeights) {
+  keywordWeights[intent] =
+    keywordWeights[intent].map(cleanText);
+}
   for (const [intentName, keywords] of Object.entries(keywordWeights)) {
     keywords.forEach((kw) => {
       if (message.includes(kw)) {
@@ -154,10 +184,8 @@ export const processSemanticAI = async (userId, rawMessage) => {
       }
     });
   }
-  for (const intent in keywordWeights) {
-  keywordWeights[intent] =
-    keywordWeights[intent].map(cleanText);
-}
+  console.log("MESSAGE:", message);
+console.log("INTENT SCORES:", intentScores);
 
   let maxScore = 0;
 
@@ -242,39 +270,35 @@ export const processSemanticAI = async (userId, rawMessage) => {
   // =========================
 
   const featureMap = {
-    "camera 360": "camera360",
-    "cửa sổ trời": "sunroof",
-    "ghế da": "leatherSeat",
-    "sạc không dây": "wirelessCharging",
-    "cốp điện": "powerTailgate",
+  "camera 360": "camera360",
 
-    "adas": "adas",
+  "cua so troi": "sunroof",
+  "ghe da": "leatherSeat",
+  "sac khong day": "wirelessCharging",
+  "cop dien": "powerTailgate",
 
-    "phanh tự động": "autoEmergencyBrake",
+  "adas": "adas",
 
-    "giữ làn": "laneKeepAssist",
+  "phanh tu dong": "autoEmergencyBrake",
 
-    "điểm mù": "blindSpot",
+  "giu lan": "laneKeepAssist",
 
-    "adaptive cruise": "adaptiveCruise",
-    "thích ứng": "adaptiveCruise",
+  "diem mu": "blindSpot",
 
-    "fordpass": "fordPass",
+  "adaptive cruise": "adaptiveCruise",
 
-    "biển báo giao thông":
-      "trafficSignRecognition",
+  "fordpass": "fordPass",
 
-    "ghế sưởi": "heatedSeat",
+  "ghe suoi": "heatedSeat",
 
-    "ghế làm mát": "ventilatedSeat",
+  "ghe lam mat": "ventilatedSeat",
 
-    "máy xăng": "fuel_gasoline",
-    "máy dầu": "fuel_diesel",
+  "may xang": "fuel_gasoline",
+  "may dau": "fuel_diesel",
 
-    "xe điện": "fuel_electric",
-    "động cơ điện": "fuel_electric"
-  };
-
+  "xe dien": "fuel_electric",
+  "dong co dien": "fuel_electric"
+};
   for (const [k, v] of Object.entries(featureMap)) {
     if (message.includes(k)) {
       entities.feature = v;
@@ -299,14 +323,13 @@ export const processSemanticAI = async (userId, rawMessage) => {
   // =========================
 
   const colors = [
-    "đen",
-    "đỏ",
-    "trắng",
-    "bạc",
-    "xám",
-    "xanh"
-  ];
-
+  "den",
+  "do",
+  "trang",
+  "bac",
+  "xam",
+  "xanh"
+];
   for (const color of colors) {
     if (message.includes(color)) {
       entities.color = color;
@@ -357,17 +380,11 @@ export const processSemanticAI = async (userId, rawMessage) => {
 
       const budget = value * multiplier;
 
-      if (
-        message.includes("dưới") ||
-        message.includes("duoi")
-      ) {
-        entities.maxBudget = budget;
-      } else if (
-        message.includes("trên") ||
-        message.includes("tren")
-      ) {
-        entities.minBudget = budget;
-      }
+      if (message.includes("duoi")) {
+  entities.maxBudget = budget;
+} else if (message.includes("tren")) {
+  entities.minBudget = budget;
+}
     }
   }
 
