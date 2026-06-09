@@ -2,14 +2,13 @@ import stringSimilarity from "string-similarity";
 import VehicleModel from "./models/VehicleModel.js";
 import Variant from "./models/Variant.js";
 
-export const cleanText = (text) => {
-  if (!text) return "";
-
+export const cleanText = (text = "") => {
   return text
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
-    .replace(/^\d+[\.\s\-]+/g, "")
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, " ")
+    .replace(/[^\w\s]/g, " ")
     .replace(/\s+/g, " ");
 };
 
@@ -130,20 +129,22 @@ export const processSemanticAI = async (userId, rawMessage) => {
       "thế hệ mới"
     ],
 
-    CONSULTING_QUERY: [
-      "xe nào",
-      "tư vấn",
-      "mua xe",
-      "gia đình",
-      "5 chỗ",
-      "7 chỗ",
-      "offroad",
-      "địa hình",
-      "pickup",
-      "bán tải",
-      "xe điện",
-      "gầm cao"
-    ]
+   CONSULTING_QUERY: [
+  "tu van",
+  "nen mua",
+  "xe nao",
+  "ford nao",
+  "phu hop",
+  "gia dinh",
+  "duoi",
+  "tren",
+  "tam",
+  "tai chinh",
+  "ngan sach",
+  "1 ty",
+  "2 ty",
+  "3 ty"
+]
   };
 
   for (const [intentName, keywords] of Object.entries(keywordWeights)) {
@@ -153,6 +154,10 @@ export const processSemanticAI = async (userId, rawMessage) => {
       }
     });
   }
+  for (const intent in keywordWeights) {
+  keywordWeights[intent] =
+    keywordWeights[intent].map(cleanText);
+}
 
   let maxScore = 0;
 
@@ -336,10 +341,9 @@ export const processSemanticAI = async (userId, rawMessage) => {
       const val2 = parseInt(numbers[1]);
 
       const multiplier =
-        message.includes("tỷ") ||
-        message.includes("ty")
-          ? 1000000000
-          : 1000000;
+  message.includes("ty")
+    ? 1000000000
+    : 1000000;
 
       entities.minBudget = val1 * multiplier;
       entities.maxBudget = val2 * multiplier;
@@ -347,10 +351,9 @@ export const processSemanticAI = async (userId, rawMessage) => {
       const value = parseInt(numbers[0]);
 
       const multiplier =
-        message.includes("tỷ") ||
-        message.includes("ty")
-          ? 1000000000
-          : 1000000;
+  message.includes("ty")
+    ? 1000000000
+    : 1000000;
 
       const budget = value * multiplier;
 
@@ -373,19 +376,22 @@ export const processSemanticAI = async (userId, rawMessage) => {
   // =========================
 
   if (
-    message.includes("5 chỗ") ||
-    message.includes("5 người")
-  ) {
-    entities.seats = 5;
-  }
+  message.includes("5 cho") ||
+  message.includes("5 nguoi")
+) {
+  entities.seats = 5;
+}
 
-  if (
-    message.includes("7 chỗ") ||
-    message.includes("7 người")
-  ) {
-    entities.seats = 7;
-  }
+if (
+  message.includes("7 cho") ||
+  message.includes("7 nguoi")
+) {
+  entities.seats = 7;
+}
 
+  console.log("MESSAGE:", message);
+console.log("INTENT:", intent);
+console.log("ENTITIES:", entities);
   return {
     intent,
     entities
