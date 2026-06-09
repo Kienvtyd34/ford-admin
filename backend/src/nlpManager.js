@@ -106,16 +106,22 @@ SPECS_QUERY: [
   "xe dien"
 ],
 
-    TECHNICAL_SUPPORT: [
- "loi",
- "hong",
- "su co",
- "khong no",
- "khoi",
- "chay dau",
- "giat so",
- "dps6",
- "abs"
+   TECHNICAL_SUPPORT: [
+   "loi",
+   "hong",
+   "su co",
+   "khong no",
+   "abs",
+   "u3000",
+
+   "giat so",
+   "vao so bi giat",
+   "sang so bi giat",
+   "khung khi sang so",
+   "rung khi sang so",
+   "ly hop",
+   "dps6",
+   "tcm"
 ],
 
     NEWS_QUERY: [
@@ -168,7 +174,13 @@ SPECS_QUERY: [
 
  "cao cap",
 
- "phu hop"
+ "phu hop",
+ "dia hinh",
+"offroad",
+"off road",
+"phuot",
+"manh me",
+"dam chac"
 
 ]
   };
@@ -401,7 +413,9 @@ console.log("INTENT SCORES:", intentScores);
 
 if (
   message.includes("7 cho") ||
-  message.includes("7 nguoi")
+  message.includes("7 nguoi") ||
+  message.includes("dong nguoi") ||
+   message.includes("gia dinh dong nguoi")
 ) {
   entities.seats = 7;
 }

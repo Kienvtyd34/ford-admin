@@ -120,7 +120,15 @@ export const handleChatInteraction = async (req, res) => {
       reply =
       "🚗 Ford Territory là mẫu CUV rất phù hợp đi phố.";
 
-   }
+   }else if (
+   message.includes("dia hinh") ||
+   message.includes("offroad") ||
+   message.includes("phuot")
+) {
+
+   reply =
+      "🚗 Ford Ranger Raptor hoặc Ford Everest Wildtrak là lựa chọn phù hợp nhất cho nhu cầu off-road mạnh mẽ.";
+}
 
    else {
 
@@ -252,10 +260,34 @@ export const handleChatInteraction = async (req, res) => {
                     break;
                 }
 
-                const stockItems = await Inventory.find({ 
-                    variantId: variant._id, 
-                    status: "Trong kho" 
-                }).populate({ path: 'colorId', select: 'name' });
+                let inventoryQuery = {
+   variantId: variant._id,
+   status: "Trong kho"
+};
+
+if (entities.color) {
+
+   const colorDoc =
+      await VehicleColor.findOne({
+         variantId: variant._id,
+         name: {
+            $regex: new RegExp(
+               entities.color,
+               "i"
+            )
+         }
+      });
+
+   if (colorDoc) {
+      inventoryQuery.colorId =
+         colorDoc._id;
+   }
+}
+
+const stockItems =
+   await Inventory.find(
+      inventoryQuery
+   );
 
                 const count = stockItems.length;
 
