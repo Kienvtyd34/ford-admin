@@ -190,12 +190,39 @@ SPECS_QUERY: [
     keywordWeights[intent].map(cleanText);
 }
   for (const [intentName, keywords] of Object.entries(keywordWeights)) {
-    keywords.forEach((kw) => {
-      if (message.includes(kw)) {
-        intentScores[intentName]++;
+
+  keywords.forEach((kw) => {
+
+    const escapedKeyword =
+      kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const regex =
+      new RegExp(`\\b${escapedKeyword}\\b`, "i");
+
+    if (regex.test(message)) {
+
+      // ưu tiên mạnh cho thông số
+      if (
+        intentName === "SPECS_QUERY" &&
+        [
+          "camera 360",
+          "cua so troi",
+          "adas",
+          "fordpass",
+          "ghe suoi",
+          "ghe lam mat"
+        ].includes(kw)
+      ) {
+        intentScores[intentName] += 3;
+      } else {
+        intentScores[intentName] += 1;
       }
-    });
-  }
+
+    }
+
+  });
+
+}
   console.log("MESSAGE:", message);
 console.log("INTENT SCORES:", intentScores);
 
