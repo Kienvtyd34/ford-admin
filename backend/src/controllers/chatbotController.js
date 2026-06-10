@@ -267,16 +267,13 @@ export const handleChatInteraction = async (req, res) => {
 
 if (entities.color) {
 
-   const colorDoc =
-      await VehicleColor.findOne({
-         variantId: variant._id,
-         name: {
-            $regex: new RegExp(
-               entities.color,
-               "i"
-            )
-         }
-      });
+   const colorDoc = (
+  await VehicleColor.find({
+    variantId: variant._id
+  })
+).find(c =>
+  cleanText(c.name).includes(entities.color)
+);
 
    if (colorDoc) {
       inventoryQuery.colorId =
@@ -309,32 +306,87 @@ const stockItems =
             // 🎨 LUỒNG TRA CỨU DANH SÁCH MÀU NGOẠI THẤT
             case 'COLOR_QUERY': {
 
-                console.log("ENTITIES:", entities);
-                console.log("VARIANT QUERY:", variantQuery);
+  const variant = await Variant.findOne(variantQuery)
+    .populate('modelId');
 
-                const variant = await Variant.findOne(variantQuery)
-                    .populate('modelId');
+  if (!variant) {
+    reply =
+      "🎨 Anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản để em tra cứu màu sắc chính xác ạ.";
+    break;
+  }
 
-                console.log("FOUND VARIANT:", variant);
+  const colors = await VehicleColor.find({
+    variantId: variant._id
+  });
 
-                if (!variant) {
-                    reply = `🎨 Dữ liệu bảng màu phối của dòng xe này đang được cập nhật lại từ phòng thiết kế.`;
-                    break;
-                }
+  if (!colors.length) {
+    reply =
+      `🎨 Hiện chưa có dữ liệu màu cho ${variant.variantName}.`;
+    break;
+  }
 
-                const dbColors = await VehicleColor.find({
-                    variantId: variant._id
-                });
+  // ======================
+  // HỎI MÀU CỤ THỂ
+  // ======================
 
-                console.log("COLORS:", dbColors);
+  if (entities.color) {
 
-                const names = dbColors.map(c => c.name).join(', ');
+    const colorDoc = colors.find(c =>
+      cleanText(c.name).includes(entities.color)
+    );
 
-                reply =
-                    `🎨 Màu hiện có: ${names}`;
+    if (!colorDoc) {
+      reply =
+        `❌ ${variant.variantName} hiện không có màu ${entities.color}.`;
+      break;
+    }
 
-                break;
-            }
+    // Xem ảnh màu
+
+    if (
+      message.includes("xem") ||
+      message.includes("anh") ||
+      message.includes("hinh")
+    ) {
+
+      reply =
+        `🎨 ${variant.variantName} màu ${colorDoc.name}\n\n`;
+
+      if (colorDoc.images?.length) {
+
+        reply +=
+          `📸 Hình ảnh thực tế:\n\n` +
+          colorDoc.images.join("\n");
+
+      } else {
+
+        reply +=
+          "📷 Hiện chưa có ảnh cho màu này.";
+
+      }
+
+      break;
+    }
+
+    reply =
+      `🎨 ${variant.variantName} hiện có màu ${colorDoc.name}.`;
+
+    break;
+  }
+
+  // ======================
+  // LIỆT KÊ TOÀN BỘ MÀU
+  // ======================
+
+  reply =
+    `🎨 ${variant.variantName} hiện có ${colors.length} màu:\n\n`;
+
+  colors.forEach(color => {
+    reply += `• ${color.name}\n`;
+  });
+
+  break;
+}
 
             // 🏦 HỖ TRỢ GIẢI PHÁP TÀI CHÍNH TRẢ GÓP NGÂN HÀNG
             case 'INSTALLMENT_QUERY': {

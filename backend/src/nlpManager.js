@@ -73,15 +73,19 @@ export const processSemanticAI = async (userId, rawMessage) => {
 ],
 
     COLOR_QUERY: [
- "mau gi",
- "may mau",
- "bang mau",
- "mau do",
- "mau trang",
- "mau den",
- "mau bac",
- "mau xam",
- "mau xanh"
+  "mau gi",
+  "may mau",
+  "bang mau",
+  "co nhung mau nao",
+  "co mau nao",
+  "mau xe",
+  "mau trang",
+  "mau do",
+  "mau den",
+  "mau bac",
+  "mau xanh",
+  "xem mau",
+  "xem anh"
 ],
 SPECS_QUERY: [
   "thong so",
@@ -390,20 +394,21 @@ console.log("INTENT SCORES:", intentScores);
   // COLOR
   // =========================
 
-  const colors = [
-  "den",
-  "do",
-  "trang",
-  "bac",
-  "xam",
-  "xanh"
-];
-  for (const color of colors) {
-    if (message.includes(color)) {
-      entities.color = color;
-      break;
-    }
+ const colorAliases = {
+  do: ["do", "mau do"],
+  trang: ["trang", "mau trang"],
+  den: ["den", "mau den"],
+  bac: ["bac", "mau bac"],
+  xanh: ["xanh", "mau xanh"],
+  xam: ["xam", "mau xam"]
+};
+
+for (const [color, aliases] of Object.entries(colorAliases)) {
+  if (aliases.some(alias => message.includes(alias))) {
+    entities.color = color;
+    break;
   }
+}
 
   // =========================
   // VIN
