@@ -255,6 +255,41 @@ export const handleChatInteraction = async (req, res) => {
 
                 // 2. Nếu không có VIN, thực hiện truy vấn tồn kho theo variant
                 const variant = await Variant.findOne(variantQuery);
+                if (entities.color) {
+
+   const colorDoc =
+      await VehicleColor.findOne({
+         variantId: variant._id,
+         name: {
+            $regex: new RegExp(
+               entities.color,
+               "i"
+            )
+         }
+      });
+
+   if (!colorDoc) {
+
+      const availableColors =
+         await VehicleColor.find({
+            variantId: variant._id
+         });
+
+      reply =
+         `❌ Ford ${variant.variantName} không có màu ${entities.color}.\n\n` +
+         `🎨 Các màu hiện có:\n\n` +
+         availableColors
+            .map(c => `• ${c.name}`)
+            .join("\n");
+
+      break;
+   }
+
+   reply =
+      `✅ Ford ${variant.variantName} có màu ${colorDoc.name}.`;
+
+   break;
+}
                 if (
   message.includes("mau nao") ||
   message.includes("con mau nao")
