@@ -145,54 +145,60 @@ chatMemory[userId].updatedAt = Date.now();
         switch (finalIntent){
             
             // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
-            case 'CONSULTING_QUERY': {
+            case "CONSULTING_QUERY": {
 
-   if (
-      entities.seats === 7 ||
-      message.includes("rong rai") ||
-      message.includes("dong nguoi")
-   ) {
+   // 7 chỗ
+   if (entities.seats === 7) {
 
       reply =
-      "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người với 7 chỗ ngồi rộng rãi, khoang hành lý lớn và nhiều công nghệ an toàn.";
+         "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người.";
 
    }
 
+   // 5 chỗ đi phố
+   else if (
+      entities.seats === 5 ||
+      normalizedMessage.includes("di pho")
+   ) {
+
+      reply =
+         "🚗 Ford Territory là mẫu CUV 5 chỗ phù hợp nhất cho gia đình đi phố, rộng rãi, nhiều công nghệ và dễ vận hành.";
+
+   }
+
+   // offroad
+   else if (
+      normalizedMessage.includes("offroad") ||
+      normalizedMessage.includes("off road") ||
+      normalizedMessage.includes("phuot")
+   ) {
+
+      reply =
+         "🚗 Ford Ranger Raptor hoặc Everest Wildtrak là lựa chọn phù hợp.";
+
+   }
+
+   // ngân sách 2 tỷ
+   else if (
+   (entities.minBudget || 0) >= 1800000000 ||
+   (entities.maxBudget || 0) >= 2000000000
+){
+
+      reply =
+         "🚗 Với ngân sách khoảng 2 tỷ, anh/chị có thể lựa chọn Ford Ranger Raptor hoặc các phiên bản Everest cao cấp nhất.";
+
+   }
+
+   // dưới 1 tỷ
    else if (
       entities.maxBudget &&
       entities.maxBudget <= 1000000000
    ) {
 
       reply =
-      "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend, Titanium hoặc Sport.";
+         "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend, Titanium hoặc Sport.";
 
    }
-
-   else if (
-      entities.minBudget >= 2000000000
-   ) {
-
-      reply =
-      "🚗 Với ngân sách khoảng 2 tỷ, Ford Mustang Mach-E Premium AWD hoặc Ranger Raptor là những lựa chọn cao cấp nhất.";
-
-   }
-
-   else if (
-      message.includes("di pho")
-   ) {
-
-      reply =
-      "🚗 Ford Territory là mẫu CUV rất phù hợp đi phố.";
-
-   }else if (
-   normalizedMessage.includes("off road")||
-normalizedMessage.includes("offroad")||
-normalizedMessage.includes("phuot")
-) {
-
-   reply =
-      "🚗 Ford Ranger Raptor hoặc Ford Everest Wildtrak là lựa chọn phù hợp nhất cho nhu cầu off-road mạnh mẽ.";
-}
 
    else {
     if (hasEnoughInfo(entities, message)) {
