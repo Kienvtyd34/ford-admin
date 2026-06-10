@@ -57,8 +57,7 @@ export const processSemanticAI = async (userId, rawMessage) => {
 
     INSTALLMENT_QUERY: [
  "tra gop",
- "vay",
- "ngan hang",
+ "vay ngan hang",
  "lai suat",
  "tra truoc"
 ],
@@ -506,7 +505,7 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
   // BUDGET
   // =========================
 
-  const numbers = message.match(/\d+/g);
+  
   const budgetAliases = [
    "trieu",
    "tr",
@@ -515,55 +514,58 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
    "ty"
 ];
 
-if (numbers) {
+// =========================
+// BUDGET
+// =========================
 
+const numbers = message.match(/\d+/g);
+
+if (numbers && numbers.length > 0) {
+
+  let multiplier = 1000000;
+
+  if (message.includes("ty")) {
+    multiplier = 1000000000;
+  }
+
+  // từ 800 đến 900 triệu
   if (
-   message.includes("trieu") ||
-   message.includes("tr")
-){
-   multiplier = 1000000;
-}
-else if (
-   message.includes("ty")
-){
-   multiplier = 1000000000;
-}
-
-  const budget = value * multiplier;
-
-  // dưới 800tr
-  if (message.includes("duoi")) {
-
-    entities.maxBudget = budget;
-
-  }
-
-  // trên 800tr
-  else if (message.includes("tren")) {
-
-    entities.minBudget = budget;
-
-  }
-
-  // từ 800 đến 1 tỷ
-  else if (
     numbers.length >= 2 &&
     /(den|toi|tu.*den|-)/i.test(message)
   ) {
 
+    const value1 = parseInt(numbers[0]);
     const value2 = parseInt(numbers[1]);
 
-    entities.minBudget = value * multiplier;
+    entities.minBudget = value1 * multiplier;
     entities.maxBudget = value2 * multiplier;
-
   }
 
-  // mặc định "tầm 800tr"
+  // dưới 800 triệu
+  else if (message.includes("duoi")) {
+
+    const value = parseInt(numbers[0]);
+
+    entities.maxBudget = value * multiplier;
+  }
+
+  // trên 800 triệu
+  else if (message.includes("tren")) {
+
+    const value = parseInt(numbers[0]);
+
+    entities.minBudget = value * multiplier;
+  }
+
+  // khoảng / tầm 800 triệu
   else {
 
-    entities.minBudget = budget * 0.8;
-    entities.maxBudget = budget * 1.2;
+    const value = parseInt(numbers[0]);
 
+    const budget = value * multiplier;
+
+    entities.minBudget = Math.round(budget * 0.8);
+    entities.maxBudget = Math.round(budget * 1.2);
   }
 }
 
