@@ -72,20 +72,15 @@ export const processSemanticAI = async (userId, rawMessage) => {
  "bai"
 ],
 
-    COLOR_QUERY: [
-  "mau gi",
-  "may mau",
-  "bang mau",
-  "co nhung mau nao",
-  "co mau nao",
-  "mau xe",
-  "mau trang",
-  "mau do",
-  "mau den",
-  "mau bac",
-  "mau xanh",
-  "xem mau",
-  "xem anh"
+   COLOR_QUERY: [
+ "mau gi",
+ "may mau",
+ "bang mau",
+ "co nhung mau nao",
+ "co mau nao",
+ "mau xe",
+ "xem mau",
+ "xem anh"
 ],
 SPECS_QUERY: [
   "thong so",
@@ -230,6 +225,22 @@ SPECS_QUERY: [
   console.log("MESSAGE:", message);
 console.log("INTENT SCORES:", intentScores);
 
+const stockPriorityWords = [
+  "con",
+  "ton",
+  "kho",
+  "may chiec",
+  "bao nhieu xe",
+  "so luong"
+];
+
+if (
+  stockPriorityWords.some(w =>
+    message.includes(w)
+  )
+) {
+  intentScores.STOCK_QUERY += 5;
+}
   let maxScore = 0;
 
   for (const [intentName, score] of Object.entries(intentScores)) {
@@ -321,7 +332,7 @@ console.log("INTENT SCORES:", intentScores);
 
         if (
           score > bestScore &&
-          score > 0.55
+          score > 0.75
         ) {
           bestScore = score;
           entities.variantName =
@@ -342,6 +353,8 @@ console.log("INTENT SCORES:", intentScores);
   // =========================
 
   const featureMap = {
+    "he dan dong": "drive_info",
+"dan dong": "drive_info",
   "camera 360": "camera360",
 
   "cua so troi": "sunroof",
@@ -378,6 +391,22 @@ console.log("INTENT SCORES:", intentScores);
     }
   }
 
+  const driveKeywords = [
+  "he dan dong",
+  "dan dong",
+  "awd la gi",
+  "fwd la gi",
+  "4wd la gi",
+  "4x4 la gi"
+];
+
+const askingDriveTrain =
+  driveKeywords.some(k =>
+    message.includes(k)
+  );
+
+if (askingDriveTrain) {
+
   if (message.includes("fwd"))
     entities.feature = "drive_fwd";
 
@@ -389,6 +418,7 @@ console.log("INTENT SCORES:", intentScores);
 
   if (message.includes("4x4"))
     entities.feature = "drive_4wd";
+}
 
   // =========================
   // COLOR
@@ -399,8 +429,17 @@ console.log("INTENT SCORES:", intentScores);
   trang: ["trang", "mau trang"],
   den: ["den", "mau den"],
   bac: ["bac", "mau bac"],
-  xanh: ["xanh", "mau xanh"],
-  xam: ["xam", "mau xam"]
+  xanh: ["xanh"],
+  xam: ["xam", "mau xam"],
+   xanh_la: [
+     "xanh la",
+     "mau xanh la"
+  ],
+
+  xanh_duong: [
+     "xanh duong",
+     "mau xanh duong"
+  ],
 };
 
 for (const [color, aliases] of Object.entries(colorAliases)) {

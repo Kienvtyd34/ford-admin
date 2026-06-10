@@ -255,11 +255,80 @@ export const handleChatInteraction = async (req, res) => {
 
                 // 2. Nếu không có VIN, thực hiện truy vấn tồn kho theo variant
                 const variant = await Variant.findOne(variantQuery);
+                if (
+  message.includes("mau nao") ||
+  message.includes("con mau nao")
+) {
+
+  const inventories =
+    await Inventory.find({
+      variantId: variant._id,
+      status: "Trong kho"
+    }).populate("colorId");
+
+  const colorMap = {};
+
+  inventories.forEach(item => {
+
+    if (!item.colorId) return;
+
+    const color =
+      item.colorId.name;
+
+    colorMap[color] =
+      (colorMap[color] || 0) + 1;
+  });
+
+  reply =
+    `🎨 Các màu hiện còn trong kho:\n\n`;
+
+  Object.entries(colorMap)
+    .forEach(([color, qty]) => {
+
+      reply +=
+        `• ${color}: ${qty} xe\n`;
+    });
+
+  break;
+}
                 if (!variant) {
                     reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
                     break;
                 }
 
+                if (entities.color) {
+
+  const colorDoc =
+    (
+      await VehicleColor.find({
+        variantId: variant._id
+      })
+    ).find(c =>
+      cleanText(c.name)
+        .includes(
+          entities.color
+        )
+    );
+
+  if (colorDoc) {
+
+    const stockCount =
+      await Inventory.countDocuments({
+        variantId: variant._id,
+        colorId: colorDoc._id,
+        status: "Trong kho"
+      });
+
+    reply =
+      `📦 TỒN KHO MÀU XE\n` +
+      `──────────────────\n` +
+      `🚗 ${variant.variantName}\n` +
+      `🎨 ${colorDoc.name}\n` +
+      `📊 Hiện còn ${stockCount} xe trong kho`;
+
+    break;
+  }
+}
                 let inventoryQuery = {
    variantId: variant._id,
    status: "Trong kho"
