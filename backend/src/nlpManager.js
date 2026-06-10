@@ -243,39 +243,68 @@ console.log("INTENT SCORES:", intentScores);
   // =========================
 
   try {
-    const allVariants = await Variant.find({});
 
-    let bestScore = 0;
+  const allVariants =
+    await Variant.find({});
 
-    for (const variant of allVariants) {
-      const targets = [
-        variant.variantName,
-        ...(variant.aliases || [])
-      ];
+  const sortedVariants =
+    allVariants.sort(
+      (a, b) =>
+        cleanText(b.variantName).length -
+        cleanText(a.variantName).length
+    );
 
-      for (const target of targets) {
-        const normalized = cleanText(target);
+  let exactMatchFound = false;
+  let bestScore = 0;
 
-        if (message.includes(normalized)) {
-          entities.variantName = variant.variantName;
-          bestScore = 1;
-          break;
-        }
+  for (const variant of sortedVariants) {
 
-        const score = stringSimilarity.compareTwoStrings(
-          message,
-          normalized
-        );
+    const targets = [
+      variant.variantName,
+      ...(variant.aliases || [])
+    ];
 
-        if (score > bestScore && score > 0.55) {
+    for (const target of targets) {
+
+      const normalized =
+        cleanText(target);
+
+      if (
+        message.includes(normalized)
+      ) {
+
+        entities.variantName =
+          variant.variantName;
+
+        exactMatchFound = true;
+        break;
+      }
+
+      if (!exactMatchFound) {
+
+        const score =
+          stringSimilarity.compareTwoStrings(
+            message,
+            normalized
+          );
+
+        if (
+          score > bestScore &&
+          score > 0.55
+        ) {
           bestScore = score;
-          entities.variantName = variant.variantName;
+          entities.variantName =
+            variant.variantName;
         }
       }
     }
-  } catch (err) {
-    console.error(err);
+
+    if (exactMatchFound) break;
   }
+
+} catch (err) {
+  console.error(err);
+}
 
   // =========================
   // FEATURE DETECTION
