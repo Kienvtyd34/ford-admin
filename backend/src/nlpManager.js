@@ -136,18 +136,29 @@ SPECS_QUERY: [
    CONSULTING_QUERY: [
 
  "tu van",
-
  "nen mua",
 
  "xe nao",
-
  "ford nao",
+
+ "mua duoc xe gi",
+ "mua xe gi",
+
+ "chon xe",
+
+ "goi y xe",
+
+ "de xuat xe",
+
+ "phu hop",
 
  "gia dinh",
 
- "7 cho",
+ "5 nguoi",
+ "7 nguoi",
 
  "5 cho",
+ "7 cho",
 
  "rong rai",
 
@@ -157,6 +168,14 @@ SPECS_QUERY: [
 
  "di pho",
 
+ "di lam",
+
+ "chay dich vu",
+
+ "ban tai",
+
+ "pick up",
+
  "tai chinh",
 
  "ngan sach",
@@ -164,6 +183,14 @@ SPECS_QUERY: [
  "duoi",
 
  "tren",
+
+ "khoang",
+
+ "tam",
+
+ "800 trieu",
+
+ "900 trieu",
 
  "1 ty",
 
@@ -173,14 +200,17 @@ SPECS_QUERY: [
 
  "cao cap",
 
- "phu hop",
  "dia hinh",
-"offroad",
-"off road",
-"phuot",
-"manh me",
-"dam chac"
 
+ "offroad",
+
+ "off road",
+
+ "phuot",
+
+ "manh me",
+
+ "dam chac"
 ]
   };
 
@@ -466,6 +496,13 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
   // =========================
 
   const numbers = message.match(/\d+/g);
+  const budgetAliases = [
+   "trieu",
+   "tr",
+   "cu",
+   "chai",
+   "ty"
+];
 
   if (numbers) {
     if (
@@ -503,7 +540,13 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
   // =========================
   // SEATS
   // =========================
-
+if (
+   entities.maxBudget ||
+   entities.minBudget ||
+   entities.seats
+) {
+   intentScores.CONSULTING_QUERY += 3;
+}
   if (
   message.includes("5 cho") ||
   message.includes("5 nguoi")

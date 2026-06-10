@@ -9,20 +9,74 @@ import { processSemanticAI, cleanText } from '../nlpManager.js';
 
 // 🧠 QUẢN LÝ TRẠNG THÁI HỘI THOẠI TOÀN CỤC (STATEFUL CONTEXT MEMORY)
 const chatMemory = {}; 
+const getVariant = async (query) => {
+   return await Variant.findOne(query)
+      .populate("modelId");
+};
+
 
 export const handleChatInteraction = async (req, res) => {
     try {
-        const { message, userId = "default_user" } = req.body;
+         const { message, userId = "default_user" } = req.body;
+        const MEMORY_TIMEOUT = 30 * 60 * 1000; // 30 phút
+
+if (
+   chatMemory[userId] &&
+   Date.now() - chatMemory[userId].updatedAt >
+   MEMORY_TIMEOUT
+) {
+   delete chatMemory[userId];
+}
+       
+        const normalizedMessage = cleanText(message);
         if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
 
         // 1. Phân tích ngữ cảnh
         const { intent, entities } = await processSemanticAI(userId, message);
+        let finalIntent = intent;
+
+if (
+    (
+        normalizedMessage.includes("xem anh") ||
+        normalizedMessage.includes("xem hinh")
+    ) &&
+    chatMemory[userId]?.modelName
+){
+    finalIntent = "COLOR_QUERY";
+}
         
         // 2. CƠ CHẾ QUẢN LÝ TRÍ NHỚ THÔNG MINH
         if (!chatMemory[userId]) {
-            chatMemory[userId] = { modelName: null, variantName: null, color: null };
-        }
+    chatMemory[userId] = {
+        modelName: null,
+        variantName: null,
+        color: null,
+        lastIntent: null,
+        updatedAt: Date.now()
+    };
+}
 
+// RESET MEMORY khi đổi intent
+if (
+    entities.modelName &&
+    chatMemory[userId].modelName &&
+    cleanText(entities.modelName) !==
+    cleanText(chatMemory[userId].modelName)
+) {
+    chatMemory[userId].variantName = null;
+    chatMemory[userId].color = null;
+}
+
+if (
+   entities.variantName &&
+   chatMemory[userId].variantName &&
+   cleanText(entities.variantName) !==
+   cleanText(chatMemory[userId].variantName)
+) {
+   chatMemory[userId].color = null;
+}
+chatMemory[userId].lastIntent = intent;
+chatMemory[userId].updatedAt = Date.now();
         // Logic ghi đè thông minh: 
         // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
         if (entities.modelName) {
@@ -35,7 +89,9 @@ export const handleChatInteraction = async (req, res) => {
         chatMemory[userId] = {
             modelName: entities.modelName,
             variantName: null,
-            color: null
+            color: null,
+            lastIntent: intent,
+            updatedAt: Date.now()
         };
 
     } else {
@@ -44,7 +100,6 @@ export const handleChatInteraction = async (req, res) => {
             entities.modelName;
     }
 }
-        
         // Cập nhật các thông tin khác nếu có
         if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
         if (entities.color) chatMemory[userId].color = entities.color;
@@ -78,7 +133,16 @@ export const handleChatInteraction = async (req, res) => {
         // =========================================================
         // 4. ĐIỀU PHỐI DỮ LIỆU ĐẦU RA (MAPPED TRỰC TIẾP SCHEMA GỐC)
         // =========================================================
-        switch (intent) {
+        const hasEnoughInfo = ({ seats, maxBudget, minBudget }, msg) =>
+   seats ||
+   maxBudget ||
+   minBudget ||
+   msg.includes("7 chỗ") ||
+   msg.includes("5 người") ||
+   msg.includes("bán tải") ||
+   msg.includes("gia đình");
+
+        switch (finalIntent){
             
             // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
             case 'CONSULTING_QUERY': {
@@ -121,9 +185,9 @@ export const handleChatInteraction = async (req, res) => {
       "🚗 Ford Territory là mẫu CUV rất phù hợp đi phố.";
 
    }else if (
-   message.includes("dia hinh") ||
-   message.includes("offroad") ||
-   message.includes("phuot")
+   normalizedMessage.includes("off road")||
+normalizedMessage.includes("offroad")||
+normalizedMessage.includes("phuot")
 ) {
 
    reply =
@@ -131,18 +195,66 @@ export const handleChatInteraction = async (req, res) => {
 }
 
    else {
-
-      reply =
-      "Dạ, anh/chị cho em biết thêm nhu cầu sử dụng để em tư vấn chính xác hơn ạ.";
-
-   }
+    if (hasEnoughInfo(entities, message)) {
+        reply =
+            "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n" +
+            "• Ford Territory (đi phố, gia đình nhỏ)\n" +
+            "• Ford Everest (gia đình đông người 7 chỗ)\n" +
+            "• Ford Ranger (bán tải, đa dụng)\n\n" +
+            "Anh/chị muốn em so sánh chi tiết dòng nào không ạ?";
+    } else {
+        reply =
+            "Dạ anh/chị cho em biết thêm nhu cầu (7 chỗ / bán tải / đi phố) để em tư vấn chính xác hơn ạ.";
+    }
+}
 
    break;
 }
 
             // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
             case 'PRICE_QUERY': {
-                const variant = await Variant.findOne(variantQuery).populate('modelId');
+                let variant;
+
+if (chatMemory[userId].variantName) {
+
+    variant = await getVariant(variantQuery);
+
+} else if (chatMemory[userId].modelName) {
+
+    const model = await VehicleModel.findOne({
+        name: {
+            $regex: new RegExp(
+                chatMemory[userId].modelName,
+                "i"
+            )
+        }
+    });
+    if (!model) {
+   reply = "❌ Không tìm thấy dòng xe.";
+   break;
+}
+
+    const variants =
+        await Variant.find({
+            modelId: model._id
+        });
+
+        
+    reply =
+        `🚗 Ford ${model.name}\n\n` +
+        variants
+          .map(v =>
+             `• ${v.variantName}: ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
+          )
+          .join("\n");
+
+    break;
+
+} else {
+
+    variant = await getVariant(variantQuery);
+
+}
                 if (!variant) {
                     reply = `✨ **Ford Quế Võ Thông Báo** ✨\n\nDạ, thông tin giá bán của dòng xe này đang được cập nhật. Anh/chị vui lòng cung cấp rõ tên dòng xe hoặc phiên bản cụ thể để bot check giá chính xác nhé!`;
                 } else {
@@ -160,7 +272,7 @@ export const handleChatInteraction = async (req, res) => {
 
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
             case 'SPECS_QUERY': {
-                const variant = await Variant.findOne(variantQuery).populate('modelId');
+                const variant = await getVariant(variantQuery);
                 if (!variant) {
                     reply = `📋 Thông tin cấu hình dòng xe này hiện chưa được đồng bộ toàn diện trên hệ thống. Anh/chị vui lòng cho bot biết rõ tên dòng xe nhé!`;
                     break;
@@ -254,45 +366,18 @@ export const handleChatInteraction = async (req, res) => {
                 }
 
                 // 2. Nếu không có VIN, thực hiện truy vấn tồn kho theo variant
-                const variant = await Variant.findOne(variantQuery);
-                if (entities.color) {
-
-   const colorDoc =
-      await VehicleColor.findOne({
-         variantId: variant._id,
-         name: {
-            $regex: new RegExp(
-               entities.color,
-               "i"
-            )
-         }
-      });
-
-   if (!colorDoc) {
-
-      const availableColors =
-         await VehicleColor.find({
-            variantId: variant._id
-         });
-
-      reply =
-         `❌ Ford ${variant.variantName} không có màu ${entities.color}.\n\n` +
-         `🎨 Các màu hiện có:\n\n` +
-         availableColors
-            .map(c => `• ${c.name}`)
-            .join("\n");
-
-      break;
-   }
-
-   reply =
-      `✅ Ford ${variant.variantName} có màu ${colorDoc.name}.`;
-
-   break;
-}
-                if (
-  message.includes("mau nao") ||
-  message.includes("con mau nao")
+                const variant = await getVariant(variantQuery);
+                if (!variant) {
+                    reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
+                    break;
+                }
+                
+  if (
+  normalizedMessage.includes("mau nao") ||
+   normalizedMessage.includes("con mau nao") ||
+   normalizedMessage.includes("mau nao con hang") ||
+   normalizedMessage.includes("con mau gi") ||
+   normalizedMessage.includes("mau gi con")
 ) {
 
   const inventories =
@@ -326,44 +411,9 @@ export const handleChatInteraction = async (req, res) => {
 
   break;
 }
-                if (!variant) {
-                    reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
-                    break;
-                }
+                
 
-                if (entities.color) {
-
-  const colorDoc =
-    (
-      await VehicleColor.find({
-        variantId: variant._id
-      })
-    ).find(c =>
-      cleanText(c.name)
-        .includes(
-          entities.color
-        )
-    );
-
-  if (colorDoc) {
-
-    const stockCount =
-      await Inventory.countDocuments({
-        variantId: variant._id,
-        colorId: colorDoc._id,
-        status: "Trong kho"
-      });
-
-    reply =
-      `📦 TỒN KHO MÀU XE\n` +
-      `──────────────────\n` +
-      `🚗 ${variant.variantName}\n` +
-      `🎨 ${colorDoc.name}\n` +
-      `📊 Hiện còn ${stockCount} xe trong kho`;
-
-    break;
-  }
-}
+                
                 let inventoryQuery = {
    variantId: variant._id,
    status: "Trong kho"
@@ -371,18 +421,52 @@ export const handleChatInteraction = async (req, res) => {
 
 if (entities.color) {
 
-   const colorDoc = (
-  await VehicleColor.find({
-    variantId: variant._id
-  })
-).find(c =>
-  cleanText(c.name).includes(entities.color)
-);
+   const colorDoc =
+      (
+         await VehicleColor.find({
+            variantId: variant._id
+         })
+      ).find(c =>
+         cleanText(c.name)
+            .includes(
+               cleanText(
+                  entities.color
+               )
+            )
+      );
 
-   if (colorDoc) {
-      inventoryQuery.colorId =
-         colorDoc._id;
+   if (!colorDoc) {
+
+      const colors =
+         await VehicleColor.find({
+            variantId: variant._id
+         });
+
+      reply =
+         `❌ ${variant.variantName} không có màu ${entities.color}.\n\n` +
+         `🎨 Các màu hiện có:\n\n` +
+         colors
+            .map(c => `• ${c.name}`)
+            .join("\n");
+
+      break;
    }
+
+   const stockCount =
+      await Inventory.countDocuments({
+         variantId: variant._id,
+         colorId: colorDoc._id,
+         status: "Trong kho"
+      });
+
+   reply =
+      `📦 TỒN KHO MÀU XE\n` +
+      `──────────────────\n` +
+      `🚗 ${variant.variantName}\n` +
+      `🎨 ${colorDoc.name}\n` +
+      `📊 Hiện còn ${stockCount} xe trong kho`;
+
+   break;
 }
 
 const stockItems =
@@ -410,8 +494,63 @@ const stockItems =
             // 🎨 LUỒNG TRA CỨU DANH SÁCH MÀU NGOẠI THẤT
             case 'COLOR_QUERY': {
 
-  const variant = await Variant.findOne(variantQuery)
-    .populate('modelId');
+if (
+   chatMemory[userId].modelName &&
+   !chatMemory[userId].variantName
+) {
+
+   const model =
+      await VehicleModel.findOne({
+         name: {
+            $regex: new RegExp(
+               chatMemory[userId].modelName,
+               "i"
+            )
+         }
+      });
+      if (!model) {
+   reply = "❌ Không tìm thấy dòng xe.";
+   break;
+}
+
+   const variants =
+      await Variant.find({
+         modelId: model._id
+      });
+
+      
+   let allColors = [];
+
+   for (const v of variants) {
+
+      const colors =
+         await VehicleColor.find({
+            variantId: v._id
+         });
+
+      allColors.push(...colors);
+   }
+
+   const uniqueColors =
+[
+   ...new Map(
+      allColors.map(c => [
+         cleanText(c.name),
+         c.name
+      ])
+   ).values()
+];
+   reply =
+      `🎨 Ford ${model.name} hiện có các màu:\n\n` +
+      uniqueColors
+         .map(c => `• ${c}`)
+         .join("\n");
+
+   break;
+}
+
+const variant =
+   await getVariant(variantQuery);
 
   if (!variant) {
     reply =
@@ -435,9 +574,13 @@ const stockItems =
 
   if (entities.color) {
 
-    const colorDoc = colors.find(c =>
-      cleanText(c.name).includes(entities.color)
-    );
+    const colorDoc =
+   colors.find(
+      c => cleanText(c.name) === cleanText(entities.color)
+   ) ||
+   colors.find(
+      c => cleanText(c.name).includes(cleanText(entities.color))
+   );
 
     if (!colorDoc) {
       reply =
@@ -448,10 +591,10 @@ const stockItems =
     // Xem ảnh màu
 
     if (
-      message.includes("xem") ||
-      message.includes("anh") ||
-      message.includes("hinh")
-    ) {
+      normalizedMessage.includes("xem") ||
+      normalizedMessage.includes("anh") ||
+      normalizedMessage.includes("hinh")
+) {
 
       reply =
         `🎨 ${variant.variantName} màu ${colorDoc.name}\n\n`;
@@ -494,7 +637,7 @@ const stockItems =
 
             // 🏦 HỖ TRỢ GIẢI PHÁP TÀI CHÍNH TRẢ GÓP NGÂN HÀNG
             case 'INSTALLMENT_QUERY': {
-                const variant = await Variant.findOne(variantQuery).populate('modelId');
+                const variant = await getVariant(variantQuery);
                 const price = variant?.basePrice || 889000000;
                 const displayCar = variant ? `Ford ${variant.modelId?.name || 'Territory'} (${variant.variantName})` : "xe Ford chính hãng";
                 
@@ -514,30 +657,20 @@ const stockItems =
                 let matched = null; let maxScore = 0;
                 const cleanMsg = cleanText(message);
 
-for (let p of problems) {
-
-   for (let symptom of p.symptoms) {
-
-      const cleanSymptom =
-         cleanText(symptom);
-
-      if (
-         cleanMsg.includes(cleanSymptom)
-      ) {
-         matched = p;
-         maxScore = 999;
-         break;
-      }
+for (const problem of problems) {
+   for (const symptom of problem.symptoms) {
 
       const score =
-         stringSimilarity.compareTwoStrings(
-            cleanMsg,
-            cleanSymptom
-         );
+         cleanMsg.includes(cleanText(symptom))
+            ? 999
+            : stringSimilarity.compareTwoStrings(
+                  cleanMsg,
+                  cleanText(symptom)
+              );
 
       if (score > maxScore) {
          maxScore = score;
-         matched = p;
+         matched = problem;
       }
    }
 }
