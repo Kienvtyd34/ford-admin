@@ -40,7 +40,8 @@ export const processSemanticAI = async (userId, rawMessage) => {
     SPECS_QUERY: 0,
     TECHNICAL_SUPPORT: 0,
     NEWS_QUERY: 0,
-    CONSULTING_QUERY: 0
+    CONSULTING_QUERY: 0,
+    IMAGE_QUERY: 0
   };
 
   const keywordWeights = {
@@ -79,8 +80,7 @@ export const processSemanticAI = async (userId, rawMessage) => {
  "co nhung mau nao",
  "co mau nao",
  "mau xe",
- "xem mau",
- "xem anh"
+ "xem mau"
 ],
 SPECS_QUERY: [
   "thong so",
@@ -130,7 +130,24 @@ SPECS_QUERY: [
  "uu dai",
  "ra mat",
  "launch",
- "the he moi"
+ "the he moi",
+ "bai viet",
+"tin moi",
+"thang nay",
+"showroom",
+"ra mat",
+"ford viet nam",
+"su kien moi",
+"everest 2026",
+"territory 2026",
+"ranger 2026"
+],
+IMAGE_QUERY: [
+   "xem anh",
+   "anh xe",
+   "hinh xe",
+   "hinh anh",
+   "xem hinh"
 ],
 
    CONSULTING_QUERY: [
@@ -256,29 +273,22 @@ SPECS_QUERY: [
 console.log("INTENT SCORES:", intentScores);
 
 const stockPriorityWords = [
-  "con",
-  "ton",
-  "kho",
-  "may chiec",
+  "con xe",
+  "con hang",
+  "ton kho",
+  "giao ngay",
   "bao nhieu xe",
   "so luong"
 ];
 
 if (
   stockPriorityWords.some(w =>
-    message.includes(w)
+   new RegExp(`\\b${w}\\b`).test(message)
   )
 ) {
   intentScores.STOCK_QUERY += 5;
 }
-  let maxScore = 0;
-
-  for (const [intentName, score] of Object.entries(intentScores)) {
-    if (score > maxScore) {
-      maxScore = score;
-      intent = intentName;
-    }
-  }
+  
 
   // =========================
   // MODEL DETECTION
@@ -361,9 +371,10 @@ if (
           );
 
         if (
-          score > bestScore &&
-          score > 0.75
-        ) {
+  normalized.length >= 12 &&
+  score > bestScore &&
+  score > 0.93
+){
           bestScore = score;
           entities.variantName =
             variant.variantName;
@@ -455,13 +466,7 @@ if (askingDriveTrain) {
   // =========================
 
  const colorAliases = {
-  do: ["do", "mau do"],
-  trang: ["trang", "mau trang"],
-  den: ["den", "mau den"],
-  bac: ["bac", "mau bac"],
-  xanh: ["xanh"],
-  xam: ["xam", "mau xam"],
-   xanh_la: [
+  xanh_la: [
      "xanh la",
      "mau xanh la"
   ],
@@ -470,6 +475,12 @@ if (askingDriveTrain) {
      "xanh duong",
      "mau xanh duong"
   ],
+  do: ["do", "mau do"],
+  trang: ["trang", "mau trang"],
+  den: ["den", "mau den"],
+  bac: ["bac", "mau bac"],
+  xanh: ["xanh"],
+  xam: ["xam", "mau xam"]
 };
 
 for (const [color, aliases] of Object.entries(colorAliases)) {
@@ -504,49 +515,61 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
    "ty"
 ];
 
-  if (numbers) {
-    if (
-      numbers.length >= 2 &&
-      /(đến|toi|tới|-)/i.test(message)
-    ) {
-      const val1 = parseInt(numbers[0]);
-      const val2 = parseInt(numbers[1]);
+if (numbers) {
 
-      const multiplier =
-  message.includes("ty")
-    ? 1000000000
-    : 1000000;
-
-      entities.minBudget = val1 * multiplier;
-      entities.maxBudget = val2 * multiplier;
-    } else if (numbers.length === 1) {
-      const value = parseInt(numbers[0]);
-
-      const multiplier =
-  message.includes("ty")
-    ? 1000000000
-    : 1000000;
-
-      const budget = value * multiplier;
-
-      if (message.includes("duoi")) {
-  entities.maxBudget = budget;
-} else if (message.includes("tren")) {
-  entities.minBudget = budget;
+  if (
+   message.includes("trieu") ||
+   message.includes("tr")
+){
+   multiplier = 1000000;
 }
-    }
+else if (
+   message.includes("ty")
+){
+   multiplier = 1000000000;
+}
+
+  const budget = value * multiplier;
+
+  // dưới 800tr
+  if (message.includes("duoi")) {
+
+    entities.maxBudget = budget;
+
   }
+
+  // trên 800tr
+  else if (message.includes("tren")) {
+
+    entities.minBudget = budget;
+
+  }
+
+  // từ 800 đến 1 tỷ
+  else if (
+    numbers.length >= 2 &&
+    /(den|toi|tu.*den|-)/i.test(message)
+  ) {
+
+    const value2 = parseInt(numbers[1]);
+
+    entities.minBudget = value * multiplier;
+    entities.maxBudget = value2 * multiplier;
+
+  }
+
+  // mặc định "tầm 800tr"
+  else {
+
+    entities.minBudget = budget * 0.8;
+    entities.maxBudget = budget * 1.2;
+
+  }
+}
 
   // =========================
   // SEATS
   // =========================
-if (
-   entities.maxBudget ||
-   entities.minBudget ||
-   entities.seats
-) {
-   intentScores.CONSULTING_QUERY += 3;
-}
   if (
   message.includes("5 cho") ||
   message.includes("5 nguoi")
@@ -562,7 +585,33 @@ if (
 ) {
   entities.seats = 7;
 }
+if (entities.feature) {
+  intentScores.SPECS_QUERY += 5;
+}
 
+if (entities.color) {
+  intentScores.COLOR_QUERY += 5;
+}
+
+if (entities.seats) {
+  intentScores.CONSULTING_QUERY += 5;
+}
+
+if (
+  entities.maxBudget ||
+  entities.minBudget
+) {
+  intentScores.CONSULTING_QUERY += 5;
+}
+
+let maxScore = 0;
+
+for (const [intentName, score] of Object.entries(intentScores)) {
+  if (score > maxScore) {
+    maxScore = score;
+    intent = intentName;
+  }
+}
   console.log("MESSAGE:", message);
 console.log("INTENT:", intent);
 console.log("ENTITIES:", entities);
