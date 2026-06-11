@@ -35,6 +35,21 @@ if (
         const { intent, entities } = await processSemanticAI(userId, message);
         let finalIntent = intent;
 
+        if (entities.vin) {
+    finalIntent = "STOCK_QUERY";
+} 
+// Ưu tiên 2: Nếu có feature (tính năng) nhưng intent lại là DEFAULT -> Ép về SPECS_QUERY
+else if (entities.feature && finalIntent === "DEFAULT") {
+    finalIntent = "SPECS_QUERY";
+}
+// Ưu tiên 3: Nếu có màu sắc nhưng intent lại là DEFAULT -> Ép về COLOR_QUERY
+else if (entities.color && finalIntent === "DEFAULT") {
+    finalIntent = "COLOR_QUERY";
+}
+// Ưu tiên 4: Nếu có budget hoặc số chỗ ngồi -> Đảm bảo là CONSULTING_QUERY
+else if ((entities.minBudget || entities.maxBudget || entities.seats) && finalIntent === "DEFAULT") {
+    finalIntent = "CONSULTING_QUERY";
+}
 if (
     (
         normalizedMessage.includes("xem anh") ||
@@ -497,148 +512,57 @@ const stockItems =
                 break;
             }
 
-            // 🎨 LUỒNG TRA CỨU DANH SÁCH MÀU NGOẠI THẤT
             case 'COLOR_QUERY': {
-
-if (
-   chatMemory[userId].modelName &&
-   !chatMemory[userId].variantName
-) {
-
-   const model =
-      await VehicleModel.findOne({
-         name: {
-            $regex: new RegExp(
-               chatMemory[userId].modelName,
-               "i"
-            )
-         }
-      });
-      if (!model) {
-   reply = "❌ Không tìm thấy dòng xe.";
-   break;
-}
-
-   const variants =
-      await Variant.find({
-         modelId: model._id
-      });
-
-      
-   let allColors = [];
-
-   for (const v of variants) {
-
-      const colors =
-         await VehicleColor.find({
-            variantId: v._id
-         });
-
-      allColors.push(...colors);
-   }
-
-   const uniqueColors =
-[
-   ...new Map(
-      allColors.map(c => [
-         cleanText(c.name),
-         c.name
-      ])
-   ).values()
-];
-   reply =
-      `🎨 Ford ${model.name} hiện có các màu:\n\n` +
-      uniqueColors
-         .map(c => `• ${c}`)
-         .join("\n");
-
-   break;
-}
-
-const variant =
-   await getVariant(variantQuery);
-
-  if (!variant) {
-    reply =
-      "🎨 Anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản để em tra cứu màu sắc chính xác ạ.";
-    break;
-  }
-
-  const colors = await VehicleColor.find({
-    variantId: variant._id
-  });
-
-  if (!colors.length) {
-    reply =
-      `🎨 Hiện chưa có dữ liệu màu cho ${variant.variantName}.`;
-    break;
-  }
-
-  // ======================
-  // HỎI MÀU CỤ THỂ
-  // ======================
-
-  if (entities.color) {
-
-    const colorDoc =
-   colors.find(
-      c => cleanText(c.name) === cleanText(entities.color)
-   ) ||
-   colors.find(
-      c => cleanText(c.name).includes(cleanText(entities.color))
-   );
-
-    if (!colorDoc) {
-      reply =
-        `❌ ${variant.variantName} hiện không có màu ${entities.color}.`;
-      break;
+    // 1. Lấy dữ liệu model hoặc variant từ memory
+    let model = null;
+    if (chatMemory[userId].modelName) {
+        model = await VehicleModel.findOne({ 
+            name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
+        });
     }
 
-    // Xem ảnh màu
+    // 2. Nếu có Variant (hỏi cụ thể phiên bản)
+    const variant = await getVariant(variantQuery);
+    
+    if (variant) {
+        const colors = await VehicleColor.find({ variantId: variant._id });
+        
+        // Người dùng hỏi màu cụ thể: "Bản X có màu Y không?"
+        if (entities.color) {
+            const targetColor = cleanText(entities.color);
+            const colorDoc = colors.find(c => cleanText(c.name).includes(targetColor));
 
-    if (
-      normalizedMessage.includes("xem") ||
-      normalizedMessage.includes("anh") ||
-      normalizedMessage.includes("hinh")
-) {
-
-      reply =
-        `🎨 ${variant.variantName} màu ${colorDoc.name}\n\n`;
-
-      if (colorDoc.images?.length) {
-
-        reply +=
-          `📸 Hình ảnh thực tế:\n\n` +
-          colorDoc.images.join("\n");
-
-      } else {
-
-        reply +=
-          "📷 Hiện chưa có ảnh cho màu này.";
-
-      }
-
-      break;
+            if (!colorDoc) {
+                reply = `❌ Rất tiếc, ${variant.variantName} không có màu ${entities.color}.\n` +
+                        `🎨 Các màu hiện có: ${colors.map(c => c.name).join(', ')}.`;
+            } else {
+                // Kiểm tra xem user có muốn xem ảnh không
+                if (normalizedMessage.includes("xem") || normalizedMessage.includes("anh") || normalizedMessage.includes("hinh")) {
+                    reply = colorDoc.images?.length > 0 
+                        ? `🎨 ${variant.variantName} màu ${colorDoc.name}:\n📸 Hình ảnh thực tế:\n${colorDoc.images.join("\n")}`
+                        : `📷 Màu ${colorDoc.name} hiện chưa có ảnh mẫu. Anh/chị đợi em cập nhật nhé!`;
+                } else {
+                    reply = `✅ Có ạ! ${variant.variantName} có màu ${colorDoc.name}.`;
+                }
+            }
+        } else {
+            // Liệt kê toàn bộ màu của phiên bản
+            reply = `🎨 ${variant.variantName} hiện có ${colors.length} màu:\n• ${colors.map(c => c.name).join('\n• ')}`;
+        }
+    } 
+    // 3. Nếu chỉ có Model (hỏi chung chung: "Territory có màu gì?")
+    else if (model) {
+        const variants = await Variant.find({ modelId: model._id });
+        const allColors = await VehicleColor.find({ variantId: { $in: variants.map(v => v._id) } });
+        const uniqueColors = [...new Set(allColors.map(c => c.name))];
+        
+        reply = `🎨 Dòng xe Ford ${model.name} hiện có các màu ngoại thất:\n• ${uniqueColors.join('\n• ')}\n\n` +
+                `Anh/chị muốn xem màu của phiên bản nào cụ thể không ạ?`;
+    } 
+    else {
+        reply = "Dạ, anh/chị đang quan tâm đến màu của dòng xe nào ạ? (Ví dụ: Ford Territory, Everest...)";
     }
-
-    reply =
-      `🎨 ${variant.variantName} hiện có màu ${colorDoc.name}.`;
-
     break;
-  }
-
-  // ======================
-  // LIỆT KÊ TOÀN BỘ MÀU
-  // ======================
-
-  reply =
-    `🎨 ${variant.variantName} hiện có ${colors.length} màu:\n\n`;
-
-  colors.forEach(color => {
-    reply += `• ${color.name}\n`;
-  });
-
-  break;
 }
 
             // 🏦 HỖ TRỢ GIẢI PHÁP TÀI CHÍNH TRẢ GÓP NGÂN HÀNG
@@ -681,7 +605,7 @@ for (const problem of problems) {
    }
 }
 
-                if (maxScore > 0.18 && matched) {
+                if (maxScore > 0.4 && matched) {
                     reply = `🛠️ **CỐ VẤN DỊCH VỤ SỐ FORD QUẾ VÕ CHẨN ĐOÁN** 🛠️\n` +
                             `──────────────────\n` +
                             `• 🚨 **Sự cố hệ thống:** ${matched.title}\n` +

@@ -106,7 +106,10 @@ SPECS_QUERY: [
 "chay xang",
 "chay dau",
 "autoemergencybrake",
-  "aeb"
+  "aeb",
+  "cua so troi", "cua noc", "co sunroof", "sunroof", 
+  "nhan dien bien bao", "traffic sign", 
+  "suoi ghe", "lam mat ghe", "sac khong day"
 ],
 
    TECHNICAL_SUPPORT: [
@@ -462,7 +465,8 @@ if (normalized.length > 12 && message.includes(normalized)) {
       "autoEmergencyBrake",
 
   "phanh khan cap":
-      "autoEmergencyBrake"
+      "autoEmergencyBrake",
+      
 };
   for (const [k, v] of Object.entries(featureMap)) {
     if (message.includes(k)) {
@@ -567,8 +571,10 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
 // =========================
 
 const numbers = message.match(/\d+/g);
+const budgetKeywords = ["trieu", "tr", "ty", "chai", "cu"];
+const hasMoneyKeyword = budgetKeywords.some(k => message.includes(k));
 
-if (numbers && numbers.length > 0) {
+if (numbers && numbers.length > 0 && hasMoneyKeyword) {
 
   let multiplier = 1000000;
 
