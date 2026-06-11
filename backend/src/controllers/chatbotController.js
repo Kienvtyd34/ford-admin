@@ -1,16 +1,21 @@
 import { processSemanticAI } from "../nlp/nlpManager.js";
 import { generateResponse } from "../engine/responseEngine.js";
+import { getMemory, updateMemory } from "../memory/chatMemory.js";
 
 export const handleChatInteraction = async (req, res) => {
 
   try {
-    const { message } = req.body;
+    const { message, userId = "u1" } = req.body;
 
-    if (!message) {
+    if (!message)
       return res.status(400).json({ text: "Thiếu nội dung" });
-    }
 
-    const { intent, entities } = await processSemanticAI(message);
+    const memory = getMemory(userId);
+
+    const { intent, entities } =
+      await processSemanticAI(message, memory);
+
+    updateMemory(userId, entities);
 
     const reply = await generateResponse({
       intent,
@@ -23,7 +28,7 @@ export const handleChatInteraction = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      text: "Hệ thống tạm lỗi, vui lòng thử lại."
+      text: "Hệ thống tạm lỗi"
     });
   }
 };

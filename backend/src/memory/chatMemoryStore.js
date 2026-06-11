@@ -1,21 +1,12 @@
 const chatMemory = {};
 
 export const getMemory = (userId) => {
-  if (!chatMemory[userId]) {
-    chatMemory[userId] = {
-      modelName: null,
-      variantName: null,
-      color: null,
-      lastIntent: null,
-      updatedAt: Date.now()
-    };
-  }
-  return chatMemory[userId];
+  return chatMemory[userId] || {};
 };
 
 export const updateMemory = (userId, data) => {
   chatMemory[userId] = {
-    ...getMemory(userId),
+    ...(chatMemory[userId] || {}),
     ...data,
     updatedAt: Date.now()
   };
