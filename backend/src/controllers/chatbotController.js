@@ -3,12 +3,8 @@ import { generateResponse } from "../engine/responseEngine.js";
 import { getMemory, updateMemory } from "../memory/chatMemoryStore.js";
 
 export const handleChatInteraction = async (req, res) => {
-
   try {
     const { message, userId = "u1" } = req.body;
-
-    if (!message)
-      return res.status(400).json({ text: "Thiếu nội dung" });
 
     const memory = getMemory(userId);
 
@@ -28,7 +24,7 @@ export const handleChatInteraction = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({
-      text: "Hệ thống tạm lỗi"
+      text: "Hệ thống lỗi"
     });
   }
 };
