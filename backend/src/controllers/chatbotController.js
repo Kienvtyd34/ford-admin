@@ -1,6 +1,6 @@
 import { processSemanticAI } from "../nlp/nlpManager.js";
 import { generateResponse } from "../engine/responseEngine.js";
-import { getMemory, updateMemory } from "../memory/chatMemory.js";
+import { getMemory, updateMemory } from "../memory/chatMemoryStore.js";
 
 export const handleChatInteraction = async (req, res) => {
 
