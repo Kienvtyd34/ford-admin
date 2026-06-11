@@ -184,7 +184,7 @@ router.delete(
 router.post(
   "/confirm-delivery/:bookingId",
   protect,
-  admin,
+  staff,
   confirmDelivery
 );
 
