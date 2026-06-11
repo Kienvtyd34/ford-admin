@@ -22,7 +22,7 @@ import {
   getVariantsByModel
 } from "../controllers/vehicleController.js";
 
-import { protect, staff } from "../middleware/authMiddleware.js";
+import { protect, staff, admin } from "../middleware/authMiddleware.js";
 
 import { uploadCloud } from "../config/cloudinary.js";
 
@@ -46,14 +46,14 @@ router.get(
 router.patch(
   "/inventory/:id",
   protect,
-  staff,
+  admin,
   updateInventory
 );
 
 router.post(
   "/inventory",
   protect,
-  staff,
+  admin,
   addInventory
 );
 
@@ -72,7 +72,7 @@ router.get(
 router.post(
   "/",
   protect,
-  staff,
+  admin,
   uploadCloud.fields([
     {
       name: "images",
@@ -90,7 +90,7 @@ router.post(
 router.patch(
   "/:id",
   protect,
-  staff,
+  admin,
   uploadCloud.fields([
     {
       name: "images",
@@ -108,7 +108,7 @@ router.patch(
 router.delete(
   "/:id",
   protect,
-  staff,
+  admin,
   deleteVehicle
 );
 
@@ -117,16 +117,20 @@ router.delete(
 router.post(
   "/variants",
   protect,
-  staff,
+  admin,
   addVariant
 );
 router.put(
   "/variants/:id",
+  protect,
+  admin,
   updateVariant
 );
 
 router.delete(
   "/variants/:id",
+  protect,
+  admin,
   deleteVariant
 );
 
@@ -141,7 +145,7 @@ router.get(
 router.post(
   "/colors",
   protect,
-  staff,
+  admin,
   uploadCloud.array("images", 5),
   addVehicleColor
 );
@@ -162,7 +166,7 @@ router.get(
 router.patch(
   "/colors/:id",
   protect,
-  staff,
+  admin,
   uploadCloud.array("images", 5),
   updateVehicleColor
 );
@@ -171,7 +175,7 @@ router.patch(
 router.delete(
   "/colors/:id",
   protect,
-  staff,
+  admin,
   deleteVehicleColor
 );
 
@@ -180,7 +184,7 @@ router.delete(
 router.post(
   "/confirm-delivery/:bookingId",
   protect,
-  staff,
+  admin,
   confirmDelivery
 );
 
