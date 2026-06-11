@@ -156,7 +156,6 @@ export const getAllBookings = async (req, res) => {
 
             .populate('user', 'fullName phone email')
 
-            // 🔥 FIX CHÍNH Ở ĐÂY
             .populate({
                 path: 'vehicle',
                 populate: [
@@ -172,11 +171,8 @@ export const getAllBookings = async (req, res) => {
                 ]
             })
 
-            .populate({
-                path: 'confirmedBy',
-                select: 'fullName',
-                options: { strictPopulate: false }
-            })
+            // ✅ FIX HERE
+            .populate('confirmedBy', 'fullName role')
 
             .sort('-createdAt');
 

@@ -39,7 +39,7 @@ const AdminLayout = () => {
             to="/admin/contacts" 
             className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-800 transition-all font-medium text-white"
           >
-            <span className="text-xl">📂</span> Quản lý khách hàng
+            <span className="text-xl">📂</span> Quản lý Yêu cầu & đặt cọc
           </Link>
 
           <Link 

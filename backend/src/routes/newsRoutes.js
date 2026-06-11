@@ -6,6 +6,7 @@ import {
     deleteNews, 
     getNewsBySlug // Đảm bảo đã import hàm này
 } from '../controllers/newsController.js';
+import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -22,12 +23,12 @@ router.get('/:slug', getNewsBySlug);
 // --- ROUTE QUẢN TRỊ (Admin) ---
 
 // 3. Tạo tin tức mới
-router.post('/add', createNews);
+router.post('/add', protect, admin, createNews);
 
 // 4. Cập nhật tin tức bằng ID
-router.put('/:id', updateNews);
+router.put('/:id', protect, admin, updateNews);
 
 // 5. Xóa tin tức bằng ID
-router.delete('/:id', deleteNews);
+router.delete('/:id', protect, admin, deleteNews);
 
 export default router;
