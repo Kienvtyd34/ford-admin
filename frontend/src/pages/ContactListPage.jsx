@@ -54,8 +54,7 @@ const AdminDashboard = () => {
 
     try {
       await api.post(`/vehicles/confirm-delivery/${bookingId}`, {
-        paymentMethod,
-        confirmedBy: currentUser._id
+        paymentMethod
       });
 
       alert("Giao xe thành công!");

@@ -830,10 +830,7 @@ export const getDashboard = async (req, res) => {
 
 export const confirmDelivery = async (req, res) => {
   try {
-
     const { bookingId } = req.params;
-
-    const { confirmedBy } = req.body;
 
     const booking = await Booking.findById(bookingId);
 
@@ -844,33 +841,31 @@ export const confirmDelivery = async (req, res) => {
       });
     }
 
+    // update inventory
     await Inventory.findByIdAndUpdate(
       booking.vehicle,
-      {
-        status: "Đã bán"
-      }
+      { status: "Đã bán" }
     );
 
+    // 🔥 FIX QUAN TRỌNG
     booking.orderStatus = "Completed";
     booking.paymentStatus = "Paid";
-    booking.confirmedBy = confirmedBy;
+    booking.confirmedBy = req.user._id; // 👈 LẤY TỪ TOKEN
 
     await booking.save();
 
     res.json({
-      success: true
+      success: true,
+      data: booking
     });
 
   } catch (err) {
-
     res.status(500).json({
       success: false,
       error: err.message
     });
-
   }
 };
-
 // ================= ADD VARIANT =================
 
 export const addVariant = async (req, res) => {
