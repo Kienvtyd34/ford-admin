@@ -47,7 +47,6 @@ export const processSemanticAI = async (userId, rawMessage) => {
   const keywordWeights = {
     PRICE_QUERY: [
  "gia",
- "bao nhieu",
  "bao gia",
  "gia lan banh",
  "gia niem yet",
@@ -101,7 +100,13 @@ SPECS_QUERY: [
   "4x4",
   "may xang",
   "may dau",
-  "xe dien"
+  "xe dien",
+  "xang",
+"dau",
+"chay xang",
+"chay dau",
+"autoemergencybrake",
+  "aeb"
 ],
 
    TECHNICAL_SUPPORT: [
@@ -391,8 +396,16 @@ if (
   // =========================
   // FEATURE DETECTION
   // =========================
+  if (
+  message.includes("xang") &&
+  message.includes("dau")
+) {
+  entities.feature = "fuel_info";
+}
 
   const featureMap = {
+"chay xang": "fuel_gasoline",
+"chay dau": "fuel_diesel",
     "he dan dong": "drive_info",
 "dan dong": "drive_info",
   "camera 360": "camera360",
@@ -422,7 +435,15 @@ if (
   "may dau": "fuel_diesel",
 
   "xe dien": "fuel_electric",
-  "dong co dien": "fuel_electric"
+  "dong co dien": "fuel_electric",
+  "autoemergencybrake":
+      "autoEmergencyBrake",
+
+  "aeb":
+      "autoEmergencyBrake",
+
+  "phanh khan cap":
+      "autoEmergencyBrake"
 };
   for (const [k, v] of Object.entries(featureMap)) {
     if (message.includes(k)) {
@@ -483,10 +504,18 @@ if (askingDriveTrain) {
 };
 
 for (const [color, aliases] of Object.entries(colorAliases)) {
-  if (aliases.some(alias => message.includes(alias))) {
-    entities.color = color;
-    break;
-  }
+
+   if (
+      aliases.some(alias =>
+         new RegExp(
+            `\\b${cleanText(alias)}\\b`
+         ).test(message)
+      )
+   ) {
+
+      entities.color = color;
+      break;
+   }
 }
 
   // =========================
