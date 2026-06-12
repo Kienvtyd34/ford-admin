@@ -192,46 +192,61 @@ const currentContacts = contacts.slice(
                   <th className="p-3">Khách</th>
                   <th className="p-3">SĐT</th>
                   <th className="p-3">Yêu cầu</th>
+                  <th className="p-3">Ghi chú</th>
                   <th className="p-3">Trạng thái</th>
                   <th className="p-3">Action</th>
                 </tr>
               </thead>
 
               <tbody>
-                {currentContacts.map((c) => (
-                  <tr key={c._id} className="border-b">
-                    <td className="p-3 font-bold">{c.fullName}</td>
-                    <td className="p-3">{c.phone}</td>
+  {currentContacts.map((c) => (
+    <tr key={c._id} className="border-b">
+      <td className="p-3 font-bold">
+        {c.fullName}
+      </td>
 
-                    <td className="p-3">
-                      <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-                        {c.requestType}
-                      </span>
-                    </td>
+      <td className="p-3">
+        {c.phone}
+      </td>
 
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        c.status === 'Đã hoàn thành'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {c.status}
-                      </span>
-                    </td>
+      <td className="p-3">
+        <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+          {c.requestType}
+        </span>
+      </td>
 
-                    <td className="p-3">
-                      {c.status !== 'Đã hoàn thành' && (
-                        <button
-                          onClick={() => handleUpdateContactStatus(c._id)}
-                          className="bg-gray-800 text-white px-3 py-1 rounded text-xs"
-                        >
-                          Xử lý
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+      {/* GHI CHÚ */}
+      <td className="p-3 max-w-xs truncate">
+        {c.message || "-"}
+      </td>
+
+      <td className="p-3">
+        <span
+          className={`px-2 py-1 rounded text-xs ${
+            c.status === "Đã hoàn thành"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+          }`}
+        >
+          {c.status}
+        </span>
+      </td>
+
+      <td className="p-3">
+        {c.status !== "Đã hoàn thành" && (
+          <button
+            onClick={() =>
+              handleUpdateContactStatus(c._id)
+            }
+            className="bg-gray-800 text-white px-3 py-1 rounded text-xs"
+          >
+            Xử lý
+          </button>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
             </table>
             <div className="flex justify-center items-center gap-2 py-4">
 

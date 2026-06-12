@@ -646,7 +646,10 @@ if (entities.feature) {
 }
 
 if (entities.color) {
-  intentScores.COLOR_QUERY += 2;
+  // chỉ tăng COLOR khi KHÔNG phải hỏi tồn kho
+  if (!message.includes("con") && !message.includes("bao nhieu") && !message.includes("ton kho")) {
+    intentScores.COLOR_QUERY += 2;
+  }
 }
 
 if (entities.seats) {
@@ -659,7 +662,17 @@ if (
 ) {
   intentScores.CONSULTING_QUERY += 2;
 }
+const isStockQuestion =
+  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(message);
 
+if (isStockQuestion) {
+  intentScores.STOCK_QUERY += 10;
+}
+
+// COLOR chỉ tăng khi KHÔNG phải stock
+if (entities.color && !isStockQuestion) {
+  intentScores.COLOR_QUERY += 3;
+}
 let maxScore = 0;
 
 for (const [intentName, score] of Object.entries(intentScores)) {

@@ -30,7 +30,7 @@ const contactSchema = new mongoose.Schema({
   message: { type: String },
   status: { 
     type: String, 
-    enum: ['Chờ xử lý', 'Đã liên hệ', 'Đã hoàn thành', 'Hủy bỏ'],
+    enum: ['Chờ xử lý', 'Đã hoàn thành'],
     default: 'Chờ xử lý' 
   },
   noteFromStaff: String
