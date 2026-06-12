@@ -68,7 +68,16 @@ const StaffDashboard = () => {
       const res =
         await api.get("/vehicles/dashboard");
 
-      setDashboard(res.data.data);
+      const d = res.data.data;
+
+setDashboard({
+  totalMonthlyRevenue: d.monthlyRevenue || 0,
+  totalCarsSold: d.totalSold || 0,
+  totalStaffCount: d.staffStats?.length || 0,
+  topSalesPerson: d.staffStats?.[0] || null,
+  monthlyRevenue: d.monthlySales || [],
+  staffStats: d.staffStats || []
+});
 
     } catch (err) {
 
@@ -119,7 +128,7 @@ const StaffDashboard = () => {
 
         <StatCard
           title="Doanh thu tháng"
-          value={`${dashboard.totalMonthlyRevenue.toLocaleString()} VNĐ`}
+          value={`${(dashboard.totalMonthlyRevenue || 0).toLocaleString()} VNĐ`}
           color="text-green-600"
         />
 
@@ -221,7 +230,7 @@ const StaffDashboard = () => {
               />
 
               <Bar
-                dataKey="totalRevenue"
+                dataKey="revenue"
                 radius={[8, 8, 0, 0]}
               >
                 {dashboard.staffStats.map(
@@ -347,8 +356,7 @@ const StaffDashboard = () => {
                     </td>
 
                     <td className="py-4 text-green-600 font-bold">
-                      {staff.totalRevenue.toLocaleString()}{" "}
-                      VNĐ
+                      {(staff.revenue || 0).toLocaleString()} VNĐ
                     </td>
 
                   </tr>

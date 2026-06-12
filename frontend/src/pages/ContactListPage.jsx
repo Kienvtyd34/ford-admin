@@ -5,6 +5,18 @@ import api from '../api/axios';
 const AdminDashboard = () => {
   const [contacts, setContacts] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [contactPage, setContactPage] = useState(1);
+
+const CONTACTS_PER_PAGE = 25;
+
+const totalContactPages = Math.ceil(
+  contacts.length / CONTACTS_PER_PAGE
+);
+
+const currentContacts = contacts.slice(
+  (contactPage - 1) * CONTACTS_PER_PAGE,
+  contactPage * CONTACTS_PER_PAGE
+);
   const navigate = useNavigate();
 
   // ===== USER =====
@@ -186,22 +198,15 @@ const AdminDashboard = () => {
               </thead>
 
               <tbody>
-                {contacts.map((c) => (
+                {currentContacts.map((c) => (
                   <tr key={c._id} className="border-b">
                     <td className="p-3 font-bold">{c.fullName}</td>
                     <td className="p-3">{c.phone}</td>
-                    <td className="p-3">{c.email || "---"}</td>
 
                     <td className="p-3">
                       <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
                         {c.requestType}
                       </span>
-                    </td>
-
-                    <td className="p-3">
-                      {c.appointmentDate
-                        ? new Date(c.appointmentDate).toLocaleDateString('vi-VN')
-                        : "---"}
                     </td>
 
                     <td className="p-3">
@@ -228,6 +233,58 @@ const AdminDashboard = () => {
                 ))}
               </tbody>
             </table>
+            <div className="flex justify-center items-center gap-2 py-4">
+
+  <button
+    disabled={contactPage === 1}
+    onClick={() =>
+      setContactPage(contactPage - 1)
+    }
+    className={`px-3 py-1 rounded ${
+      contactPage === 1
+        ? "bg-gray-200 cursor-not-allowed"
+        : "bg-blue-500 text-white"
+    }`}
+  >
+    ← Trước
+  </button>
+
+  {Array.from(
+    { length: totalContactPages },
+    (_, i) => i + 1
+  ).map((page) => (
+    <button
+      key={page}
+      onClick={() =>
+        setContactPage(page)
+      }
+      className={`px-3 py-1 rounded ${
+        page === contactPage
+          ? "bg-blue-600 text-white"
+          : "bg-gray-200"
+      }`}
+    >
+      {page}
+    </button>
+  ))}
+
+  <button
+    disabled={
+      contactPage === totalContactPages
+    }
+    onClick={() =>
+      setContactPage(contactPage + 1)
+    }
+    className={`px-3 py-1 rounded ${
+      contactPage === totalContactPages
+        ? "bg-gray-200 cursor-not-allowed"
+        : "bg-blue-500 text-white"
+    }`}
+  >
+    Sau →
+  </button>
+
+</div>
           </div>
         </section>
 

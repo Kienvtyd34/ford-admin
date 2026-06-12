@@ -85,13 +85,6 @@ const InventoryCard = ({ unit, onEdit }) => {
                     )}
                 </div>
             </div>
-
-            <button
-                onClick={() => onEdit(unit)}
-                className="bg-blue-900 text-white px-5 py-2 rounded-lg text-xs font-bold"
-            >
-                Sửa
-            </button>
         </div>
     );
 };
@@ -249,48 +242,6 @@ const VehicleInventory = () => {
                 ))}
             </div>
 
-            {/* MODAL */}
-            {openModal && editing && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-
-                    <div className="bg-white p-6 rounded-2xl w-[400px]">
-
-                        <form onSubmit={handleSave} className="space-y-3">
-
-                            {/* COLOR */}
-                            <select
-                                value={editing.colorId}
-                                onChange={(e) =>
-                                    setEditing({ ...editing, colorId: e.target.value })
-                                }
-                                className="w-full border p-2 rounded"
-                            >
-                                {colors.map(c => (
-                                    <option key={c._id} value={c._id}>
-                                        {c.name}
-                                    </option>
-                                ))}
-                            </select>
-
-                            {/* PRICE */}
-                            <input
-                                type="number"
-                                value={editing.importPrice}
-                                onChange={(e) =>
-                                    setEditing({ ...editing, importPrice: Number(e.target.value) })
-                                }
-                                className="w-full border p-2 rounded"
-                            />
-
-                            <button className="w-full bg-blue-900 text-white py-2 rounded">
-                                Lưu
-                            </button>
-
-                        </form>
-
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
