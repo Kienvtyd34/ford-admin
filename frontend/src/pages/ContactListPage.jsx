@@ -179,9 +179,7 @@ const AdminDashboard = () => {
                 <tr>
                   <th className="p-3">Khách</th>
                   <th className="p-3">SĐT</th>
-                  <th className="p-3">Email</th>
                   <th className="p-3">Yêu cầu</th>
-                  <th className="p-3">Ngày hẹn</th>
                   <th className="p-3">Trạng thái</th>
                   <th className="p-3">Action</th>
                 </tr>

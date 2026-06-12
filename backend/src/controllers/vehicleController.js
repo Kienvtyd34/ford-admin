@@ -798,22 +798,124 @@ export const addInventory = async (req, res) => {
 
 // ================= DASHBOARD =================
 
-export const getDashboard = async (req, res) => {
+import User from "../models/User.js";
+
+export const getSalesDashboard = async (req, res) => {
   try {
 
-    const inventory =
-      await Inventory.find().lean();
+    const bookings = await Booking.find({
+      orderStatus: "Completed"
+    })
+      .populate("confirmedBy", "fullName")
+      .populate({
+        path: "vehicle",
+        populate: {
+          path: "variantId",
+          populate: {
+            path: "modelId"
+          }
+        }
+      });
+
+    // ===================
+    // Tổng xe bán
+    // ===================
+
+    const totalSold = bookings.length;
+
+    // ===================
+    // Doanh số tháng
+    // ===================
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    let monthlyRevenue = 0;
+
+    bookings.forEach((b) => {
+
+      const d = new Date(b.createdAt);
+
+      if (
+        d.getMonth() === currentMonth &&
+        d.getFullYear() === currentYear
+      ) {
+
+        monthlyRevenue +=
+          b.vehicle?.importPrice || 0;
+      }
+    });
+
+    // ===================
+    // NHÂN VIÊN
+    // ===================
+
+    const staffMap = {};
+
+    bookings.forEach((b) => {
+
+      const staffId =
+        b.confirmedBy?._id?.toString();
+
+      if (!staffId) return;
+
+      if (!staffMap[staffId]) {
+
+        staffMap[staffId] = {
+          name: b.confirmedBy.fullName,
+          carsSold: 0,
+          revenue: 0
+        };
+      }
+
+      staffMap[staffId].carsSold += 1;
+
+      staffMap[staffId].revenue +=
+        b.vehicle?.importPrice || 0;
+    });
+
+    const staffStats =
+      Object.values(staffMap)
+        .sort(
+          (a, b) =>
+            b.revenue - a.revenue
+        );
+
+    // ===================
+    // SALES MONTH
+    // ===================
+
+    const salesByMonth = {};
+
+    bookings.forEach((b) => {
+
+      const d = new Date(b.createdAt);
+
+      const key =
+        `${d.getMonth() + 1}/${d.getFullYear()}`;
+
+      if (!salesByMonth[key]) {
+        salesByMonth[key] = 0;
+      }
+
+      salesByMonth[key] +=
+        b.vehicle?.importPrice || 0;
+    });
+
+    const monthlySales =
+      Object.entries(salesByMonth)
+        .map(([month, value]) => ({
+          month,
+          value
+        }));
 
     res.json({
       success: true,
       data: {
-        totalCars: inventory.length,
-        totalValue:
-          inventory.reduce(
-            (sum, item) =>
-              sum + (item.importPrice || 0),
-            0
-          )
+        totalSold,
+        monthlyRevenue,
+        staffStats,
+        monthlySales
       }
     });
 
