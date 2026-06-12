@@ -10,7 +10,7 @@ import {
   confirmDelivery,
   addInventory,
   addVariant,
-  getDashboard,
+  getSalesDashboard,
   addVehicleColor,
   getColorsByModel,
   deleteVehicleColor,
@@ -63,7 +63,7 @@ router.get(
   "/dashboard",
   protect,
   staff,
-  getDashboard
+  getSalesDashboard
 );
 
 // ================= VEHICLE =================
