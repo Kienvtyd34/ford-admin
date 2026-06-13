@@ -102,10 +102,10 @@ SPECS_QUERY: [
   "may dau",
   "xe dien",
   "xang",
-"dau",
-"chay xang",
-"chay dau",
-"autoemergencybrake",
+  "dau",
+  "chay xang",
+  "chay dau",
+  "autoemergencybrake",
   "aeb",
   "cua so troi", "cua noc", "co sunroof", "sunroof", 
   "nhan dien bien bao", "traffic sign", 
@@ -119,7 +119,6 @@ SPECS_QUERY: [
    "khong no",
    "abs",
    "u3000",
-
    "giat so",
    "vao so bi giat",
    "sang so bi giat",
@@ -220,7 +219,7 @@ IMAGE_QUERY: [
 
  "2 ty",
 
- "3 ty",
+ "1 ty ruoi",
 
  "cao cap",
 

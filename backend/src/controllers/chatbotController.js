@@ -149,148 +149,204 @@ chatMemory[userId].updatedAt = Date.now();
         // 4. ĐIỀU PHỐI DỮ LIỆU ĐẦU RA (MAPPED TRỰC TIẾP SCHEMA GỐC)
         // =========================================================
         const hasEnoughInfo = ({ seats, maxBudget, minBudget }, msg) =>
-   seats ||
-   maxBudget ||
-   minBudget ||
-   msg.includes("7 chỗ") ||
-   msg.includes("5 người") ||
-   msg.includes("bán tải") ||
-   msg.includes("gia đình");
+            seats ||
+            maxBudget ||
+            minBudget ||
+            msg.includes("7 chỗ") ||
+            msg.includes("5 người") ||
+            msg.includes("bán tải") ||
+            msg.includes("gia đình");
 
-        switch (finalIntent){
-            
-            // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
-            case "CONSULTING_QUERY": {
+                    switch (finalIntent){
+                        
+                        // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
+                        case "CONSULTING_QUERY": {
 
-   // 7 chỗ
-   if (entities.seats === 7) {
+            // 7 chỗ
+            if (entities.seats === 7) {
 
-      reply =
-         "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người.";
+                reply =
+                    "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người.";
 
-   }
-
-   // 5 chỗ đi phố
-   else if (
-      entities.seats === 5 ||
-      normalizedMessage.includes("di pho")
-   ) {
-
-      reply =
-         "🚗 Ford Territory là mẫu CUV 5 chỗ phù hợp nhất cho gia đình đi phố, rộng rãi, nhiều công nghệ và dễ vận hành.";
-
-   }
-
-   // offroad
-   else if (
-      normalizedMessage.includes("offroad") ||
-      normalizedMessage.includes("off road") ||
-      normalizedMessage.includes("phuot")
-   ) {
-
-      reply =
-         "🚗 Ford Ranger Raptor hoặc Everest Wildtrak là lựa chọn phù hợp.";
-
-   }
-
-   // ngân sách 2 tỷ
-   else if (
-   (entities.minBudget || 0) >= 1800000000 ||
-   (entities.maxBudget || 0) >= 2000000000
-){
-
-      reply =
-         "🚗 Với ngân sách khoảng 2 tỷ, anh/chị có thể lựa chọn Ford Ranger Raptor hoặc các phiên bản Everest cao cấp nhất.";
-
-   }
-
-   // dưới 1 tỷ
-   else if (
-      entities.maxBudget &&
-      entities.maxBudget <= 1000000000
-   ) {
-
-      reply =
-         "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend, Titanium hoặc Sport.";
-
-   }
-
-   else {
-    if (hasEnoughInfo(entities, message)) {
-        reply =
-            "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n" +
-            "• Ford Territory (đi phố, gia đình nhỏ)\n" +
-            "• Ford Everest (gia đình đông người 7 chỗ)\n" +
-            "• Ford Ranger (bán tải, đa dụng)\n\n" +
-            "Anh/chị muốn em so sánh chi tiết dòng nào không ạ?";
-    } else {
-        reply =
-            "Dạ anh/chị cho em biết thêm nhu cầu (7 chỗ / bán tải / đi phố) để em tư vấn chính xác hơn ạ.";
-    }
-}
-
-   break;
-}
-
-            // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
-            case 'PRICE_QUERY': {
-                let variant;
-
-if (chatMemory[userId].variantName) {
-
-    variant = await getVariant(variantQuery);
-
-} else if (chatMemory[userId].modelName) {
-
-    const model = await VehicleModel.findOne({
-        name: {
-            $regex: new RegExp(
-                chatMemory[userId].modelName,
-                "i"
-            )
-        }
-    });
-    if (!model) {
-   reply = "❌ Không tìm thấy dòng xe.";
-   break;
-}
-
-    const variants =
-        await Variant.find({
-            modelId: model._id
-        });
-
-        
-    reply =
-        `🚗 Ford ${model.name}\n\n` +
-        variants
-          .map(v =>
-             `• ${v.variantName}: ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
-          )
-          .join("\n");
-
-    break;
-
-} else {
-
-    variant = await getVariant(variantQuery);
-
-}
-                if (!variant) {
-                    reply = `✨ **Ford Quế Võ Thông Báo** ✨\n\nDạ, thông tin giá bán của dòng xe này đang được cập nhật. Anh/chị vui lòng cung cấp rõ tên dòng xe hoặc phiên bản cụ thể để bot check giá chính xác nhé!`;
-                } else {
-                    const modelName = variant.modelId?.name || "Territory";
-                    reply = `💰 **BÁO GIÁ NIÊM YẾT CHÍNH HÃNG** 💰\n` +
-                            `──────────────────\n` +
-                            `🚗 **Dòng xe:** Ford ${modelName}\n` +
-                            `⚙️ **Phiên bản:** ${variant.variantName}\n` +
-                            `💵 **Giá công bố:** ${variant.basePrice ? variant.basePrice.toLocaleString('vi-VN') : 'Đang cập nhật'} VNĐ\n` +
-                            `──────────────────\n` +
-                            `*(Lưu ý: Giá trên chưa bao gồm chương trình giảm thuế và các gói quà tặng phụ kiện tại đại lý).*`;
-                }
-                break;
             }
 
+            // 5 chỗ đi phố
+            else if (
+                entities.seats === 5 ||
+                normalizedMessage.includes("di pho")
+            ) {
+
+                reply =
+                    "🚗 Ford Territory là mẫu CUV 5 chỗ phù hợp nhất cho gia đình đi phố, rộng rãi, nhiều công nghệ và dễ vận hành.";
+
+            }
+
+            // offroad
+            else if (
+                normalizedMessage.includes("offroad") ||
+                normalizedMessage.includes("off road") ||
+                normalizedMessage.includes("phuot")
+            ) {
+
+                reply =
+                    "🚗 Ford Ranger Raptor hoặc Everest Wildtrak là lựa chọn phù hợp.";
+
+            }
+
+            // ngân sách 2 tỷ
+            else if (
+            (entities.minBudget || 0) >= 1800000000 ||
+            (entities.maxBudget || 0) >= 2000000000
+            ){
+
+                reply =
+                    "🚗 Với ngân sách khoảng 2 tỷ, anh/chị có thể lựa chọn Ford Ranger Raptor hoặc các phiên bản Everest cao cấp nhất.";
+
+            }
+
+            // dưới 1 tỷ
+            else if (
+                entities.maxBudget &&
+                entities.maxBudget <= 1000000000
+            ) {
+
+                reply =
+                    "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend, Titanium hoặc Sport.";
+
+            }
+
+            else {
+                if (hasEnoughInfo(entities, message)) {
+                    reply =
+                        "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n" +
+                        "• Ford Territory (đi phố, gia đình nhỏ)\n" +
+                        "• Ford Everest (gia đình đông người 7 chỗ)\n" +
+                        "• Ford Ranger (bán tải, đa dụng)\n\n" +
+                        "Anh/chị muốn em so sánh chi tiết dòng nào không ạ?";
+                } else {
+                    reply =
+                        "Dạ anh/chị cho em biết thêm nhu cầu (7 chỗ / bán tải / đi phố) để em tư vấn chính xác hơn ạ.";
+                }
+            }
+
+            break;
+            }
+
+                        // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
+                      case 'PRICE_QUERY': {
+
+                        let variant = null;
+                        let model = null;
+
+                        // ======================================================
+                        // 1. ƯU TIÊN VARIANT TRỰC TIẾP
+                        // ======================================================
+                        if (chatMemory[userId].variantName) {
+
+                            variant = await Variant.findOne({
+                                variantName: {
+                                    $regex: new RegExp(chatMemory[userId].variantName, "i")
+                                }
+                            }).populate("modelId");
+
+                        }
+
+                        // ======================================================
+                        // 2. NẾU CÓ MODEL NHƯNG KHÔNG CÓ VARIANT → LIST ALL VARIANTS
+                        // ======================================================
+                        else if (chatMemory[userId].modelName) {
+
+                            model = await VehicleModel.findOne({
+                                name: {
+                                    $regex: new RegExp(chatMemory[userId].modelName, "i")
+                                }
+                            });
+
+                            if (!model) {
+                                reply = "❌ Không tìm thấy dòng xe.";
+                                break;
+                            }
+
+                            const variants = await Variant.find({
+                                modelId: model._id
+                            });
+
+                            reply =
+                                `🚗 Ford ${model.name}\n\n` +
+                                variants
+                                    .map(v =>
+                                        `• ${v.variantName}: ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
+                                    )
+                                    .join("\n");
+
+                            break;
+                        }
+
+                        // ======================================================
+                        // 3. KHÔNG CÓ MEMORY → fallback NLP result
+                        // ======================================================
+                        else {
+
+                            if (entities.modelName) {
+
+                                model = await VehicleModel.findOne({
+                                    name: {
+                                        $regex: new RegExp(entities.modelName, "i")
+                                    }
+                                });
+
+                                if (model && entities.variantName) {
+
+                                    variant = await Variant.findOne({
+                                        modelId: model._id,
+                                        variantName: {
+                                            $regex: new RegExp(entities.variantName, "i")
+                                        }
+                                    }).populate("modelId");
+
+                                } else if (model) {
+
+                                    const variants = await Variant.find({
+                                        modelId: model._id
+                                    });
+
+                                    reply =
+                                        `🚗 Ford ${model.name}\n\n` +
+                                        variants
+                                            .map(v =>
+                                                `• ${v.variantName}: ${v.basePrice.toLocaleString("vi-VN")} VNĐ`
+                                            )
+                                            .join("\n");
+
+                                    break;
+                                }
+
+                            }
+
+                            // fallback cuối
+                            variant = await getVariant(variantQuery);
+                        }
+
+                        // ======================================================
+                        // 4. RESPONSE FINAL
+                        // ======================================================
+                        if (!variant) {
+                            reply = `✨ **Ford Quế Võ Thông Báo** ✨\n\nDạ, anh/chị vui lòng cung cấp rõ dòng xe hoặc phiên bản cụ thể để bot báo giá chính xác nhé!`;
+                        } else {
+                            const modelName = variant.modelId?.name || "Ford";
+
+                            reply =
+                                `💰 **BÁO GIÁ NIÊM YẾT CHÍNH HÃNG** 💰\n` +
+                                `──────────────────\n` +
+                                `🚗 **Dòng xe:** Ford ${modelName}\n` +
+                                `⚙️ **Phiên bản:** ${variant.variantName}\n` +
+                                `💵 **Giá công bố:** ${variant.basePrice.toLocaleString('vi-VN')} VNĐ\n` +
+                                `──────────────────\n` +
+                                `*(Giá chưa bao gồm ưu đãi tại đại lý)*`;
+                        }
+
+                        break;
+                    }
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
             case 'SPECS_QUERY': {
                 const variant = await getVariant(variantQuery);
@@ -392,108 +448,108 @@ if (chatMemory[userId].variantName) {
                     reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
                     break;
                 }
-                
-  if (
-  normalizedMessage.includes("mau nao") ||
-   normalizedMessage.includes("con mau nao") ||
-   normalizedMessage.includes("mau nao con hang") ||
-   normalizedMessage.includes("con mau gi") ||
-   normalizedMessage.includes("mau gi con")
-) {
+                                
+                if (
+                normalizedMessage.includes("mau nao") ||
+                normalizedMessage.includes("con mau nao") ||
+                normalizedMessage.includes("mau nao con hang") ||
+                normalizedMessage.includes("con mau gi") ||
+                normalizedMessage.includes("mau gi con")
+                ) {
 
-  const inventories =
-    await Inventory.find({
-      variantId: variant._id,
-      status: "Trong kho"
-    }).populate("colorId");
+                const inventories =
+                    await Inventory.find({
+                    variantId: variant._id,
+                    status: "Trong kho"
+                    }).populate("colorId");
 
-  const colorMap = {};
+                const colorMap = {};
 
-  inventories.forEach(item => {
+                inventories.forEach(item => {
 
-    if (!item.colorId) return;
+                    if (!item.colorId) return;
 
-    const color =
-      item.colorId.name;
+                    const color =
+                    item.colorId.name;
 
-    colorMap[color] =
-      (colorMap[color] || 0) + 1;
-  });
+                    colorMap[color] =
+                    (colorMap[color] || 0) + 1;
+                });
 
-  reply =
-    `🎨 Các màu hiện còn trong kho:\n\n`;
+                reply =
+                    `🎨 Các màu hiện còn trong kho:\n\n`;
 
-  Object.entries(colorMap)
-    .forEach(([color, qty]) => {
+                Object.entries(colorMap)
+                    .forEach(([color, qty]) => {
 
-      reply +=
-        `• ${color}: ${qty} xe\n`;
-    });
+                    reply +=
+                        `• ${color}: ${qty} xe\n`;
+                    });
 
-  break;
-}
-                
+                break;
+                }
+                                
 
-                
-                let inventoryQuery = {
-   variantId: variant._id,
-   status: "Trong kho"
-};
+                                
+                                let inventoryQuery = {
+                variantId: variant._id,
+                status: "Trong kho"
+                };
 
-if (entities.color) {
+                if (entities.color) {
 
-   const colorDoc =
-      (
-         await VehicleColor.find({
-            variantId: variant._id
-         })
-      ).find(c =>
-         cleanText(c.name)
-            .includes(
-               cleanText(
-                  entities.color
-               )
-            )
-      );
+                const colorDoc =
+                    (
+                        await VehicleColor.find({
+                            variantId: variant._id
+                        })
+                    ).find(c =>
+                        cleanText(c.name)
+                            .includes(
+                            cleanText(
+                                entities.color
+                            )
+                            )
+                    );
 
-   if (!colorDoc) {
+                if (!colorDoc) {
 
-      const colors =
-         await VehicleColor.find({
-            variantId: variant._id
-         });
+                    const colors =
+                        await VehicleColor.find({
+                            variantId: variant._id
+                        });
 
-      reply =
-         `❌ ${variant.variantName} không có màu ${entities.color}.\n\n` +
-         `🎨 Các màu hiện có:\n\n` +
-         colors
-            .map(c => `• ${c.name}`)
-            .join("\n");
+                    reply =
+                        `❌ ${variant.variantName} không có màu ${entities.color}.\n\n` +
+                        `🎨 Các màu hiện có:\n\n` +
+                        colors
+                            .map(c => `• ${c.name}`)
+                            .join("\n");
 
-      break;
-   }
+                    break;
+                }
 
-   const stockCount =
-      await Inventory.countDocuments({
-         variantId: variant._id,
-         colorId: colorDoc._id,
-         status: "Trong kho"
-      });
+                const stockCount =
+                    await Inventory.countDocuments({
+                        variantId: variant._id,
+                        colorId: colorDoc._id,
+                        status: "Trong kho"
+                    });
 
-   reply =
-      `📦 TỒN KHO MÀU XE\n` +
-      `──────────────────\n` +
-      `🚗 ${variant.variantName}\n` +
-      `🎨 ${colorDoc.name}\n` +
-      `📊 Hiện còn ${stockCount} xe trong kho`;
+                reply =
+                    `📦 TỒN KHO MÀU XE\n` +
+                    `──────────────────\n` +
+                    `🚗 ${variant.variantName}\n` +
+                    `🎨 ${colorDoc.name}\n` +
+                    `📊 Hiện còn ${stockCount} xe trong kho`;
 
-   break;
-}
+                break;
+                }
 
-const stockItems =
-   await Inventory.find(
-      inventoryQuery
-   );
+                const stockItems =
+                await Inventory.find(
+                    inventoryQuery
+                );
 
                 const count = stockItems.length;
 
@@ -513,57 +569,57 @@ const stockItems =
             }
 
             case 'COLOR_QUERY': {
-    // 1. Lấy dữ liệu model hoặc variant từ memory
-    let model = null;
-    if (chatMemory[userId].modelName) {
-        model = await VehicleModel.findOne({ 
-            name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
-        });
-    }
-
-    // 2. Nếu có Variant (hỏi cụ thể phiên bản)
-    const variant = await getVariant(variantQuery);
-    
-    if (variant) {
-        const colors = await VehicleColor.find({ variantId: variant._id });
-        
-        // Người dùng hỏi màu cụ thể: "Bản X có màu Y không?"
-        if (entities.color) {
-            const targetColor = cleanText(entities.color);
-            const colorDoc = colors.find(c => cleanText(c.name).includes(targetColor));
-
-            if (!colorDoc) {
-                reply = `❌ Rất tiếc, ${variant.variantName} không có màu ${entities.color}.\n` +
-                        `🎨 Các màu hiện có: ${colors.map(c => c.name).join(', ')}.`;
-            } else {
-                // Kiểm tra xem user có muốn xem ảnh không
-                if (normalizedMessage.includes("xem") || normalizedMessage.includes("anh") || normalizedMessage.includes("hinh")) {
-                    reply = colorDoc.images?.length > 0 
-                        ? `🎨 ${variant.variantName} màu ${colorDoc.name}:\n📸 Hình ảnh thực tế:\n${colorDoc.images.join("\n")}`
-                        : `📷 Màu ${colorDoc.name} hiện chưa có ảnh mẫu. Anh/chị đợi em cập nhật nhé!`;
-                } else {
-                    reply = `✅ Có ạ! ${variant.variantName} có màu ${colorDoc.name}.`;
+                // 1. Lấy dữ liệu model hoặc variant từ memory
+                let model = null;
+                if (chatMemory[userId].modelName) {
+                    model = await VehicleModel.findOne({ 
+                        name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
+                    });
                 }
-            }
-        } else {
-            // Liệt kê toàn bộ màu của phiên bản
-            reply = `🎨 ${variant.variantName} hiện có ${colors.length} màu:\n• ${colors.map(c => c.name).join('\n• ')}`;
-        }
-    } 
-    // 3. Nếu chỉ có Model (hỏi chung chung: "Territory có màu gì?")
-    else if (model) {
-        const variants = await Variant.find({ modelId: model._id });
-        const allColors = await VehicleColor.find({ variantId: { $in: variants.map(v => v._id) } });
-        const uniqueColors = [...new Set(allColors.map(c => c.name))];
-        
-        reply = `🎨 Dòng xe Ford ${model.name} hiện có các màu ngoại thất:\n• ${uniqueColors.join('\n• ')}\n\n` +
-                `Anh/chị muốn xem màu của phiên bản nào cụ thể không ạ?`;
-    } 
-    else {
-        reply = "Dạ, anh/chị đang quan tâm đến màu của dòng xe nào ạ? (Ví dụ: Ford Territory, Everest...)";
-    }
-    break;
-}
+
+                // 2. Nếu có Variant (hỏi cụ thể phiên bản)
+                const variant = await getVariant(variantQuery);
+                
+                if (variant) {
+                    const colors = await VehicleColor.find({ variantId: variant._id });
+                    
+                    // Người dùng hỏi màu cụ thể: "Bản X có màu Y không?"
+                    if (entities.color) {
+                        const targetColor = cleanText(entities.color);
+                        const colorDoc = colors.find(c => cleanText(c.name).includes(targetColor));
+
+                        if (!colorDoc) {
+                            reply = `❌ Rất tiếc, ${variant.variantName} không có màu ${entities.color}.\n` +
+                                    `🎨 Các màu hiện có: ${colors.map(c => c.name).join(', ')}.`;
+                        } else {
+                            // Kiểm tra xem user có muốn xem ảnh không
+                            if (normalizedMessage.includes("xem") || normalizedMessage.includes("anh") || normalizedMessage.includes("hinh")) {
+                                reply = colorDoc.images?.length > 0 
+                                    ? `🎨 ${variant.variantName} màu ${colorDoc.name}:\n📸 Hình ảnh thực tế:\n${colorDoc.images.join("\n")}`
+                                    : `📷 Màu ${colorDoc.name} hiện chưa có ảnh mẫu. Anh/chị đợi em cập nhật nhé!`;
+                            } else {
+                                reply = `✅ Có ạ! ${variant.variantName} có màu ${colorDoc.name}.`;
+                            }
+                        }
+                    } else {
+                        // Liệt kê toàn bộ màu của phiên bản
+                        reply = `🎨 ${variant.variantName} hiện có ${colors.length} màu:\n• ${colors.map(c => c.name).join('\n• ')}`;
+                    }
+                } 
+                // 3. Nếu chỉ có Model (hỏi chung chung: "Territory có màu gì?")
+                    else if (model) {
+                        const variants = await Variant.find({ modelId: model._id });
+                        const allColors = await VehicleColor.find({ variantId: { $in: variants.map(v => v._id) } });
+                        const uniqueColors = [...new Set(allColors.map(c => c.name))];
+                        
+                        reply = `🎨 Dòng xe Ford ${model.name} hiện có các màu ngoại thất:\n• ${uniqueColors.join('\n• ')}\n\n` +
+                                `Anh/chị muốn xem màu của phiên bản nào cụ thể không ạ?`;
+                    } 
+                    else {
+                        reply = "Dạ, anh/chị đang quan tâm đến màu của dòng xe nào ạ? (Ví dụ: Ford Territory, Everest...)";
+                    }
+                    break;
+                }
 
             // 🏦 HỖ TRỢ GIẢI PHÁP TÀI CHÍNH TRẢ GÓP NGÂN HÀNG
             case 'INSTALLMENT_QUERY': {
@@ -587,23 +643,23 @@ const stockItems =
                 let matched = null; let maxScore = 0;
                 const cleanMsg = cleanText(message);
 
-for (const problem of problems) {
-   for (const symptom of problem.symptoms) {
+                for (const problem of problems) {
+                for (const symptom of problem.symptoms) {
 
-      const score =
-         cleanMsg.includes(cleanText(symptom))
-            ? 999
-            : stringSimilarity.compareTwoStrings(
-                  cleanMsg,
-                  cleanText(symptom)
-              );
+                    const score =
+                        cleanMsg.includes(cleanText(symptom))
+                            ? 999
+                            : stringSimilarity.compareTwoStrings(
+                                cleanMsg,
+                                cleanText(symptom)
+                            );
 
-      if (score > maxScore) {
-         maxScore = score;
-         matched = problem;
-      }
-   }
-}
+                    if (score > maxScore) {
+                        maxScore = score;
+                        matched = problem;
+                    }
+                }
+                }
 
                 if (maxScore > 0.4 && matched) {
                     reply = `🛠️ **CỐ VẤN DỊCH VỤ SỐ FORD QUẾ VÕ CHẨN ĐOÁN** 🛠️\n` +
