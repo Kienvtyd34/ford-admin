@@ -609,7 +609,11 @@ chatMemory[userId].updatedAt = Date.now();
                 
                 if (variant) {
                     const colors = await VehicleColor.find({ variantId: variant._id });
-                    
+                    if (isStockQuestion) {
+                    // KHÔNG xử lý COLOR_QUERY nữa
+                    break;
+                    }
+                                        
                     // Người dùng hỏi màu cụ thể: "Bản X có màu Y không?"
                     if (entities.color) {
                         const targetColor = cleanText(entities.color);
