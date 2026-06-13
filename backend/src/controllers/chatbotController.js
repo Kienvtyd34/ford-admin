@@ -267,9 +267,28 @@ chatMemory[userId].updatedAt = Date.now();
                                 break;
                             }
 
-                            const variants = await Variant.find({
+                            let variants = await Variant.find({
                                 modelId: model._id
                             });
+
+                            const rawMsg = cleanText(message);
+
+                            // 🔥 nếu user có nhắc variant keyword → lọc lại
+                            const matchedVariant = variants.find(v =>
+                                cleanText(v.variantName).includes(rawMsg) ||
+                                rawMsg.includes(cleanText(v.variantName))
+                            );
+
+                            if (matchedVariant) {
+                                return res.json({
+                                    text:
+                                        `💰 **BÁO GIÁ NIÊM YẾT CHÍNH HÃNG** 💰\n` +
+                                        `──────────────────\n` +
+                                        `🚗 **Dòng xe:** Ford ${model.name}\n` +
+                                        `⚙️ **Phiên bản:** ${matchedVariant.variantName}\n` +
+                                        `💵 **Giá công bố:** ${matchedVariant.basePrice.toLocaleString("vi-VN")} VNĐ\n`
+                                });
+                            }
 
                             reply =
                                 `🚗 Ford ${model.name}\n\n` +
