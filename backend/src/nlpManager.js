@@ -546,7 +546,8 @@ if (askingDriveTrain) {
   bac: ["bac", "mau bac"],
   xanh: ["xanh"],
   xam: ["xam", "mau xam"],
- vang: ["vang", "mau vang", "mau vang gold", "yellow"]
+ vang: ["vang", "mau vang", "mau vang gold", "yellow"],
+ nau: ["nau", "mau nau", "mau nau dat"],
 };
 
 for (const [color, aliases] of Object.entries(colorAliases)) {
