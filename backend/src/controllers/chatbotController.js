@@ -596,6 +596,7 @@ chatMemory[userId].updatedAt = Date.now();
             }
 
             case 'COLOR_QUERY': {
+                const isStockQuestion = /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(normalizedMessage);
                 // 1. Lấy dữ liệu model hoặc variant từ memory
                 let model = null;
                 if (chatMemory[userId].modelName) {
