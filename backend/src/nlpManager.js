@@ -326,94 +326,113 @@ if (
     console.error(err);
   }
 
-  // =========================
+
+ // =========================
   // VARIANT DETECTION
   // =========================
 
-  try {
+const allVariants = await Variant.find({}).populate("modelId");
 
-  const allVariants = await Variant.find({});
+const tokenize = (text) =>
+  cleanText(text)
+    .split(" ")
+    .filter(Boolean);
 
-  const modelContext = entities.modelName
-    ? cleanText(entities.modelName)
-    : null;
+// =========================
+// 1. FIND MODEL ID CHÍNH XÁC (KHÔNG so string nữa)
+// =========================
+let modelId = null;
 
-  const filteredVariants = modelContext
+if (entities.modelName) {
+  const model = await VehicleModel.findOne({
+    name: new RegExp(entities.modelName, "i")
+  });
+
+  if (model) {
+    modelId = model._id;
+  }
+}
+
+// =========================
+// 2. FILTER VARIANTS THEO MODEL ID (QUAN TRỌNG)
+// =========================
+const filteredVariants = modelId
   ? allVariants.filter(v =>
-      cleanText(v.modelName || "").includes(modelContext)
+      v.modelId?._id?.toString() === modelId.toString()
     )
   : allVariants;
 
-  const sortedVariants = filteredVariants.sort(
-    (a, b) =>
-      cleanText(b.variantName).length -
-      cleanText(a.variantName).length
+// =========================
+// 3. MATCH VARIANT (TOKEN + FUZZY + BOOST)
+// =========================
+const messageTokens = tokenize(message);
+
+let bestVariant = null;
+let bestScore = 0;
+
+for (const variant of filteredVariants) {
+
+  const candidateText = cleanText(
+  [
+    variant.modelId?.name || "",
+    variant.variantName,
+    ...(variant.aliases || [])
+  ].join(" ")
+);
+
+  const candidateTokens = tokenize(candidateText);
+
+  // TOKEN MATCH
+  const matchCount = candidateTokens.filter(t =>
+    messageTokens.includes(t)
+  ).length;
+
+  const tokenScore =
+    candidateTokens.length > 0
+      ? matchCount / candidateTokens.length
+      : 0;
+
+  // FUZZY MATCH
+  const fuzzyScore = stringSimilarity.compareTwoStrings(
+    message,
+    candidateText
   );
 
-  let bestScore = 0;
-  let bestVariant = null;
+  let finalScore = tokenScore * 0.7 + fuzzyScore * 0.3;
 
-  for (const variant of sortedVariants) {
+  // 🔥 BOOST quan trọng
+  const variantTokens = tokenize(variant.variantName);
 
-    const targets = [
-      variant.variantName,
-      ...(variant.aliases || [])
-    ];
-
-    for (const target of targets) {
-
-      const normalized = cleanText(target);
-
-      if (!normalized) continue;
-
-      // =========================
-      // 1. EXACT MATCH (ƯU TIÊN TUYỆT ĐỐI)
-      // =========================
-      if (message === normalized) {
-        entities.variantName = variant.variantName;
-        bestVariant = variant.variantName;
-        bestScore = 1;
-        break;
-      }
-
-      // =========================
-      // 2. FUZZY MATCH
-      // =========================
-      const score = stringSimilarity.compareTwoStrings(
-        message,
-        normalized
-      );
-
-      // boost nhẹ nếu match prefix
-      let finalScore = score;
-
-      if (message.startsWith(normalized)) {
-  finalScore += 0.03;
+if (variantTokens.some(t => messageTokens.includes(t))) {
+  finalScore += 0.25;
 }
 
-if (normalized.length > 12 && message.includes(normalized)) {
-  finalScore += 0.05;
-}
+ let matchBoost = 0;
 
-      const MIN_SCORE = 0.88;
-
-      if (finalScore > bestScore && finalScore >= MIN_SCORE) {
-        bestScore = finalScore;
-        bestVariant = variant.variantName;
-      }
-    }
-    if (bestScore === 1) break;
-
+for (const token of messageTokens) {
+  if (candidateTokens.includes(token)) {
+    matchBoost += 0.12;
   }
-
-  if (bestVariant) {
-    entities.variantName = bestVariant;
-  }
-
-} catch (err) {
-  console.error(err);
 }
 
+finalScore += Math.min(matchBoost, 0.35);
+
+  if (
+  finalScore > bestScore &&
+  (finalScore > 0.30 || messageTokens.length <= 2)
+) {
+    bestScore = finalScore;
+    bestVariant = variant;
+  }
+}
+
+// =========================
+// 4. OUTPUT
+// =========================
+if (bestVariant) {
+  entities.modelName = bestVariant.modelId?.name;
+  entities.variantName = bestVariant.variantName;
+}
   // =========================
   // FEATURE DETECTION
   // =========================

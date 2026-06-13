@@ -238,6 +238,14 @@ chatMemory[userId].updatedAt = Date.now();
                         let variant = null;
                         let model = null;
 
+                        if (entities.modelName && entities.variantName) {
+                        variant = await Variant.findOne({
+                            variantName: new RegExp(entities.variantName, "i"),
+                            modelId: (await VehicleModel.findOne({
+                            name: new RegExp(entities.modelName, "i")
+                            }))?._id
+                        }).populate("modelId");
+                        }
                         // ======================================================
                         // 1. ƯU TIÊN VARIANT TRỰC TIẾP
                         // ======================================================
