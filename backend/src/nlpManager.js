@@ -526,6 +526,7 @@ if (askingDriveTrain) {
   // COLOR
   // =========================
 
+
  const colorAliases = {
   xanh_la: [
      "xanh la",
@@ -534,7 +535,10 @@ if (askingDriveTrain) {
 
   xanh_duong: [
      "xanh duong",
-     "mau xanh duong"
+     "mau xanh duong",
+     "xanh dương",
+    "màu xanh dương",
+    "blue"
   ],
   do: ["do", "mau do"],
   trang: ["trang", "mau trang"],
@@ -558,11 +562,6 @@ for (const [color, aliases] of Object.entries(colorAliases)) {
       entities.color = color;
       break;
    }
-}
-if (entities.color) {
-  // màu + kho = truy vấn tồn kho theo màu
-  intentScores.STOCK_QUERY += 6;
-  intentScores.COLOR_QUERY += 1; // giảm COLOR priority
 }
 
   // =========================
@@ -687,27 +686,21 @@ if (
   intentScores.CONSULTING_QUERY += 2;
 }
 const isStockQuestion =
-  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(message);
+  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|con xe)/i.test(message);
 
-// ⭐ FIX QUAN TRỌNG: COLOR + STOCK = ưu tiên STOCK mạnh hơn
 if (isStockQuestion) {
   intentScores.STOCK_QUERY += 10;
 }
 
-// ⭐ THÊM DÒNG NÀY NGAY SAU
-if (isStockQuestion && entities.color) {
-  intentScores.STOCK_QUERY += 5; // << FIX lỗi bạn đang bị
+if (entities.color && isStockQuestion) {
+  intentScores.STOCK_QUERY += 3;   // chỉ boost STOCK nhẹ
 }
-// COLOR chỉ tăng khi KHÔNG phải stock
+
 if (entities.color && !isStockQuestion) {
-  intentScores.COLOR_QUERY += 3;
+  intentScores.COLOR_QUERY += 10;  // COLOR phải thắng khi không hỏi kho
 }
 let maxScore = 0;
-// ⭐ FIX QUAN TRỌNG: COLOR + STOCK → ép STOCK_QUERY thắng COLOR_QUERY
-if (entities.color && isStockQuestion) {
-  intentScores.COLOR_QUERY -= 5;
-  intentScores.STOCK_QUERY += 5;
-}
+
 
 for (const [intentName, score] of Object.entries(intentScores)) {
   if (score > maxScore) {

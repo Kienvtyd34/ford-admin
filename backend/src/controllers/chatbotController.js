@@ -35,6 +35,17 @@ if (
         const { intent, entities } = await processSemanticAI(userId, message);
         let finalIntent = intent;
 
+        const isStockQuestion =
+  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|mau.*con|con.*mau)/i.test(normalizedMessage);
+
+// override rõ ràng
+if (isStockQuestion && entities.color) {
+  finalIntent = "STOCK_QUERY";
+}
+
+if (entities.color && !isStockQuestion) {
+  finalIntent = "COLOR_QUERY";
+}
         if (entities.vin) {
     finalIntent = "STOCK_QUERY";
 } 
@@ -610,8 +621,7 @@ chatMemory[userId].updatedAt = Date.now();
                 
                 if (variant) {
                     const colors = await VehicleColor.find({ variantId: variant._id });
-                    if (isStockQuestion) {
-                    // KHÔNG xử lý COLOR_QUERY nữa
+                    if (isStockQuestion && !entities.color) {
                     break;
                     }
                                         
