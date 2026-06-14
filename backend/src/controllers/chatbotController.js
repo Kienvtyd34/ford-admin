@@ -212,7 +212,7 @@ if (
             ) {
 
                 reply =
-                    "🚗 Ford Ranger Raptor hoặc Everest Wildtrak là lựa chọn phù hợp.";
+                    "🚗 Ford Ranger Raptor hoặc Ranger Wildtrak là lựa chọn phù hợp để có thể chạy offroad, đi phượt cũng như chở hàng nặng.";
 
             }
 
@@ -223,7 +223,7 @@ if (
             ){
 
                 reply =
-                    "🚗 Với ngân sách khoảng 2 tỷ, anh/chị có thể lựa chọn Ford Ranger Raptor hoặc các phiên bản Everest cao cấp nhất.";
+                    "🚗 Với ngân sách khoảng 2 tỷ, anh/chị có thể lựa chọn Ford Ranger Raptor hoặc các phiên bản Everest cao cấp nhất (Titanium 4x4 hoặc Platinum).";
 
             }
 
@@ -234,7 +234,7 @@ if (
             ) {
 
                 reply =
-                    "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend, Titanium hoặc Sport.";
+                    "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend hoặc Titanium.";
 
             }
 
