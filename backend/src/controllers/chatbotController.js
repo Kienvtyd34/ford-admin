@@ -93,39 +93,39 @@ if (
     chatMemory[userId].color = null;
 }
 
-if (
-   entities.variantName &&
-   chatMemory[userId].variantName &&
-   cleanText(entities.variantName) !==
-   cleanText(chatMemory[userId].variantName)
-) {
-   chatMemory[userId].color = null;
-}
-chatMemory[userId].lastIntent = intent;
-chatMemory[userId].updatedAt = Date.now();
-        // Logic ghi đè thông minh: 
-        // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
-        if (entities.modelName) {
+        //Reset Memory
+        if (
+        entities.variantName &&
+        chatMemory[userId].variantName &&
+        cleanText(entities.variantName) !==
+        cleanText(chatMemory[userId].variantName)
+        ) {
+        chatMemory[userId].color = null;
+        }
+        chatMemory[userId].lastIntent = intent;
+        chatMemory[userId].updatedAt = Date.now();
+                // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
+                if (entities.modelName) {
 
-    if (
-        chatMemory[userId].modelName &&
-        chatMemory[userId].modelName !== entities.modelName
-    ) {
+            if (
+                chatMemory[userId].modelName &&
+                chatMemory[userId].modelName !== entities.modelName
+            ) {
 
-        chatMemory[userId] = {
-            modelName: entities.modelName,
-            variantName: null,
-            color: null,
-            lastIntent: intent,
-            updatedAt: Date.now()
-        };
+                chatMemory[userId] = {
+                    modelName: entities.modelName,
+                    variantName: null,
+                    color: null,
+                    lastIntent: intent,
+                    updatedAt: Date.now()
+                };
 
-    } else {
+            } else {
 
-        chatMemory[userId].modelName =
-            entities.modelName;
-    }
-}
+                chatMemory[userId].modelName =
+                    entities.modelName;
+            }
+        }
         // Cập nhật các thông tin khác nếu có
         if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
         if (entities.color) chatMemory[userId].color = entities.color;
@@ -173,8 +173,18 @@ chatMemory[userId].updatedAt = Date.now();
                         // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
                         case "CONSULTING_QUERY": {
 
+            // xe điện
+            if (
+                entities.feature === "electric"
+            ) {
+
+                reply =
+                    "⚡ Hiện tại mẫu xe điện nổi bật của Ford là Mustang Mach-E. Nếu anh/chị quan tâm xe điện, đây là lựa chọn phù hợp nhất của Ford.";
+
+            }                
+
             // 7 chỗ
-            if (entities.seats === 7) {
+            else if (entities.seats === 7) {
 
                 reply =
                     "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người.";
@@ -196,7 +206,9 @@ chatMemory[userId].updatedAt = Date.now();
             else if (
                 normalizedMessage.includes("offroad") ||
                 normalizedMessage.includes("off road") ||
-                normalizedMessage.includes("phuot")
+                normalizedMessage.includes("phuot")||
+                normalizedMessage.includes("ban tai") ||
+                normalizedMessage.includes("manh me")
             ) {
 
                 reply =

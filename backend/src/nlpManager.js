@@ -5,6 +5,8 @@ import Variant from "./models/Variant.js";
 export const cleanText = (text = "") => {
   return text
     .toLowerCase()
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
@@ -12,6 +14,7 @@ export const cleanText = (text = "") => {
     .replace(/\s+/g, " ");
 };
 
+//intent detection + entity extraction
 export const processSemanticAI = async (userId, rawMessage) => {
   const message = cleanText(rawMessage);
 
@@ -28,6 +31,7 @@ export const processSemanticAI = async (userId, rawMessage) => {
     seats: null
   };
 
+  
   // =========================
   // INTENT DETECTION
   // =========================
@@ -397,7 +401,7 @@ for (const variant of filteredVariants) {
     message,
     candidateText
   );
-
+//Công thức Sematic match tổng hợp
   let finalScore = tokenScore * 0.7 + fuzzyScore * 0.3;
 
   // 🔥 BOOST quan trọng
@@ -474,7 +478,7 @@ if (bestVariant) {
   "may xang": "fuel_gasoline",
   "may dau": "fuel_diesel",
 
-  "xe dien": "fuel_electric",
+  "xe dien": "electric",
   "dong co dien": "fuel_electric",
   "autoemergencybrake":
       "autoEmergencyBrake",
