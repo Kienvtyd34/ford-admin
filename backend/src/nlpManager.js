@@ -276,44 +276,45 @@ if (
 }
   
 const allModels = await VehicleModel.find({});
+
 // =========================
 // MODEL MATCHING
 // =========================
 
+let bestMatchModel = null;
+let bestModelScore = 0;
+
 for (const model of allModels) {
 
-   const targets = [
-      model.name,
-      ...(model.aliases || [])
-   ];
+  const targets = [
+    model.name,
+    ...(model.aliases || [])
+  ];
 
-   for (const target of targets) {
+  for (const target of targets) {
 
-      const similarity =
+    const similarity =
       stringSimilarity.compareTwoStrings(
-         message,
-         cleanText(target)
+        message,
+        cleanText(target)
       );
 
-      if (similarity > bestScore) {
+    if (similarity > bestModelScore) {
 
-         bestScore = similarity;
+      bestModelScore = similarity;
+      bestMatchModel = model;
 
-         bestMatchModel = model;
-
-      }
-
-   }
-
+    }
+  }
 }
+
 if (
-   bestMatchModel &&
-   bestModelScore > 0.45
+  bestMatchModel &&
+  bestModelScore > 0.45
 ) {
-   entities.modelName =
-      bestMatchModel.name;
+  entities.modelName =
+    bestMatchModel.name;
 }
-
 // =========================
 // COMPARE MODELS
 // =========================
@@ -393,7 +394,7 @@ const filteredVariants = modelId
 const messageTokens = tokenize(message);
 
 let bestVariant = null;
-let bestScore = 0;
+let bestVariantScore = 0;
 
 for (const variant of filteredVariants) {
 
@@ -441,16 +442,13 @@ for (const token of messageTokens) {
 }
 
 finalScore += Math.min(matchBoost, 0.35);
-
-  if (
-  finalScore > bestScore &&
+if (
+  finalScore > bestVariantScore &&
   (finalScore > 0.30 || messageTokens.length <= 2)
 ) {
-    bestScore = finalScore;
+    bestVariantScore = finalScore;
     bestVariant = variant;
-  }
 }
-
 // =========================
 // 4. OUTPUT
 // =========================
