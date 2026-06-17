@@ -28,7 +28,10 @@ export const processSemanticAI = async (userId, rawMessage) => {
     vin: null,
     minBudget: null,
     maxBudget: null,
-    seats: null
+    seats: null,
+    purpose: [],
+    priority: [],
+    compareModels: []
   };
 
   
@@ -45,7 +48,8 @@ export const processSemanticAI = async (userId, rawMessage) => {
     TECHNICAL_SUPPORT: 0,
     NEWS_QUERY: 0,
     CONSULTING_QUERY: 0,
-    IMAGE_QUERY: 0
+    IMAGE_QUERY: 0,
+    COMPARE_QUERY: 0
   };
 
   const keywordWeights = {
@@ -161,83 +165,55 @@ IMAGE_QUERY: [
 ],
 
    CONSULTING_QUERY: [
-
  "tu van",
  "nen mua",
-
  "xe nao",
  "ford nao",
-
  "mua duoc xe gi",
  "mua xe gi",
-
  "chon xe",
-
  "goi y xe",
-
  "de xuat xe",
-
  "phu hop",
-
  "gia dinh",
-
  "5 nguoi",
  "7 nguoi",
-
  "5 cho",
  "7 cho",
-
  "rong rai",
-
  "dong nguoi",
-
  "di du lich",
-
  "di pho",
-
  "di lam",
-
  "chay dich vu",
-
  "ban tai",
-
  "pick up",
-
  "tai chinh",
-
  "ngan sach",
-
  "duoi",
-
  "tren",
-
  "khoang",
-
  "tam",
-
  "800 trieu",
-
  "900 trieu",
-
  "1 ty",
-
  "2 ty",
-
  "1 ty ruoi",
-
  "cao cap",
-
  "dia hinh",
-
  "offroad",
-
  "off road",
-
  "phuot",
-
  "manh me",
-
  "dam chac"
+],
+COMPARE_QUERY: [
+   "so sanh",
+   "khac nhau",
+   "chon giua",
+   "doi chieu",
+   "uu diem",
+   "nhuoc diem"
 ]
   };
 
@@ -299,38 +275,83 @@ if (
   intentScores.STOCK_QUERY += 3;
 }
   
+const allModels = await VehicleModel.find({});
+// =========================
+// MODEL MATCHING
+// =========================
 
-  // =========================
-  // MODEL DETECTION
-  // =========================
+for (const model of allModels) {
 
-  try {
-    const allModels = await VehicleModel.find({});
+   const targets = [
+      model.name,
+      ...(model.aliases || [])
+   ];
 
-    for (const model of allModels.sort(
-      (a, b) => b.name.length - a.name.length
-    )) {
-      const targets = [
-        model.name,
-        ...(model.aliases || [])
-      ];
+   for (const target of targets) {
 
-      for (const target of targets) {
-        const normalized = cleanText(target);
+      const similarity =
+      stringSimilarity.compareTwoStrings(
+         message,
+         cleanText(target)
+      );
 
-        if (message.includes(normalized)) {
-          entities.modelName = model.name;
-          break;
-        }
+      if (similarity > bestScore) {
+
+         bestScore = similarity;
+
+         bestMatchModel = model;
+
       }
 
-      if (entities.modelName) break;
-    }
-  } catch (err) {
-    console.error(err);
-  }
+   }
 
+}
+if (
+   bestMatchModel &&
+   bestModelScore > 0.45
+) {
+   entities.modelName =
+      bestMatchModel.name;
+}
 
+// =========================
+// COMPARE MODELS
+// =========================
+
+const foundModels = [];
+
+for (const model of allModels) {
+
+   const targets = [
+
+      model.name,
+
+      ...(model.aliases || [])
+
+   ];
+
+   for (const target of targets) {
+
+      const normalized =
+      cleanText(target);
+
+      if (
+         message.includes(normalized)
+      ) {
+
+         foundModels.push(
+            model.name
+         );
+
+         break;
+      }
+
+   }
+
+}
+
+entities.compareModels =
+[...new Set(foundModels)];
  // =========================
   // VARIANT DETECTION
   // =========================
@@ -437,6 +458,19 @@ if (bestVariant) {
   entities.modelName = bestVariant.modelId?.name;
   entities.variantName = bestVariant.variantName;
 }
+
+// =========================
+// COMPARE DETECTION
+// =========================
+
+const compareWords = [
+   "so sanh",
+   "khac nhau",
+   "chon giua",
+   "doi chieu",
+   "uu diem",
+   "nhuoc diem"
+];
   // =========================
   // FEATURE DETECTION
   // =========================
@@ -448,47 +482,33 @@ if (bestVariant) {
 }
 
   const featureMap = {
-"chay xang": "fuel_gasoline",
-"chay dau": "fuel_diesel",
-    "he dan dong": "drive_info",
-"dan dong": "drive_info",
+  "chay xang": "fuel_gasoline",
+  "chay dau": "fuel_diesel",
+  "he dan dong": "drive_info",
+  "dan dong": "drive_info",
   "camera 360": "camera360",
-
   "cua so troi": "sunroof",
   "ghe da": "leatherSeat",
   "sac khong day": "wirelessCharging",
   "cop dien": "powerTailgate",
-
   "adas": "adas",
-
   "phanh tu dong": "autoEmergencyBrake",
-
   "giu lan": "laneKeepAssist",
-
   "diem mu": "blindSpot",
-
   "adaptive cruise": "adaptiveCruise",
-
   "fordpass": "fordPass",
-
   "ghe suoi": "heatedSeat",
-
   "ghe lam mat": "ventilatedSeat",
-
   "may xang": "fuel_gasoline",
   "may dau": "fuel_diesel",
-
   "xe dien": "electric",
   "dong co dien": "fuel_electric",
   "autoemergencybrake":
       "autoEmergencyBrake",
-
   "aeb":
       "autoEmergencyBrake",
-
   "phanh khan cap":
       "autoEmergencyBrake",
-      
 };
   for (const [k, v] of Object.entries(featureMap)) {
     if (message.includes(k)) {
@@ -669,6 +689,134 @@ if (
 ) {
   entities.seats = 7;
 }
+
+
+// =========================
+// PURPOSE DETECTION
+// =========================
+
+const purposeMap = {
+
+   family: [
+      "gia dinh",
+      "vo con",
+      "dua con",
+      "tre nho"
+   ],
+
+   city: [
+      "di pho",
+      "di lam",
+      "hang ngay"
+   ],
+
+   travel: [
+      "di du lich",
+      "di xa",
+      "cao toc"
+   ],
+
+   business: [
+      "grab",
+      "taxi",
+      "dich vu"
+   ],
+
+   offroad: [
+      "offroad",
+      "dia hinh",
+      "cam trai",
+      "phuot"
+   ]
+
+};
+
+for (
+   const [purpose, keywords]
+   of Object.entries(purposeMap)
+){
+   if(
+      keywords.some(
+         k => message.includes(k)
+      )
+   ){
+      entities.purpose.push(purpose);
+   }
+
+}
+const priorityMap = {
+
+   economy: [
+
+      "it hao xang",
+
+      "tiet kiem",
+
+      "tiet kiem nhien lieu"
+
+   ],
+
+   safety: [
+
+      "an toan",
+
+      "adas"
+
+   ],
+
+   luxury: [
+
+      "cao cap",
+
+      "sang trong"
+
+   ],
+
+   technology: [
+
+      "cong nghe",
+
+      "nhieu option"
+
+   ],
+
+   performance: [
+
+      "manh me",
+
+      "bo toc",
+
+      "cam giac lai"
+
+   ],
+
+   space: [
+
+      "rong",
+
+      "rong rai",
+
+      "nhieu cho"
+
+   ]
+
+};
+for (
+   const [priority, keywords]
+   of Object.entries(priorityMap)
+){
+
+   if(
+      keywords.some(
+         k => message.includes(k)
+      )
+   ){
+
+      entities.priority.push(priority);
+
+   }
+
+}
 if (entities.feature) {
   intentScores.SPECS_QUERY += 2;
 }
@@ -704,6 +852,14 @@ if (entities.color && isStockQuestion) {
 if (entities.color && !isStockQuestion) {
   intentScores.COLOR_QUERY += 10;  // COLOR phải thắng khi không hỏi kho
 }
+
+if(
+   compareWords.some(
+      w => message.includes(w)
+   )
+){
+   intentScores.COMPARE_QUERY += 5;
+}
 let maxScore = 0;
 
 
@@ -714,8 +870,8 @@ for (const [intentName, score] of Object.entries(intentScores)) {
   }
 }
   console.log("MESSAGE:", message);
-console.log("INTENT:", intent);
-console.log("ENTITIES:", entities);
+  console.log("INTENT:", intent);
+  console.log("ENTITIES:", entities);
   return {
     intent,
     entities

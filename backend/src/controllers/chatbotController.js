@@ -6,9 +6,8 @@ import Inventory from '../models/Inventory.js';
 import CarProblem from '../models/CarProblem.js';
 import News from '../models/News.js';
 import { processSemanticAI, cleanText } from '../nlpManager.js';
+import ChatSession from "../models/ChatSession.js";
 
-// 🧠 QUẢN LÝ TRẠNG THÁI HỘI THOẠI TOÀN CỤC (STATEFUL CONTEXT MEMORY)
-const chatMemory = {}; 
 const getVariant = async (query) => {
    return await Variant.findOne(query)
       .populate("modelId");
@@ -17,22 +16,27 @@ const getVariant = async (query) => {
 
 export const handleChatInteraction = async (req, res) => {
     try {
-         const { message, userId = "default_user" } = req.body;
-        const MEMORY_TIMEOUT = 30 * 60 * 1000; // 30 phút
+        const { message, sessionId } = req.body;
+        let session = await ChatSession.findOne({
+            sessionId
+            });
 
-if (
-   chatMemory[userId] &&
-   Date.now() - chatMemory[userId].updatedAt >
-   MEMORY_TIMEOUT
-) {
-   delete chatMemory[userId];
-}
+            if (!session) {
+            session = await ChatSession.create({
+                sessionId,
+                modelName: null,
+                variantName: null,
+                color: null,
+                lastIntent: null
+            });
+            }
        
         const normalizedMessage = cleanText(message);
         if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
 
         // 1. Phân tích ngữ cảnh
-        const { intent, entities } = await processSemanticAI(userId, message);
+        const { intent, entities } =
+            await processSemanticAI(sessionId, message);
         let finalIntent = intent;
 
         const isStockQuestion =
@@ -66,94 +70,50 @@ if (
         normalizedMessage.includes("xem anh") ||
         normalizedMessage.includes("xem hinh")
     ) &&
-    chatMemory[userId]?.modelName
+    session?.modelName
 ){
     finalIntent = "COLOR_QUERY";
 }
-        
-        // 2. CƠ CHẾ QUẢN LÝ TRÍ NHỚ THÔNG MINH
-        if (!chatMemory[userId]) {
-    chatMemory[userId] = {
-        modelName: null,
-        variantName: null,
-        color: null,
-        lastIntent: null,
-        updatedAt: Date.now()
-    };
-}
+// =====================================================
+// MEMORY DATABASE
+// =====================================================
 
-// RESET MEMORY khi đổi intent
+// đổi model mới
 if (
-    entities.modelName &&
-    chatMemory[userId].modelName &&
-    cleanText(entities.modelName) !==
-    cleanText(chatMemory[userId].modelName)
+   entities.modelName &&
+   session.modelName &&
+   cleanText(entities.modelName) !==
+      cleanText(session.modelName)
 ) {
-    chatMemory[userId].variantName = null;
-    chatMemory[userId].color = null;
+   session.variantName = null;
+   session.color = null;
 }
 
-        //Reset Memory
-        if (
-        entities.variantName &&
-        chatMemory[userId].variantName &&
-        cleanText(entities.variantName) !==
-        cleanText(chatMemory[userId].variantName)
-        ) {
-        chatMemory[userId].color = null;
-        }
-        chatMemory[userId].lastIntent = intent;
-        chatMemory[userId].updatedAt = Date.now();
-                // Nếu người dùng nhắc đến Model mới -> Xóa sạch Variant cũ để tránh xung đột
-                if (entities.modelName) {
+// đổi variant mới
+if (
+   entities.variantName &&
+   session.variantName &&
+   cleanText(entities.variantName) !==
+      cleanText(session.variantName)
+) {
+   session.color = null;
+}
 
-            if (
-                chatMemory[userId].modelName &&
-                chatMemory[userId].modelName !== entities.modelName
-            ) {
+if (entities.modelName) {
+   session.modelName = entities.modelName;
+}
 
-                chatMemory[userId] = {
-                    modelName: entities.modelName,
-                    variantName: null,
-                    color: null,
-                    lastIntent: intent,
-                    updatedAt: Date.now()
-                };
+if (entities.variantName) {
+   session.variantName = entities.variantName;
+}
 
-            } else {
+if (entities.color) {
+   session.color = entities.color;
+}
 
-                chatMemory[userId].modelName =
-                    entities.modelName;
-            }
-        }
-        // Cập nhật các thông tin khác nếu có
-        if (entities.variantName) chatMemory[userId].variantName = entities.variantName;
-        if (entities.color) chatMemory[userId].color = entities.color;
+session.lastIntent = intent;
 
-        // 3. XÂY DỰNG TOÁN TỬ TRUY VẤN
-        let variantQuery = {};
-
-        // Chỉ tìm theo modelName nếu nó tồn tại trong memory
-        if (chatMemory[userId].modelName) {
-            const model = await VehicleModel.findOne({ 
-                name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
-            });
-            if (model) {
-                variantQuery.modelId = model._id;
-            } else {
-                // Nếu không tìm thấy model (do user gõ sai tên xe), reset memory để tránh lỗi
-                chatMemory[userId].modelName = null;
-            }
-        }
-
-        // Nếu có variantName, mới thêm vào query
-        if (chatMemory[userId].variantName) {
-            variantQuery.$or = [
-                { variantName: { $regex: new RegExp(chatMemory[userId].variantName, "i") } },
-                { aliases: { $regex: new RegExp(chatMemory[userId].variantName, "i") } }
-            ];
-        }
-
+await session.save();
         let reply = "";
 
         // =========================================================
@@ -168,92 +128,157 @@ if (
             msg.includes("bán tải") ||
             msg.includes("gia đình");
 
-                    switch (finalIntent){
-                        
-                        // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
-                        case "CONSULTING_QUERY": {
+            // =====================================================
+            // BUILD QUERY TỪ SESSION
+            // =====================================================
 
-            // xe điện
-            if (
-                entities.feature === "electric"
-            ) {
+            let variantQuery = {};
 
-                reply =
-                    "⚡ Hiện tại mẫu xe điện nổi bật của Ford là Mustang Mach-E. Nếu anh/chị quan tâm xe điện, đây là lựa chọn phù hợp nhất của Ford.";
+            if (session.modelName) {
 
-            }                
+                const model = await VehicleModel.findOne({
+                    name: {
+                        $regex: new RegExp(
+                            session.modelName,
+                            "i"
+                        )
+                    }
+                });
 
-            // 7 chỗ
-            else if (entities.seats === 7) {
-
-                reply =
-                    "🚗 Ford Everest là lựa chọn phù hợp nhất cho gia đình đông người.";
-
-            }
-
-            // 5 chỗ đi phố
-            else if (
-                entities.seats === 5 ||
-                normalizedMessage.includes("di pho")
-            ) {
-
-                reply =
-                    "🚗 Ford Territory là mẫu CUV 5 chỗ phù hợp nhất cho gia đình đi phố, rộng rãi, nhiều công nghệ và dễ vận hành.";
-
-            }
-
-            // offroad
-            else if (
-                normalizedMessage.includes("offroad") ||
-                normalizedMessage.includes("off road") ||
-                normalizedMessage.includes("phuot")||
-                normalizedMessage.includes("ban tai") ||
-                normalizedMessage.includes("manh me")
-            ) {
-
-                reply =
-                    "🚗 Ford Ranger Raptor hoặc Ranger Wildtrak là lựa chọn phù hợp để có thể chạy offroad, đi phượt cũng như chở hàng nặng.";
-
-            }
-
-            // ngân sách 2 tỷ
-            else if (
-            (entities.minBudget || 0) >= 1800000000 ||
-            (entities.maxBudget || 0) >= 2000000000
-            ){
-
-                reply =
-                    "🚗 Với ngân sách khoảng 2 tỷ, anh/chị có thể lựa chọn Ford Ranger Raptor hoặc các phiên bản Everest cao cấp nhất (Titanium 4x4 hoặc Platinum).";
-
-            }
-
-            // dưới 1 tỷ
-            else if (
-                entities.maxBudget &&
-                entities.maxBudget <= 1000000000
-            ) {
-
-                reply =
-                    "🚗 Tầm dưới 1 tỷ anh/chị có thể tham khảo Ford Territory Trend hoặc Titanium.";
-
-            }
-
-            else {
-                if (hasEnoughInfo(entities, message)) {
-                    reply =
-                        "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n" +
-                        "• Ford Territory (đi phố, gia đình nhỏ)\n" +
-                        "• Ford Everest (gia đình đông người 7 chỗ)\n" +
-                        "• Ford Ranger (bán tải, đa dụng)\n\n" +
-                        "Anh/chị muốn em so sánh chi tiết dòng nào không ạ?";
-                } else {
-                    reply =
-                        "Dạ anh/chị cho em biết thêm nhu cầu (7 chỗ / bán tải / đi phố) để em tư vấn chính xác hơn ạ.";
+                if (model) {
+                    variantQuery.modelId = model._id;
                 }
             }
 
-            break;
+            if (session.variantName) {
+
+                variantQuery.$or = [
+                    {
+                        variantName: {
+                            $regex: new RegExp(
+                                session.variantName,
+                                "i"
+                            )
+                        }
+                    },
+                    {
+                        aliases: {
+                            $regex: new RegExp(
+                                session.variantName,
+                                "i"
+                            )
+                        }
+                    }
+                ];
             }
+
+                    switch (finalIntent){
+                        
+                        // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
+         case "CONSULTING_QUERY": {
+
+            const recommendations = [];
+
+            const variants = await Variant.find({})
+                .populate("modelId");
+
+            for (const v of variants) {
+
+                let score = 0;
+
+                // ===== SỐ CHỖ =====
+                if (
+                    entities.seats &&
+                    v.specs?.seats === entities.seats
+                ) {
+                    score += 30;
+                }
+
+                // ===== NGÂN SÁCH =====
+                if (
+                    entities.maxBudget &&
+                    v.basePrice <= entities.maxBudget
+                ) {
+                    score += 20;
+                }
+
+                if (
+                    entities.minBudget &&
+                    v.basePrice >= entities.minBudget
+                ) {
+                    score += 20;
+                }
+
+                // ===== XE ĐIỆN =====
+                if (
+                    entities.feature === "electric" &&
+                    v.fuelType?.toLowerCase().includes("electric")
+                ) {
+                    score += 50;
+                }
+
+                // ===== OFFROAD =====
+                if (
+                    (
+                        normalizedMessage.includes("offroad") ||
+                        normalizedMessage.includes("off road") ||
+                        normalizedMessage.includes("phuot") ||
+                        normalizedMessage.includes("ban tai")
+                    ) &&
+                    (
+                        v.modelId?.name?.toLowerCase().includes("ranger") ||
+                        v.variantName?.toLowerCase().includes("raptor")
+                    )
+                ) {
+                    score += 40;
+                }
+
+                // ===== ĐI PHỐ =====
+                if (
+                    normalizedMessage.includes("di pho") &&
+                    v.modelId?.name?.toLowerCase().includes("territory")
+                ) {
+                    score += 40;
+                }
+
+                if (score > 0) {
+                    recommendations.push({
+                        variant: v,
+                        score
+                    });
+                }
+            }
+
+            recommendations.sort(
+                (a, b) => b.score - a.score
+            );
+
+            if (!recommendations.length) {
+
+                reply =
+                    "Dạ anh/chị cho em biết thêm nhu cầu sử dụng (đi phố, gia đình, 7 chỗ, bán tải hoặc ngân sách) để em tư vấn chính xác hơn ạ.";
+
+                break;
+            }
+
+            const top3 =
+                recommendations.slice(0, 3);
+
+            reply =
+                "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n\n";
+
+            top3.forEach((item, index) => {
+
+                reply +=
+                    `${index + 1}. ${item.variant.modelId?.name} ${item.variant.variantName}\n` +
+                    `💰 ${item.variant.basePrice.toLocaleString("vi-VN")} VNĐ\n\n`;
+            });
+
+            reply +=
+                "Anh/chị muốn em so sánh chi tiết các mẫu này không ạ?";
+
+            break;
+        }
 
                         // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
                       case 'PRICE_QUERY': {
@@ -262,21 +287,31 @@ if (
                         let model = null;
 
                         if (entities.modelName && entities.variantName) {
-                        variant = await Variant.findOne({
-                            variantName: new RegExp(entities.variantName, "i"),
-                            modelId: (await VehicleModel.findOne({
-                            name: new RegExp(entities.modelName, "i")
-                            }))?._id
-                        }).populate("modelId");
+                            variant = await Variant.findOne({
+                                variantName: new RegExp(entities.variantName, "i"),
+                                modelId: (
+                                    await VehicleModel.findOne({
+                                        name: new RegExp(entities.modelName, "i")
+                                    })
+                                )?._id
+                            }).populate("modelId");
+                        }
+                        else if (session.variantName) {
+
+                            variant = await Variant.findOne({
+                                variantName: {
+                                    $regex: new RegExp(session.variantName, "i")
+                                }
+                            }).populate("modelId");
+
                         }
                         // ======================================================
                         // 1. ƯU TIÊN VARIANT TRỰC TIẾP
                         // ======================================================
-                        if (chatMemory[userId].variantName) {
-
+                        if (session.variantName) {
                             variant = await Variant.findOne({
                                 variantName: {
-                                    $regex: new RegExp(chatMemory[userId].variantName, "i")
+                                    $regex: new RegExp(session.variantName, "i")
                                 }
                             }).populate("modelId");
 
@@ -285,11 +320,11 @@ if (
                         // ======================================================
                         // 2. NẾU CÓ MODEL NHƯNG KHÔNG CÓ VARIANT → LIST ALL VARIANTS
                         // ======================================================
-                        else if (chatMemory[userId].modelName) {
+                        else if (session.modelName) {
 
                             model = await VehicleModel.findOne({
                                 name: {
-                                    $regex: new RegExp(chatMemory[userId].modelName, "i")
+                                    $regex: new RegExp(session.modelName, "i")
                                 }
                             });
 
@@ -473,6 +508,69 @@ if (
                 break;
             }
 
+            case "COMPARE_QUERY": {
+
+                const models = await VehicleModel.find({});
+
+                const matchedModels =
+                    models.filter(m =>
+                        normalizedMessage.includes(
+                            cleanText(m.name)
+                        )
+                    );
+
+                if (matchedModels.length < 2) {
+
+                    reply =
+                        "Dạ anh/chị vui lòng nêu rõ 2 mẫu xe cần so sánh.\nVí dụ: So sánh Territory và Everest.";
+
+                    break;
+                }
+
+                const modelA = matchedModels[0];
+                const modelB = matchedModels[1];
+
+                const variantA =
+                    await Variant.findOne({
+                        modelId: modelA._id
+                    });
+
+                const variantB =
+                    await Variant.findOne({
+                        modelId: modelB._id
+                    });
+
+                if (!variantA || !variantB) {
+
+                    reply =
+                        "Không tìm thấy dữ liệu để so sánh.";
+
+                    break;
+                }
+
+                reply =
+            `📊 SO SÁNH XE FORD
+
+            🚗 ${modelA.name}
+            💰 Giá từ: ${variantA.basePrice.toLocaleString("vi-VN")} VNĐ
+            ⚙️ Động cơ: ${variantA.specs?.engine || "N/A"}
+            🪑 Số chỗ: ${variantA.specs?.seats || "N/A"}
+
+            ──────────────────
+
+            🚗 ${modelB.name}
+            💰 Giá từ: ${variantB.basePrice.toLocaleString("vi-VN")} VNĐ
+            ⚙️ Động cơ: ${variantB.specs?.engine || "N/A"}
+            🪑 Số chỗ: ${variantB.specs?.seats || "N/A"}
+
+            ──────────────────
+
+            ✅ ${modelA.name} phù hợp đi phố và gia đình nhỏ.
+
+            ✅ ${modelB.name} phù hợp nhu cầu rộng rãi hoặc vận hành mạnh mẽ hơn.`;
+
+                break;
+            }
             // 📦 LUỒNG KIỂM TRA TRẠNG THÁI TỒN KHO VÀ SỐ KHUNG (VIN)
             case 'STOCK_QUERY': {
                 // 1. Ưu tiên xử lý nếu có mã VIN
@@ -622,9 +720,9 @@ if (
                 const isStockQuestion = /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(normalizedMessage);
                 // 1. Lấy dữ liệu model hoặc variant từ memory
                 let model = null;
-                if (chatMemory[userId].modelName) {
+                if (session.modelName) {
                     model = await VehicleModel.findOne({ 
-                        name: { $regex: new RegExp(chatMemory[userId].modelName, "i") } 
+                        name: { $regex: new RegExp(session.modelName, "i") } 
                     });
                 }
 
