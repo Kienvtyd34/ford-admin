@@ -49,20 +49,39 @@ export default function Chatbot() {
     setMessage("");
     setLoading(true);
 
+    const [sessionId] = useState(() => {
+
+  let id = localStorage.getItem("chat_session");
+
+  if (!id) {
+
+    id =
+      "session_" +
+      Date.now() +
+      "_" +
+      Math.random()
+        .toString(36)
+        .substring(2, 8);
+
+    localStorage.setItem(
+      "chat_session",
+      id
+    );
+  }
+
+  return id;
+});
+
     try {
   const res = await axios.post(
     "https://ford-admin.onrender.com/api/ai/chat",
     {
       message: userText,
-      userId: "user_1",
+      sessionId
     }
   );
 
   console.log("API RESPONSE:", res.data);
-
-  // === ĐOẠN FIX MỚI Ở ĐÂY ===
-  // Ưu tiên lấy key 'text' đúng theo cấu trúc Backend trả về, 
-  // nếu không có thì fallback về 'reply' hoặc 'message' cho an toàn.
   let reply = res.data?.text || res.data?.reply || res.data?.message;
   // ==========================
 
