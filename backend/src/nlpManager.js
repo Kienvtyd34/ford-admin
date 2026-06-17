@@ -449,6 +449,7 @@ if (
     bestVariantScore = finalScore;
     bestVariant = variant;
 }
+}
 // =========================
 // 4. OUTPUT
 // =========================
