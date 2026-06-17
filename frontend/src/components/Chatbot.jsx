@@ -6,6 +6,29 @@ export default function Chatbot() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [sessionId] = useState(() => {
+
+  let id = localStorage.getItem("chat_session");
+
+  if (!id) {
+
+    id =
+      "session_" +
+      Date.now() +
+      "_" +
+      Math.random()
+        .toString(36)
+        .substring(2, 8);
+
+    localStorage.setItem(
+      "chat_session",
+      id
+    );
+  }
+
+  return id;
+});
+
   const [messages, setMessages] = useState([
     {
       sender: "bot",
@@ -49,28 +72,7 @@ export default function Chatbot() {
     setMessage("");
     setLoading(true);
 
-    const [sessionId] = useState(() => {
-
-  let id = localStorage.getItem("chat_session");
-
-  if (!id) {
-
-    id =
-      "session_" +
-      Date.now() +
-      "_" +
-      Math.random()
-        .toString(36)
-        .substring(2, 8);
-
-    localStorage.setItem(
-      "chat_session",
-      id
-    );
-  }
-
-  return id;
-});
+    
 
     try {
   const res = await axios.post(
