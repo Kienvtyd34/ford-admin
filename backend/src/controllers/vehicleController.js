@@ -952,7 +952,8 @@ export const confirmDelivery = async (req, res) => {
     // 🔥 FIX QUAN TRỌNG
     booking.orderStatus = "Completed";
     booking.paymentStatus = "Paid";
-    booking.confirmedBy = req.user._id; // 👈 LẤY TỪ TOKEN
+    booking.confirmedBy = req.user._id; 
+    booking.confirmedAt = new Date();
 
     await booking.save();
 

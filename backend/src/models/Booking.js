@@ -55,6 +55,10 @@ const bookingSchema = new mongoose.Schema({
         ref: 'User',
         default: null
     },
+    confirmedAt: {
+        type: Date,
+        default: null
+    },
 
     notes: String
 

@@ -117,9 +117,11 @@ const currentContacts = contacts.slice(
                   <th className="p-3">Xe</th>
                   <th className="p-3">VIN</th>
                   <th className="p-3">Cọc</th>
+                  <th className="p-3">Ghi chú</th>
                   <th className="p-3">Trạng thái</th>
                   <th className="p-3">Giao xe</th>
                   <th className="p-3">Nhân viên</th>
+                  <th className="p-3">Ngày giao xe</th>
                 </tr>
               </thead>
 
@@ -147,6 +149,9 @@ const currentContacts = contacts.slice(
                     <td className="p-3 text-red-600 font-bold">
                       {b.depositAmount?.toLocaleString()}đ
                     </td>
+                    <td className="p-3 text-xs text-gray-600">
+                      {b.notes || '---'}
+                    </td>
 
                     <td className="p-3">{b.orderStatus}</td>
 
@@ -173,6 +178,12 @@ const currentContacts = contacts.slice(
 
                     <td className="p-3 text-center">
                       {b.confirmedBy?.fullName || '---'}
+                    </td>
+
+                    <td className="p-3 text-xs">
+                      {b.confirmedAt
+                        ? new Date(b.confirmedAt).toLocaleString('vi-VN')
+                        : '---'}
                     </td>
                   </tr>
                 ))}
