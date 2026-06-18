@@ -67,6 +67,7 @@ function App() {
   <Route path="contacts" element={<ContactListPage />} />
   <Route path="inventory" element={<VehicleInventory />} />
   <Route path="news" element={<NewsAdmin />} />
+  <Route path="intents" element={<IntentAdmin />} />
   <Route path="dashboard" element={<InventoryDashboard />} />
   <Route path="vehicle" element={<AdminVehicle/>}/>
   <Route path="test-drive-list" element={<TestDriveList />} />
@@ -81,7 +82,6 @@ function App() {
  />
 
   <Route path="customer-info" element={<StaffCustomerInfo />} />
-  <Route path="intents" element={<IntentAdmin />} />
   <Route index element={<Navigate to="/admin/contacts" />} />
 </Route>
 
