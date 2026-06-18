@@ -6,7 +6,7 @@ import {
   updateIntent,
   deleteIntent,
   toggleIntentStatus
-} from "../controllers/intent.controller.js";
+} from "../controllers/intentController.js";
 
 const router = express.Router();
 
