@@ -69,6 +69,13 @@ const AdminLayout = () => {
             <span className="text-xl">📰</span> Quản lý tin tức
           </Link>
 
+          <Link 
+            to="/admin/intents" 
+            className="flex items-center gap-3 p-3 rounded-lg hover:bg-blue-800 transition-all font-medium text-white"
+          >
+            <span className="text-xl">💬</span> Quản lý Intent
+          </Link>
+
           {/* Trường dành cho STAFF */}
           {userRole === 'staff' && (
             <Link 

@@ -13,7 +13,7 @@ import contactRoutes from "./src/routes/contactRoutes.js";
 import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
-
+import intentRoutes from "./src/routes/intentRoutes.js";
 // Controllers
 import { handleSepayWebhook } from "./src/controllers/paymentController.js";
 import { autoCancelExpiredBookings } from "./src/controllers/bookingController.js";
@@ -66,6 +66,7 @@ app.use("/api/contacts", contactRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/intents", intentRoutes);
 // ================= AUTO JOB =================
 
 setInterval(

@@ -31,6 +31,7 @@ import AdminVehicle from './pages/AdminVehicleColor';
 import TestDrivePage from './pages/TestDrivePage';
 import TestDriveList from './pages/TestDriveList';
 import Chatbot from './components/Chatbot';
+import IntentAdmin from './pages/IntentAdmin';
 function App() {
   return (
     <VehicleProvider>
@@ -80,6 +81,7 @@ function App() {
  />
 
   <Route path="customer-info" element={<StaffCustomerInfo />} />
+  <Route path="intents" element={<IntentAdmin />} />
   <Route index element={<Navigate to="/admin/contacts" />} />
 </Route>
 

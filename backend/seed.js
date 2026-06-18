@@ -1,119 +1,234 @@
+import mongoose from "mongoose";
 import dotenv from "dotenv";
+import Intent from "../backend/src/models/Intent.js";
+
 dotenv.config();
 
-import Contact from "./src/models/Contact.js";
-import connectDB from "./src/config/db.js";
+const intents = [
+  {
+    name: "PRICE_QUERY",
+    label: "Giá xe",
+    keywords: [
+      "gia",
+      "bao gia",
+      "gia lan banh",
+      "gia niem yet",
+      "nhieu tien",
+      "bao tien"
+    ]
+  },
 
-const firstNames = [
-  "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng",
-  "Vũ", "Đặng", "Bùi", "Đỗ", "Hồ"
+  {
+    name: "INSTALLMENT_QUERY",
+    label: "Trả góp",
+    keywords: [
+      "tra gop",
+      "vay ngan hang",
+      "lai suat",
+      "tra truoc"
+    ]
+  },
+
+  {
+    name: "STOCK_QUERY",
+    label: "Tồn kho / còn xe",
+    keywords: [
+      "con hang",
+      "ton kho",
+      "san xe",
+      "san hang",
+      "giao ngay",
+      "kho",
+      "bai",
+      "so luong",
+      "con xe",
+      "bao nhieu xe"
+    ]
+  },
+
+  {
+    name: "COLOR_QUERY",
+    label: "Màu xe",
+    keywords: [
+      "mau gi",
+      "may mau",
+      "bang mau",
+      "co nhung mau nao",
+      "co mau nao",
+      "mau xe",
+      "xem mau"
+    ]
+  },
+
+  {
+    name: "SPECS_QUERY",
+    label: "Thông số kỹ thuật",
+    keywords: [
+      "thong so",
+  "dong co",
+  "hop so",
+  "ma luc",
+  "option",
+  "adas",
+  "an toan",
+  "camera 360",
+  "cua so troi",
+  "sac khong day",
+  "fordpass",
+  "ghe suoi",
+  "ghe lam mat",
+  "awd",
+  "fwd",
+  "4wd",
+  "4x4",
+  "may xang",
+  "may dau",
+  "xe dien",
+  "xang",
+  "dau",
+  "chay xang",
+  "chay dau",
+  "autoemergencybrake",
+  "aeb",
+  "cua so troi", "cua noc", "co sunroof", "sunroof", 
+  "nhan dien bien bao", "traffic sign", 
+  "suoi ghe", "lam mat ghe", "sac khong day"
+    ]
+  },
+
+  {
+    name: "TECHNICAL_SUPPORT",
+    label: "Hỗ trợ kỹ thuật",
+    keywords: [
+      "loi",
+   "hong",
+   "su co",
+   "khong no",
+   "abs",
+   "u3000",
+   "giat so",
+   "vao so bi giat",
+   "sang so bi giat",
+   "khung khi sang so",
+   "rung khi sang so",
+   "ly hop",
+   "dps6",
+   "tcm"
+    ]
+  },
+
+  {
+    name: "NEWS_QUERY",
+    label: "Tin tức / khuyến mãi",
+    keywords: [
+       "tin tuc",
+ "khuyen mai",
+ "su kien",
+ "uu dai",
+ "ra mat",
+ "launch",
+ "the he moi",
+ "bai viet",
+"tin moi",
+"thang nay",
+"showroom",
+"ra mat",
+"ford viet nam",
+"su kien moi",
+"everest 2026",
+"territory 2026",
+"ranger 2026"
+    ]
+  },
+
+  {
+    name: "IMAGE_QUERY",
+    label: "Hình ảnh",
+    keywords: [
+      "xem anh",
+      "anh xe",
+      "hinh xe",
+      "hinh anh",
+      "xem hinh"
+    ]
+  },
+
+  {
+    name: "CONSULTING_QUERY",
+    label: "Tư vấn chọn xe",
+    keywords: [
+      "tu van",
+ "nen mua",
+ "xe nao",
+ "ford nao",
+ "mua duoc xe gi",
+ "mua xe gi",
+ "chon xe",
+ "goi y xe",
+ "de xuat xe",
+ "phu hop",
+ "gia dinh",
+ "5 nguoi",
+ "7 nguoi",
+ "5 cho",
+ "7 cho",
+ "rong rai",
+ "dong nguoi",
+ "di du lich",
+ "di pho",
+ "di lam",
+ "chay dich vu",
+ "ban tai",
+ "pick up",
+ "tai chinh",
+ "ngan sach",
+ "duoi",
+ "tren",
+ "khoang",
+ "tam",
+ "800 trieu",
+ "900 trieu",
+ "1 ty",
+ "2 ty",
+ "1 ty ruoi",
+ "cao cap",
+ "dia hinh",
+ "offroad",
+ "off road",
+ "phuot",
+ "manh me",
+ "dam chac"
+    ]
+  },
+
+  {
+    name: "COMPARE_QUERY",
+    label: "So sánh xe",
+    keywords: [
+      "so sanh",
+      "khac nhau",
+      "chon giua",
+      "doi chieu",
+      "uu diem",
+      "nhuoc diem"
+    ]
+  }
 ];
 
-const middleNames = [
-  "Văn", "Thị", "Minh", "Đức", "Thanh",
-  "Quang", "Ngọc", "Gia", "Tuấn", "Anh"
-];
-
-const lastNames = [
-  "An", "Bình", "Cường", "Dũng", "Giang",
-  "Hà", "Hưng", "Khánh", "Long", "Nam",
-  "Phong", "Quân", "Sơn", "Trang", "Việt"
-];
-
-const requestTypes = [
-  "Nhận báo giá",
-  "Tư vấn trả góp"
-];
-
-const statuses = [
-  "Chờ xử lý",
-  "Đã hoàn thành"
-];
-
-const messages = [
-  "Quan tâm Ford Ranger",
-  "Muốn nhận báo giá Everest",
-  "Tư vấn trả góp Territory",
-  "So sánh Everest và Explorer",
-  "Đăng ký lái thử Ranger",
-  "Quan tâm Ford Transit",
-  "Cần báo giá xe giao ngay",
-  "Hỏi về khuyến mãi tháng này"
-];
-
-function randomItem(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomName() {
-  return `${randomItem(firstNames)} ${randomItem(middleNames)} ${randomItem(lastNames)}`;
-}
-
-function randomPhone(index) {
-  return `09${String(10000000 + index).slice(-8)}`;
-}
-
-function randomDate() {
-  const now = new Date();
-  const days = Math.floor(Math.random() * 90);
-
-  return new Date(
-    now.getTime() -
-      days * 24 * 60 * 60 * 1000
-  );
-}
-
-async function seedContacts() {
+const seedIntents = async () => {
   try {
-    // Kết nối MongoDB
-    await connectDB();
+    await mongoose.connect(process.env.DATA_URL);
 
-    console.log("🚀 Start seeding contacts...");
+    await Intent.deleteMany(); // reset data
 
-    const contacts = [];
+    await Intent.insertMany(intents);
 
-    for (let i = 1; i <= 200; i++) {
-      contacts.push({
-        fullName: randomName(),
-
-        phone: randomPhone(i),
-
-        email: `customer${i}@gmail.com`,
-
-        requestType: randomItem(requestTypes),
-
-        appointmentDate: randomDate(),
-
-        message: randomItem(messages),
-
-        status: randomItem(statuses),
-
-        noteFromStaff: ""
-      });
-    }
-
-    // Nếu muốn xóa dữ liệu cũ trước
-    // await Contact.deleteMany({});
-
-    const result = await Contact.insertMany(
-      contacts
-    );
-
-    console.log(
-      `✅ Đã thêm ${result.length} contact`
-    );
-
-    process.exit(0);
-
+    console.log("✅ Seed intents success");
+    process.exit();
   } catch (err) {
-
-    console.error(
-      "❌ Seed Error:",
-      err
-    );
-
+    console.error(err);
     process.exit(1);
   }
-}
+};
 
-seedContacts();
+seedIntents();

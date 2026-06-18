@@ -1,6 +1,7 @@
 import stringSimilarity from "string-similarity";
 import VehicleModel from "./models/VehicleModel.js";
 import Variant from "./models/Variant.js";
+import Intent from "./models/Intent.js";
 
 export const cleanText = (text = "") => {
   return text
@@ -51,176 +52,15 @@ export const processSemanticAI = async (userId, rawMessage) => {
     IMAGE_QUERY: 0,
     COMPARE_QUERY: 0
   };
+const intents = await Intent.find({ active: true });
 
-  const keywordWeights = {
-    PRICE_QUERY: [
- "gia",
- "bao gia",
- "gia lan banh",
- "gia niem yet",
- "nhieu tien",
- "bao tien"
-],
+const keywordWeights = {};
 
-    INSTALLMENT_QUERY: [
- "tra gop",
- "vay ngan hang",
- "lai suat",
- "tra truoc"
-],
-
-    STOCK_QUERY: [
- "con hang",
- "ton kho",
- "san xe",
- "san hang",
- "giao ngay",
- "kho",
- "bai"
-],
-
-   COLOR_QUERY: [
- "mau gi",
- "may mau",
- "bang mau",
- "co nhung mau nao",
- "co mau nao",
- "mau xe",
- "xem mau"
-],
-SPECS_QUERY: [
-  "thong so",
-  "dong co",
-  "hop so",
-  "ma luc",
-  "option",
-  "adas",
-  "an toan",
-  "camera 360",
-  "cua so troi",
-  "sac khong day",
-  "fordpass",
-  "ghe suoi",
-  "ghe lam mat",
-  "awd",
-  "fwd",
-  "4wd",
-  "4x4",
-  "may xang",
-  "may dau",
-  "xe dien",
-  "xang",
-  "dau",
-  "chay xang",
-  "chay dau",
-  "autoemergencybrake",
-  "aeb",
-  "cua so troi", "cua noc", "co sunroof", "sunroof", 
-  "nhan dien bien bao", "traffic sign", 
-  "suoi ghe", "lam mat ghe", "sac khong day"
-],
-
-   TECHNICAL_SUPPORT: [
-   "loi",
-   "hong",
-   "su co",
-   "khong no",
-   "abs",
-   "u3000",
-   "giat so",
-   "vao so bi giat",
-   "sang so bi giat",
-   "khung khi sang so",
-   "rung khi sang so",
-   "ly hop",
-   "dps6",
-   "tcm"
-],
-
-    NEWS_QUERY: [
- "tin tuc",
- "khuyen mai",
- "su kien",
- "uu dai",
- "ra mat",
- "launch",
- "the he moi",
- "bai viet",
-"tin moi",
-"thang nay",
-"showroom",
-"ra mat",
-"ford viet nam",
-"su kien moi",
-"everest 2026",
-"territory 2026",
-"ranger 2026"
-],
-IMAGE_QUERY: [
-   "xem anh",
-   "anh xe",
-   "hinh xe",
-   "hinh anh",
-   "xem hinh"
-],
-
-   CONSULTING_QUERY: [
- "tu van",
- "nen mua",
- "xe nao",
- "ford nao",
- "mua duoc xe gi",
- "mua xe gi",
- "chon xe",
- "goi y xe",
- "de xuat xe",
- "phu hop",
- "gia dinh",
- "5 nguoi",
- "7 nguoi",
- "5 cho",
- "7 cho",
- "rong rai",
- "dong nguoi",
- "di du lich",
- "di pho",
- "di lam",
- "chay dich vu",
- "ban tai",
- "pick up",
- "tai chinh",
- "ngan sach",
- "duoi",
- "tren",
- "khoang",
- "tam",
- "800 trieu",
- "900 trieu",
- "1 ty",
- "2 ty",
- "1 ty ruoi",
- "cao cap",
- "dia hinh",
- "offroad",
- "off road",
- "phuot",
- "manh me",
- "dam chac"
-],
-COMPARE_QUERY: [
-   "so sanh",
-   "khac nhau",
-   "chon giua",
-   "doi chieu",
-   "uu diem",
-   "nhuoc diem"
-]
-  };
-
-  for (const intent in keywordWeights) {
-  keywordWeights[intent] =
-    keywordWeights[intent].map(cleanText);
+for (const intent of intents) {
+  keywordWeights[intent.name] =
+    intent.keywords.map(cleanText);
 }
+  
   for (const [intentName, keywords] of Object.entries(keywordWeights)) {
 
   keywords.forEach((kw) => {
