@@ -200,9 +200,44 @@ for (const model of allModels) {
 
 entities.compareModels =
 [...new Set(foundModels)];
+
+
+const hasExplicitVariantKeyword =
+  [
+    "trend",
+    "sport",
+    "titanium",
+    "wildtrak",
+    "platinum",
+    "raptor",
+    "ambient"
+  ].some(k => message.includes(k));
  // =========================
   // VARIANT DETECTION
   // =========================
+const vehicleKeywords = [
+  "xe",
+  "oto",
+  "o to",
+  "ford",
+  "everest",
+  "territory",
+  "ranger",
+  "transit",
+  "explorer",
+  "raptor",
+  "trend",
+  "sport",
+  "titanium",
+  "wildtrak",
+  "platinum"
+];
+
+const hasVehicleKeyword =
+  vehicleKeywords.some(k =>
+    message.includes(k)
+  ) ||
+  !!entities.modelName;
 
 const allVariants = await Variant.find({}).populate("modelId");
 
@@ -230,7 +265,7 @@ if (entities.modelName) {
 // 2. FILTER VARIANTS THEO MODEL ID (QUAN TRỌNG)
 // =========================
 const filteredVariants =
-  hasVehicleKeyword
+  (entities.modelName || hasExplicitVariantKeyword)
     ? (
         modelId
           ? allVariants.filter(
@@ -308,17 +343,10 @@ if (
 // =========================
 if (
   bestVariant &&
-  bestVariantScore >= 0.55 &&
-  (
-     entities.modelName ||
-     message.includes("trend") ||
-     message.includes("sport") ||
-     message.includes("titanium") ||
-     message.includes("wildtrak") ||
-     message.includes("platinum") ||
-     message.includes("raptor")
-  )
-) {
+  bestVariantScore >= 0.65 &&
+  hasExplicitVariantKeyword
+)
+{
    entities.modelName =
       bestVariant.modelId?.name;
 
