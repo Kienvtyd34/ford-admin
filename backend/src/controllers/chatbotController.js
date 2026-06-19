@@ -99,19 +99,25 @@ if (
    session.color = null;
 }
 
-if (entities.modelName) {
+const explicitVehicleMention =
+   entities.modelName &&
+   normalizedMessage.includes(
+      cleanText(entities.modelName)
+   );
+
+if (explicitVehicleMention) {
    session.modelName = entities.modelName;
 }
-
 if (entities.variantName) {
    session.variantName = entities.variantName;
 }
+
 
 if (entities.color) {
    session.color = entities.color;
 }
 
-session.lastIntent = intent;
+session.lastIntent = finalIntent;
 
 await session.save();
         let reply = "";
@@ -434,7 +440,16 @@ await session.save();
                     }
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
             case 'SPECS_QUERY': {
-                const variant = await getVariant(variantQuery);
+                console.log("SESSION", session);
+                console.log(
+                "VARIANT QUERY",
+                JSON.stringify(variantQuery,null,2)
+                );
+
+                const variant =
+                await getVariant(variantQuery);
+
+                console.log("FOUND VARIANT", variant);
                 if (!variant) {
                     reply = `📋 Thông tin cấu hình dòng xe này hiện chưa được đồng bộ toàn diện trên hệ thống. Anh/chị vui lòng cho bot biết rõ tên dòng xe nhé!`;
                     break;
@@ -732,8 +747,8 @@ await session.save();
                 if (variant) {
                     const colors = await VehicleColor.find({ variantId: variant._id });
                     if (isStockQuestion && !entities.color) {
-                    break;
-                    }
+                        finalIntent = "STOCK_QUERY";
+                     }
                                         
                     // Người dùng hỏi màu cụ thể: "Bản X có màu Y không?"
                     if (entities.color) {
