@@ -458,13 +458,7 @@ session.chatHistory.push({
    reasons.push(
       "Trang bị gói ADAS hỗ trợ lái"
    );
-}{
-        score += 20;
-
-        reasons.push(
-            "Trang bị công nghệ hỗ trợ lái ADAS"
-        );
-    }
+}
 
     // ===== FALLBACK TỪ TIN NHẮN =====
     if (
