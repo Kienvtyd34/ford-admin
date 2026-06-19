@@ -131,21 +131,28 @@ for (const model of allModels) {
     ...(model.aliases || [])
   ];
 
-  for (const target of targets) {
+  let matchedModel = null;
 
-    const similarity =
-      stringSimilarity.compareTwoStrings(
-        message,
-        cleanText(target)
-      );
+for (const model of allModels) {
 
-    if (similarity > bestModelScore) {
+  const targets = [
+    cleanText(model.name),
+    ...(model.aliases || []).map(cleanText)
+  ];
 
-      bestModelScore = similarity;
-      bestMatchModel = model;
-
-    }
+  if (
+    targets.some(target =>
+      message.includes(target)
+    )
+  ) {
+    matchedModel = model;
+    break;
   }
+}
+
+if (matchedModel) {
+  entities.modelName = matchedModel.name;
+}
 }
 
 if (
@@ -293,7 +300,7 @@ if (
 // =========================
 // 4. OUTPUT
 // =========================
-if (bestVariant) {
+if (bestVariant && bestVariantScore >= 0.55) {
   entities.modelName = bestVariant.modelId?.name;
   entities.variantName = bestVariant.variantName;
 }
@@ -326,6 +333,8 @@ const compareWords = [
   "he dan dong": "drive_info",
   "dan dong": "drive_info",
   "camera 360": "camera360",
+  "cam 360": "camera360",
+  "360 do": "camera360",
   "cua so troi": "sunroof",
   "ghe da": "leatherSeat",
   "sac khong day": "wirelessCharging",
