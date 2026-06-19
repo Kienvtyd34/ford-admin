@@ -1106,10 +1106,9 @@ top3.forEach((item, index) => {
                     break;
                 }
 
-                if (isSpecQuestion) {
-                    break;
-                }else{
-                    const variant = await getVariant(variantQuery);
+                let variant;
+                if (!isSpecQuestion) {
+                    variant = await getVariant(variantQuery);
                 }
                 
                 if (!variant) {
