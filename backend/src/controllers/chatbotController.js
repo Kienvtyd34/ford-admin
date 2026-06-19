@@ -31,6 +31,13 @@ export const handleChatInteraction = async (req, res) => {
             }
        
         const normalizedMessage = cleanText(message);
+        session.customerProfile =
+            session.customerProfile || {};
+        session.chatHistory =
+            session.chatHistory || [];
+
+        const profile =
+        session.customerProfile;
         if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
 
         // 1. Phân tích ngữ cảnh
@@ -164,10 +171,61 @@ if (entities.variantName) {
 if (entities.color) {
    session.color = entities.color;
 }
+// ===== CUSTOMER PROFILE =====
+
+if (entities.seats) {
+   profile.seats = entities.seats;
+}
+
+if (entities.maxBudget) {
+   profile.budget = entities.maxBudget;
+}
+
+if (
+   normalizedMessage.includes("gia dinh")
+) {
+   profile.usage = "family";
+}
+
+if (
+   normalizedMessage.includes("kinh doanh")
+) {
+   profile.usage = "business";
+}
+
+if (
+   normalizedMessage.includes("di pho")
+) {
+   profile.drivingArea = "city";
+}
+
+if (
+   normalizedMessage.includes("duong dai")
+) {
+   profile.drivingArea = "highway";
+}
+
+if (
+   normalizedMessage.includes("offroad") ||
+   normalizedMessage.includes("phuot")
+) {
+   profile.wantsOffroad = true;
+}
+
+if (
+   normalizedMessage.includes("adas")
+) {
+   profile.wantsADAS = true;
+}
 
 session.lastIntent = finalIntent;
 
 await session.save();
+
+session.chatHistory.push({
+   role: "user",
+   content: message
+});
         let reply = "";
 
         // =========================================================
@@ -231,7 +289,32 @@ await session.save();
                         
                         // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
          case "CONSULTING_QUERY": {
+            const profile =
+            session.customerProfile || {};
 
+            if (!profile.seats) {
+
+            reply =
+                "Anh/chị cần xe mấy chỗ ạ? (5 chỗ, 7 chỗ hoặc bán tải)";
+
+            break;
+            }
+
+            if (!profile.budget) {
+
+            reply =
+                "Anh/chị dự kiến ngân sách khoảng bao nhiêu ạ?";
+
+            break;
+            }
+
+            if (!profile.usage) {
+
+            reply =
+                "Anh/chị mua xe cho gia đình hay công việc ạ?";
+
+            break;
+            }
             const recommendations = [];
 
             const variants = await Variant.find({})
@@ -239,95 +322,186 @@ await session.save();
 
             for (const v of variants) {
 
-                let score = 0;
+    let score = 0;
+    const reasons = [];
 
-                // ===== SỐ CHỖ =====
-                if (
-                    entities.seats &&
-                    v.specs?.seats === entities.seats
-                ) {
-                    score += 30;
-                }
+    // ===== SỐ CHỖ =====
+    if (
+        profile.seats &&
+        v.specs?.seats === profile.seats
+    ) {
+        score += 30;
 
-                // ===== NGÂN SÁCH =====
-                if (
-                    entities.maxBudget &&
-                    v.basePrice <= entities.maxBudget
-                ) {
-                    score += 20;
-                }
+        reasons.push(
+            `Đúng nhu cầu ${profile.seats} chỗ`
+        );
+    }
 
-                if (
-                    entities.minBudget &&
-                    v.basePrice >= entities.minBudget
-                ) {
-                    score += 20;
-                }
+    // ===== NGÂN SÁCH =====
+    if (
+        profile.budget &&
+        v.basePrice <= profile.budget
+    ) {
+        score += 20;
 
-                // ===== XE ĐIỆN =====
-                if (
-                    entities.feature === "electric" &&
-                    v.fuelType?.toLowerCase().includes("electric")
-                ) {
-                    score += 50;
-                }
+        reasons.push(
+            "Phù hợp ngân sách"
+        );
+    }
 
-                // ===== OFFROAD =====
-                if (
-                    (
-                        normalizedMessage.includes("offroad") ||
-                        normalizedMessage.includes("off road") ||
-                        normalizedMessage.includes("phuot") ||
-                        normalizedMessage.includes("ban tai")
-                    ) &&
-                    (
-                        v.modelId?.name?.toLowerCase().includes("ranger") ||
-                        v.variantName?.toLowerCase().includes("raptor")
-                    )
-                ) {
-                    score += 40;
-                }
+    // ===== GIA ĐÌNH =====
+    if (
+    profile.usage === "family"
+) {
 
-                // ===== ĐI PHỐ =====
-                if (
-                    normalizedMessage.includes("di pho") &&
-                    v.modelId?.name?.toLowerCase().includes("territory")
-                ) {
-                    score += 40;
-                }
+    if (v.specs?.seats >= 5)
+        score += 20;
 
-                if (score > 0) {
-                    recommendations.push({
-                        variant: v,
-                        score
-                    });
-                }
-            }
+    reasons.push(
+        "Phù hợp nhu cầu gia đình"
+    );
+}
 
-            recommendations.sort(
-                (a, b) => b.score - a.score
-            );
+    // ===== KINH DOANH =====
+    if (
+        profile.usage === "business" &&
+        (
+            v.modelId?.name
+                ?.toLowerCase()
+                .includes("everest") ||
+            v.modelId?.name
+                ?.toLowerCase()
+                .includes("ranger")
+        )
+    ) {
+        score += 30;
 
-            if (!recommendations.length) {
+        reasons.push(
+            "Phù hợp công việc và kinh doanh"
+        );
+    }
 
-                reply =
-                    "Dạ anh/chị cho em biết thêm nhu cầu sử dụng (đi phố, gia đình, 7 chỗ, bán tải hoặc ngân sách) để em tư vấn chính xác hơn ạ.";
+    // ===== ĐI PHỐ =====
+    if (
+        profile.drivingArea === "city" &&
+        v.modelId?.name
+            ?.toLowerCase()
+            .includes("territory")
+    ) {
+        score += 30;
 
-                break;
-            }
+        reasons.push(
+            "Phù hợp di chuyển trong đô thị"
+        );
+    }
 
-            const top3 =
-                recommendations.slice(0, 3);
+    // ===== ĐƯỜNG DÀI =====
+    if (
+        profile.drivingArea === "highway" &&
+        (
+            v.modelId?.name
+                ?.toLowerCase()
+                .includes("everest") ||
+            v.modelId?.name
+                ?.toLowerCase()
+                .includes("territory")
+        )
+    ) {
+        score += 20;
 
-            reply =
-                "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n\n";
+        reasons.push(
+            "Thoải mái cho các chuyến đi đường dài"
+        );
+    }
 
-            top3.forEach((item, index) => {
+    // ===== OFFROAD =====
+    if (
+        profile.wantsOffroad &&
+        (
+            v.modelId?.name
+                ?.toLowerCase()
+                .includes("ranger") ||
+            v.variantName
+                ?.toLowerCase()
+                .includes("raptor")
+        )
+    ) {
+        score += 50;
 
-                reply +=
-                    `${index + 1}. ${item.variant.modelId?.name} ${item.variant.variantName}\n` +
-                    `💰 ${item.variant.basePrice.toLocaleString("vi-VN")} VNĐ\n\n`;
-            });
+        reasons.push(
+            "Khả năng offroad vượt trội"
+        );
+    }
+
+    // ===== ADAS =====
+    if (
+   profile.wantsADAS &&
+   v.features?.adas
+) {
+   score += 20;
+
+   reasons.push(
+      "Trang bị gói ADAS hỗ trợ lái"
+   );
+}{
+        score += 20;
+
+        reasons.push(
+            "Trang bị công nghệ hỗ trợ lái ADAS"
+        );
+    }
+
+    // ===== FALLBACK TỪ TIN NHẮN =====
+    if (
+        normalizedMessage.includes("7 cho") &&
+        v.specs?.seats === 7
+    ) {
+        score += 20;
+    }
+
+    if (
+        normalizedMessage.includes("5 cho") &&
+        v.specs?.seats === 5
+    ) {
+        score += 20;
+    }
+
+    if (
+        normalizedMessage.includes("ban tai") &&
+        v.modelId?.name
+            ?.toLowerCase()
+            .includes("ranger")
+    ) {
+        score += 40;
+    }
+
+    if (score > 0) {
+
+        recommendations.push({
+            variant: v,
+            score,
+            reasons
+        });
+
+    }
+}
+
+recommendations.sort(
+   (a, b) => b.score - a.score
+);
+const top3 = recommendations.slice(0, 3);
+
+reply =
+    "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n\n";
+
+top3.forEach((item, index) => {
+
+    reply +=
+        `${index + 1}. ${item.variant.modelId?.name} ${item.variant.variantName}\n` +
+        `💰 ${item.variant.basePrice.toLocaleString("vi-VN")} VNĐ\n` +
+        `⭐ Điểm phù hợp: ${item.score}\n` +
+        `✓ ${item.reasons.join("\n✓ ")}\n\n`;
+});
             // Lưu model đầu tiên vào memory
             if (top3.length > 0) {
                 session.modelName = top3[0].variant.modelId?.name;
@@ -951,7 +1125,19 @@ await session.save();
             }
         }
 
-        return res.json({ text: reply });
+        session.chatHistory.push({
+        role: "assistant",
+        content: reply
+        });
+
+        session.chatHistory =
+        session.chatHistory.slice(-20);
+
+        await session.save();
+
+        return res.json({
+        text: reply
+        });
 
     } catch (error) {
         console.error("❌ Lỗi Tầng Controller Tổng:", error);

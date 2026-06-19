@@ -20,6 +20,25 @@ const chatSessionSchema = new mongoose.Schema(
     type: [String],
     default: []
 },
+customerProfile: {
+   budget: Number,
+   seats: Number,
+   usage: String,
+   drivingArea: String,
+   fuelPreference: String,
+   wantsADAS: Boolean,
+   wantsLuxury: Boolean,
+   wantsOffroad: Boolean
+},
+
+chatHistory: [{
+   role: String,
+   content: String,
+   createdAt: {
+      type: Date,
+      default: Date.now
+   }
+}]
 },
 
 {
