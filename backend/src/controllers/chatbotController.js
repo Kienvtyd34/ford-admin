@@ -9,10 +9,14 @@ import { processSemanticAI, cleanText } from '../nlpManager.js';
 import ChatSession from "../models/ChatSession.js";
 
 const getVariant = async (query) => {
+
+   if (!query.variantName) {
+      return null;
+   }
+
    return await Variant.findOne(query)
       .populate("modelId");
 };
-
 
 export const handleChatInteraction = async (req, res) => {
     try {
@@ -175,16 +179,27 @@ await session.save();
                 }
             }
 
-            if (session.variantName) {
+            let model = null;
 
-            const variant =
-            await Variant.findOne({
-                modelId: model._id,
-                variantName: {
+            if (session.modelName) {
+                model = await VehicleModel.findOne({
+                    name: {
+                        $regex: new RegExp(
+                            session.modelName,
+                            "i"
+                        )
+                    }
+                });
+
+                if (model) {
+                    variantQuery.modelId = model._id;
+                }
+            }
+            if (session.variantName && model) {
+                variantQuery.variantName = {
                     $regex: `^${session.variantName}$`,
                     $options: "i"
-                }
-            });
+                };
             }
 
                     switch (finalIntent){
@@ -314,8 +329,10 @@ await session.save();
                         else if (session.variantName) {
 
                             variant = await Variant.findOne({
+                                modelId: model._id,
                                 variantName: {
-                                    $regex: new RegExp(session.variantName, "i")
+                                    $regex: `^${session.variantName}$`,
+                                    $options: "i"
                                 }
                             }).populate("modelId");
 
@@ -325,8 +342,10 @@ await session.save();
                         // ======================================================
                         if (session.variantName) {
                             variant = await Variant.findOne({
+                                modelId: model._id,
                                 variantName: {
-                                    $regex: new RegExp(session.variantName, "i")
+                                    $regex: `^${session.variantName}$`,
+                                    $options: "i"
                                 }
                             }).populate("modelId");
 
@@ -400,7 +419,8 @@ await session.save();
                                     variant = await Variant.findOne({
                                         modelId: model._id,
                                         variantName: {
-                                            $regex: new RegExp(entities.variantName, "i")
+                                            $regex: `^${session.variantName}$`,
+                                            $options: "i"
                                         }
                                     }).populate("modelId");
 
@@ -751,12 +771,8 @@ await session.save();
             case 'COLOR_QUERY': {
                 const isStockQuestion = /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(normalizedMessage);
                 if (
-                    isStockQuestion &&
-                    (
-                        entities.color ||
-                        session.variantName ||
-                        session.modelName
-                    )
+                    finalIntent === "COLOR_QUERY" &&
+                    isStockQuestion
                 ) {
                     finalIntent = "STOCK_QUERY";
                 }
