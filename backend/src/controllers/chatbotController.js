@@ -715,7 +715,7 @@ top3.forEach((item, index) => {
                         }
 
                         break;
-                    }
+                    
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
             case 'SPECS_QUERY': {
                 console.log("SESSION", session);
