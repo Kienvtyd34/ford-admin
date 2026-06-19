@@ -56,8 +56,24 @@ export const handleChatInteraction = async (req, res) => {
                 });
 
             if (found) {
-                entities.variantName = found;
+            entities.variantName = found;
+
+            session.variantName = found;
+
+            const variant =
+                await Variant.findOne({
+                    variantName: {
+                        $regex: new RegExp(found, "i")
+                    }
+                }).populate("modelId");
+
+            if (variant?.modelId) {
+                session.modelName =
+                    variant.modelId.name;
             }
+
+            await session.save();
+        }
         }
         let finalIntent = intent;
 
