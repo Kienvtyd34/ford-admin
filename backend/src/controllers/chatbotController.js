@@ -105,12 +105,10 @@ export const handleChatInteraction = async (req, res) => {
 const isSpecQuestion =
   /(cong nghe|tinh nang|trang bi|adas|camera|ghe|dong co)/i.test(normalizedMessage);
 
-if (isStockQuestion && !isSpecQuestion) {
-    finalIntent = "STOCK_QUERY";
-}
-
 if (isSpecQuestion) {
-    finalIntent = "SPECS_QUERY";
+  finalIntent = "SPECS_QUERY";
+} else if (isStockQuestion) {
+  finalIntent = "STOCK_QUERY";
 }
 const isImageQuestion =
  /(xem anh|xem hinh|co anh|gui anh|hinh thuc te)/i.test(normalizedMessage);
@@ -1100,7 +1098,11 @@ top3.forEach((item, index) => {
                     break;
                 }
 
-                const variant = await getVariant(variantQuery);
+                if (isSpecQuestion) {
+                    break;
+                }else{
+                    const variant = await getVariant(variantQuery);
+                }
                 
                 if (!variant) {
                     reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
