@@ -10,14 +10,9 @@ import ChatSession from "../models/ChatSession.js";
 
 const getVariant = async (query) => {
 
-   if (!query.variantName) {
-      return null;
-   }
-
    return await Variant.findOne(query)
       .populate("modelId");
 };
-
 export const handleChatInteraction = async (req, res) => {
     try {
         const { message, sessionId } = req.body;
@@ -41,22 +36,45 @@ export const handleChatInteraction = async (req, res) => {
         // 1. Phân tích ngữ cảnh
         const { intent, entities } =
             await processSemanticAI(sessionId, message);
+        if (
+            !entities.variantName &&
+            session.recommendedVariants?.length
+        ) {
+
+            const msg = cleanText(message);
+
+            const found =
+                session.recommendedVariants.find(v => {
+
+                    const variant = cleanText(v);
+
+                    const keywords = variant.split(" ");
+
+                    return keywords.some(k =>
+                        msg.includes(k)
+                    );
+                });
+
+            if (found) {
+                entities.variantName = found;
+            }
+        }
         let finalIntent = intent;
 
         const isStockQuestion =
-  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|mau.*con|con.*mau)/i.test(normalizedMessage);
+ /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|mau.*con|con.*mau)/i.test(normalizedMessage);
 
-// override rõ ràng
-if (isStockQuestion && entities.color) {
-  finalIntent = "STOCK_QUERY";
-}
+const isImageQuestion =
+ /(xem anh|xem hinh|co anh|gui anh|hinh thuc te)/i.test(normalizedMessage);
 
-if (entities.color && !isStockQuestion) {
-  finalIntent = "COLOR_QUERY";
-}
-        if (entities.vin) {
+// Ưu tiên tồn kho
+if (isStockQuestion) {
     finalIntent = "STOCK_QUERY";
-} 
+}
+// Ưu tiên ảnh màu
+else if (entities.color || isImageQuestion) {
+    finalIntent = "COLOR_QUERY";
+}
 // Ưu tiên 2: Nếu có feature (tính năng) nhưng intent lại là DEFAULT -> Ép về SPECS_QUERY
 else if (entities.feature && finalIntent === "DEFAULT") {
     finalIntent = "SPECS_QUERY";
@@ -294,6 +312,15 @@ await session.save();
                     `${index + 1}. ${item.variant.modelId?.name} ${item.variant.variantName}\n` +
                     `💰 ${item.variant.basePrice.toLocaleString("vi-VN")} VNĐ\n\n`;
             });
+            // Lưu model đầu tiên vào memory
+            if (top3.length > 0) {
+                session.modelName = top3[0].variant.modelId?.name;
+
+                session.recommendedVariants =
+                    top3.map(x => x.variant.variantName);
+
+                await session.save();
+            }
 
             reply +=
                 "Anh/chị muốn em so sánh chi tiết các mẫu này không ạ?";
@@ -756,6 +783,9 @@ await session.save();
                 break;
             }
 
+            console.log("SESSION", session);
+            console.log("VARIANT QUERY", variantQuery);
+            console.log("ENTITIES", entities);
             case 'COLOR_QUERY': {
                 const isStockQuestion = /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(normalizedMessage);
                 if (

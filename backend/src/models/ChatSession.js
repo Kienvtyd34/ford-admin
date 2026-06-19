@@ -16,7 +16,12 @@ const chatSessionSchema = new mongoose.Schema(
    default: []
     },
    lastIntent: String,
+   recommendedVariants: {
+    type: [String],
+    default: []
 },
+},
+
 {
    timestamps: true
 }
