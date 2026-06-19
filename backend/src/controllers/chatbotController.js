@@ -866,6 +866,10 @@ top3.forEach((item, index) => {
             }
             // 📦 LUỒNG KIỂM TRA TRẠNG THÁI TỒN KHO VÀ SỐ KHUNG (VIN)
             case 'STOCK_QUERY': {
+                console.log(
+                    "CURRENT SESSION VARIANT",
+                    session.variantName
+                );
                 // 1. Ưu tiên xử lý nếu có mã VIN
                 if (entities.vin) {
                     const item = await Inventory.findOne({ vin: { $regex: new RegExp(entities.vin, "i") } }).populate({
@@ -893,6 +897,7 @@ top3.forEach((item, index) => {
                 session
                 );
                 const variant = await getVariant(variantQuery);
+                
                 if (!variant) {
                     reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
                     break;
@@ -1038,6 +1043,14 @@ top3.forEach((item, index) => {
 
                 // 2. Nếu có Variant (hỏi cụ thể phiên bản)
                 const variant = await getVariant(variantQuery);
+                if (variant) {
+                    session.variantName = variant.variantName;
+                    await session.save();
+                }
+                console.log(
+                    "SAVE VARIANT MEMORY",
+                    variant?.variantName
+                );
                 console.log(
                 "FOUND VARIANT",
                 variant?.variantName
