@@ -777,7 +777,7 @@ if (
   intentScores.CONSULTING_QUERY += 2;
 }
 const isStockQuestion =
-  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(message);
+  /(con\s*(bao nhieu|may|xe|hang)|ton kho|so luong|con lai bao nhieu xe|xe con khong)/i.test(message);
 const isSpecIntent =
   intent === "SPECS_QUERY" || intent === "PRICE_QUERY";
 if (isStockQuestion && !isSpecIntent) {

@@ -100,21 +100,27 @@ export const handleChatInteraction = async (req, res) => {
         }
 
         const isStockQuestion =
-  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe)/i.test(normalizedMessage);
+  /(con\s*(bao nhieu|may|xe|hang)|ton kho|so luong|con lai bao nhieu xe|xe con khong)/i.test(normalizedMessage);
 
 const isSpecQuestion =
   /(cong nghe|tinh nang|trang bi|adas|camera|ghe|dong co)/i.test(normalizedMessage);
 
 if (isSpecQuestion) {
-  finalIntent = "SPECS_QUERY";
+    finalIntent = "SPECS_QUERY";
 } else if (isStockQuestion) {
-  finalIntent = "STOCK_QUERY";
+    finalIntent = "STOCK_QUERY";
 }
+const isSpecLocked =
+  /(có gì|trang bị gì|tính năng gì|công nghệ gì|option gì)/i.test(normalizedMessage);
+
+if (isSpecLocked) {
+    finalIntent = "SPECS_QUERY";
+}
+
 const isImageQuestion =
  /(xem anh|xem hinh|co anh|gui anh|hinh thuc te)/i.test(normalizedMessage);
 
-// Ưu tiên tồn kho
-if (isStockQuestion) {
+if (isStockQuestion && finalIntent !== "SPECS_QUERY") {
     finalIntent = "STOCK_QUERY";
 }
 // Ưu tiên ảnh màu
@@ -594,7 +600,6 @@ top3.forEach((item, index) => {
                                 }
                             }).populate("modelId");
                         }
-                        }
                         // ======================================================
                         // 1. ƯU TIÊN VARIANT TRỰC TIẾP
                         // ======================================================
@@ -721,7 +726,7 @@ top3.forEach((item, index) => {
                         }
 
                         break;
-                    
+                    }
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
            case 'SPECS_QUERY': {
 
