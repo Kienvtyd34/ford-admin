@@ -111,7 +111,26 @@ if (explicitVehicleMention) {
 if (entities.variantName) {
    session.variantName = entities.variantName;
 }
+if (
+   entities.variantName &&
+   !session.modelName
+) {
 
+   const foundVariant =
+      await Variant.findOne({
+         variantName: {
+            $regex: new RegExp(
+               entities.variantName,
+               "i"
+            )
+         }
+      }).populate("modelId");
+
+   if (foundVariant?.modelId) {
+      session.modelName =
+         foundVariant.modelId.name;
+   }
+}
 
 if (entities.color) {
    session.color = entities.color;
@@ -158,24 +177,14 @@ await session.save();
 
             if (session.variantName) {
 
-                variantQuery.$or = [
-                    {
-                        variantName: {
-                            $regex: new RegExp(
-                                session.variantName,
-                                "i"
-                            )
-                        }
-                    },
-                    {
-                        aliases: {
-                            $regex: new RegExp(
-                                session.variantName,
-                                "i"
-                            )
-                        }
-                    }
-                ];
+            const variant =
+            await Variant.findOne({
+                modelId: model._id,
+                variantName: {
+                    $regex: `^${session.variantName}$`,
+                    $options: "i"
+                }
+            });
             }
 
                     switch (finalIntent){
@@ -606,6 +615,14 @@ await session.save();
                 }
 
                 // 2. Nếu không có VIN, thực hiện truy vấn tồn kho theo variant
+                console.log(
+                "COLOR QUERY",
+                JSON.stringify(variantQuery, null, 2)
+                );
+                console.log(
+                "SESSION",
+                session
+                );
                 const variant = await getVariant(variantQuery);
                 if (!variant) {
                     reply = "Dạ, anh/chị vui lòng cho em biết rõ dòng xe hoặc phiên bản cụ thể để em kiểm tra tồn kho chính xác nhé!";
@@ -733,6 +750,16 @@ await session.save();
 
             case 'COLOR_QUERY': {
                 const isStockQuestion = /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(normalizedMessage);
+                if (
+                    isStockQuestion &&
+                    (
+                        entities.color ||
+                        session.variantName ||
+                        session.modelName
+                    )
+                ) {
+                    finalIntent = "STOCK_QUERY";
+                }
                 // 1. Lấy dữ liệu model hoặc variant từ memory
                 let model = null;
                 if (session.modelName) {
@@ -743,6 +770,15 @@ await session.save();
 
                 // 2. Nếu có Variant (hỏi cụ thể phiên bản)
                 const variant = await getVariant(variantQuery);
+                console.log(
+                "FOUND VARIANT",
+                variant?.variantName
+                );
+
+                console.log(
+                "MODEL",
+                model?.name
+                );
                 
                 if (variant) {
                     const colors = await VehicleColor.find({ variantId: variant._id });
