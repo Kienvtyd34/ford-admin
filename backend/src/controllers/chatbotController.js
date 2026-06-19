@@ -103,22 +103,13 @@ if (
    session.color = null;
 }
 
-const explicitVehicleMention =
-   entities.modelName &&
-   normalizedMessage.includes(
-      cleanText(entities.modelName)
-   );
-
-if (explicitVehicleMention) {
+if (entities.modelName) {
    session.modelName = entities.modelName;
 }
 if (entities.variantName) {
    session.variantName = entities.variantName;
 }
-if (
-   entities.variantName &&
-   !session.modelName
-) {
+if (entities.variantName) {
 
    const foundVariant =
       await Variant.findOne({
@@ -341,14 +332,11 @@ await session.save();
                         // 1. ƯU TIÊN VARIANT TRỰC TIẾP
                         // ======================================================
                         if (session.variantName) {
-                            variant = await Variant.findOne({
-                                modelId: model._id,
-                                variantName: {
-                                    $regex: `^${session.variantName}$`,
-                                    $options: "i"
-                                }
-                            }).populate("modelId");
 
+                        variantQuery.variantName = {
+                            $regex: `^${session.variantName}$`,
+                            $options: "i"
+                        };
                         }
 
                         // ======================================================
