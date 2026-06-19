@@ -229,12 +229,18 @@ if (entities.modelName) {
 // =========================
 // 2. FILTER VARIANTS THEO MODEL ID (QUAN TRỌNG)
 // =========================
-const filteredVariants = modelId
-  ? allVariants.filter(v =>
-      v.modelId?._id?.toString() === modelId.toString()
-    )
-  : allVariants;
-
+const filteredVariants =
+  hasVehicleKeyword
+    ? (
+        modelId
+          ? allVariants.filter(
+              v =>
+                v.modelId?._id?.toString() ===
+                modelId.toString()
+            )
+          : allVariants
+      )
+    : [];
 // =========================
 // 3. MATCH VARIANT (TOKEN + FUZZY + BOOST)
 // =========================
@@ -300,9 +306,24 @@ if (
 // =========================
 // 4. OUTPUT
 // =========================
-if (bestVariant && bestVariantScore >= 0.55) {
-  entities.modelName = bestVariant.modelId?.name;
-  entities.variantName = bestVariant.variantName;
+if (
+  bestVariant &&
+  bestVariantScore >= 0.55 &&
+  (
+     entities.modelName ||
+     message.includes("trend") ||
+     message.includes("sport") ||
+     message.includes("titanium") ||
+     message.includes("wildtrak") ||
+     message.includes("platinum") ||
+     message.includes("raptor")
+  )
+) {
+   entities.modelName =
+      bestVariant.modelId?.name;
+
+   entities.variantName =
+      bestVariant.variantName;
 }
 
 // =========================
