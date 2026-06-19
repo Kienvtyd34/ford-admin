@@ -779,7 +779,7 @@ if (
 const isStockQuestion =
   /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(message);
 const isSpecIntent =
-  finalIntent === "SPECS_QUERY" || finalIntent === "PRICE_QUERY";
+  intent === "SPECS_QUERY" || intent === "PRICE_QUERY";
 if (isStockQuestion && !isSpecIntent) {
   intentScores.STOCK_QUERY += 3; 
 }
