@@ -100,8 +100,18 @@ export const handleChatInteraction = async (req, res) => {
         }
 
         const isStockQuestion =
- /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|mau.*con|con.*mau)/i.test(normalizedMessage);
+  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe)/i.test(normalizedMessage);
 
+const isSpecQuestion =
+  /(cong nghe|tinh nang|trang bi|adas|camera|ghe|dong co)/i.test(normalizedMessage);
+
+if (isStockQuestion && !isSpecQuestion) {
+    finalIntent = "STOCK_QUERY";
+}
+
+if (isSpecQuestion) {
+    finalIntent = "SPECS_QUERY";
+}
 const isImageQuestion =
  /(xem anh|xem hinh|co anh|gui anh|hinh thuc te)/i.test(normalizedMessage);
 
@@ -717,6 +727,9 @@ top3.forEach((item, index) => {
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
            case 'SPECS_QUERY': {
 
+    if (normalizedMessage.includes("ton kho") || normalizedMessage.includes("con hang")) {
+    break; // tránh rơi nhầm
+}
     console.log("SESSION", session);
     console.log(
         "VARIANT QUERY",
@@ -1082,6 +1095,11 @@ top3.forEach((item, index) => {
                 "SESSION",
                 session
                 );
+                if (!entities.modelName && !entities.variantName) {
+                    reply = "Anh/chị vui lòng cho biết dòng xe để kiểm tra tồn kho";
+                    break;
+                }
+
                 const variant = await getVariant(variantQuery);
                 
                 if (!variant) {
