@@ -780,7 +780,7 @@ const isStockQuestion =
   /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|con xe)/i.test(message);
 
 if (isStockQuestion) {
-  intentScores.STOCK_QUERY += 10;
+  intentScores.STOCK_QUERY += 3; 
 }
 
 if (entities.color && isStockQuestion) {
@@ -789,6 +789,13 @@ if (entities.color && isStockQuestion) {
 
 if (entities.color && !isStockQuestion) {
   intentScores.COLOR_QUERY += 10;  // COLOR phải thắng khi không hỏi kho
+}
+
+if (/(có.*gì|những.*gì|trang bị gì|công nghệ gì)/i.test(message)) {
+  intentScores.SPECS_QUERY += 6;
+}
+if (message.includes("cong nghe") || message.includes("tinh nang")) {
+  intentScores.SPECS_QUERY += 5;
 }
 
 if(
