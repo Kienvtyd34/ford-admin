@@ -1068,6 +1068,9 @@ top3.forEach((item, index) => {
             }
             // 📦 LUỒNG KIỂM TRA TRẠNG THÁI TỒN KHO VÀ SỐ KHUNG (VIN)
             case 'STOCK_QUERY': {
+                console.log("SESSION", session);
+            console.log("VARIANT QUERY", variantQuery);
+            console.log("ENTITIES", entities);
                 console.log(
                     "CURRENT SESSION VARIANT",
                     session.variantName
@@ -1233,11 +1236,7 @@ top3.forEach((item, index) => {
                 break;
             }
 
-            console.log("SESSION", session);
-            console.log("VARIANT QUERY", variantQuery);
-            console.log("ENTITIES", entities);
             case 'COLOR_QUERY': {
-                const isStockQuestion = /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con mau|mau.*con|con.*mau)/i.test(normalizedMessage);
                 if (
                     finalIntent === "COLOR_QUERY" &&
                     isStockQuestion
