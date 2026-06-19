@@ -83,6 +83,17 @@ export const handleChatInteraction = async (req, res) => {
         }
         }
         let finalIntent = intent;
+        // Nếu đang trong quá trình tư vấn thì ép giữ CONSULTING_QUERY
+        if (
+            session.customerProfile &&
+            (
+                !session.customerProfile.seats ||
+                !session.customerProfile.budget ||
+                !session.customerProfile.usage
+            )
+        ) {
+            finalIntent = "CONSULTING_QUERY";
+        }
 
         const isStockQuestion =
  /(con\s*(hang|xe)?|ton kho|so luong|bao nhieu xe|con hang|mau.*con|con.*mau)/i.test(normalizedMessage);
@@ -487,8 +498,16 @@ session.chatHistory.push({
 }
 
 recommendations.sort(
-   (a, b) => b.score - a.score
+    (a, b) => b.score - a.score
 );
+
+if (!recommendations.length) {
+
+    reply =
+        "Dạ em chưa tìm được mẫu xe phù hợp. Anh/chị có thể cung cấp thêm nhu cầu sử dụng không ạ?";
+
+    break;
+}
 const top3 = recommendations.slice(0, 3);
 
 reply =
@@ -536,6 +555,31 @@ top3.forEach((item, index) => {
                         }
                         else if (session.variantName) {
 
+                            if (!session.modelName) {
+
+                                reply =
+                                    "Dạ anh/chị vui lòng cho biết dòng xe cụ thể.";
+
+                                break;
+                            }
+
+                            model = await VehicleModel.findOne({
+                                name: {
+                                    $regex: new RegExp(
+                                        session.modelName,
+                                        "i"
+                                    )
+                                }
+                            });
+
+                            if (!model) {
+
+                                reply =
+                                    "Không tìm thấy dòng xe.";
+
+                                break;
+                            }
+
                             variant = await Variant.findOne({
                                 modelId: model._id,
                                 variantName: {
@@ -543,7 +587,7 @@ top3.forEach((item, index) => {
                                     $options: "i"
                                 }
                             }).populate("modelId");
-
+                        }
                         }
                         // ======================================================
                         // 1. ƯU TIÊN VARIANT TRỰC TIẾP
