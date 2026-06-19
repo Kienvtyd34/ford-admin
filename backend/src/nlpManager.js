@@ -377,35 +377,76 @@ const compareWords = [
 }
 
   const featureMap = {
-  "chay xang": "fuel_gasoline",
-  "chay dau": "fuel_diesel",
-  "he dan dong": "drive_info",
-  "dan dong": "drive_info",
-  "camera 360": "camera360",
-  "cam 360": "camera360",
-  "360 do": "camera360",
-  "cua so troi": "sunroof",
-  "ghe da": "leatherSeat",
-  "sac khong day": "wirelessCharging",
-  "cop dien": "powerTailgate",
+  // công nghệ tổng quát
+  "cong nghe": "all_features",
+  "tinh nang": "all_features",
+  "trang bi": "all_features",
+  "option": "all_features",
+
+  // adas
   "adas": "adas",
-  "phanh tu dong": "autoEmergencyBrake",
-  "giu lan": "laneKeepAssist",
-  "diem mu": "blindSpot",
-  "adaptive cruise": "adaptiveCruise",
-  "fordpass": "fordPass",
-  "ghe suoi": "heatedSeat",
+  "an toan": "adas",
+  "ho tro lai": "adas",
+
+  // camera
+  "camera 360": "camera360",
+  "360": "camera360",
+
+  // sunroof
+  "cua so troi": "sunroof",
+  "sunroof": "sunroof",
+
+  // sạc
+  "sac khong day": "wirelessCharging",
+
+  // ghế
+  "ghe da": "leatherSeat",
   "ghe lam mat": "ventilatedSeat",
-  "may xang": "fuel_gasoline",
-  "may dau": "fuel_diesel",
-  "xe dien": "electric",
-  "dong co dien": "fuel_electric",
-  "autoemergencybrake":
-      "autoEmergencyBrake",
-  "aeb":
-      "autoEmergencyBrake",
-  "phanh khan cap":
-      "autoEmergencyBrake",
+  "ghe suoi": "heatedSeat",
+
+  // cốp
+  "cop dien": "powerTailgate",
+
+  // ford pass
+  "fordpass": "fordPass",
+
+  // apple carplay
+  "apple carplay": "appleCarplay",
+  "carplay": "appleCarplay",
+
+  // android auto
+  "android auto": "androidAuto",
+
+  // điểm mù
+  "diem mu": "blindSpot",
+
+  // giữ làn
+  "giu lan": "laneKeepAssist",
+
+  // cruise
+  "adaptive cruise": "adaptiveCruise",
+  "cruise control": "adaptiveCruise",
+
+  // động cơ
+  "dong co": "engine",
+
+  // mã lực
+  "ma luc": "horsepower",
+
+  // mô men xoắn
+  "mo men xoan": "torque",
+
+  // hộp số
+  "hop so": "transmission",
+
+  // dẫn động
+  "fwd": "drive_fwd",
+  "awd": "drive_awd",
+  "4x4": "drive_4x4",
+
+  // nhiên liệu
+  "xang": "fuel_gasoline",
+  "dau": "fuel_diesel"
 };
   for (const [k, v] of Object.entries(featureMap)) {
     if (message.includes(k)) {

@@ -8,6 +8,10 @@ import News from '../models/News.js';
 import { processSemanticAI, cleanText } from '../nlpManager.js';
 import ChatSession from "../models/ChatSession.js";
 
+import { FEATURE_LABELS } from "../config/featureLabels.js";
+import { SPEC_LABELS } from "../config/specLabels.js";
+
+
 const getVariant = async (query) => {
 
    return await Variant.findOne(query)
@@ -717,89 +721,277 @@ top3.forEach((item, index) => {
                         break;
                     
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
-            case 'SPECS_QUERY': {
-                console.log("SESSION", session);
-                console.log(
-                "VARIANT QUERY",
-                JSON.stringify(variantQuery,null,2)
-                );
+           case 'SPECS_QUERY': {
 
-                const variant =
-                await getVariant(variantQuery);
+    console.log("SESSION", session);
+    console.log(
+        "VARIANT QUERY",
+        JSON.stringify(variantQuery, null, 2)
+    );
 
-                console.log("FOUND VARIANT", variant);
-                if (!variant) {
-                    reply = `📋 Thông tin cấu hình dòng xe này hiện chưa được đồng bộ toàn diện trên hệ thống. Anh/chị vui lòng cho bot biết rõ tên dòng xe nhé!`;
-                    break;
-                }
+    const variant = await getVariant(variantQuery);
 
-                const modelName = variant.modelId?.name || "Territory";
+    console.log("FOUND VARIANT", variant);
 
-                if (entities.feature) {
-                    // Tuyến 1: Hệ thống hỗ trợ lái an toàn ADAS
-                    if (entities.feature === 'adas') {
-                        const hasAdas = variant.features?.adas;
-                        reply = hasAdas
-                            ? `🛡️ **HỆ THỐNG AN TOÀN CAO CẤP ADAS** 🛡️\n🚗 Xe: **Ford ${modelName} (${variant.variantName})**\n\nPhiên bản này sở hữu gói công nghệ thông minh cao cấp bao gồm:\n• Phanh tự động khẩn cấp (AEB)\n• Cảnh báo điểm mù kết hợp xe cắt ngang (BLIS)\n• Hệ thống kiểm soát hành trình thích ứng (Adaptive Cruise Control)\n• Hỗ trợ giữ làn đường & Cảnh báo lệch làn.`
-                            : `❌ Hệ thống xác nhận phiên bản **Ford ${modelName} (${variant.variantName})** chưa được tích hợp gói hỗ trợ an toàn nâng cao ADAS từ nhà máy.`;
-                    }
-                    // Tuyến 2: Nhiên liệu (Lấy trực tiếp từ tầng ngoài cùng của variant: variant.fuelType)
-                    else if (entities.feature.startsWith('fuel_')) {
-                        const targetFuel = entities.feature.split('_')[1] === 'gasoline' ? 'Xăng' : 'Dầu';
-                        const currentFuel = variant.fuelType || 'Xăng';
-                        const isMatch = currentFuel.toLowerCase().includes(targetFuel.toLowerCase());
-                        
-                        reply = `⛽ **THÔNG TIN CẤU HÌNH NHIÊN LIỆU** ⛽\n` +
-                                `──────────────────\n` +
-                                `🚗 Mẫu xe **Ford ${modelName} [${variant.variantName}]** sử dụng động cơ vận hành bằng **${currentFuel}**.\n` +
-                                `➔ Trả lời: ${isMatch ? 'Dạ CHÍNH XÁC rồi ạ! Mẫu này chạy máy ' + targetFuel : 'Dạ không ạ, phiên bản này chính thức sử dụng cấu hình động cơ máy ' + currentFuel}.`;
-                    }
-                    // Tuyến 3: Hệ dẫn động (Lấy trực tiếp từ tầng ngoài cùng: variant.driveTrain)
-                    else if (entities.feature.startsWith('drive_')) {
-                        const targetDrive = entities.feature.split('_')[1].toUpperCase();
-                        const currentDrive = variant.driveTrain || 'FWD';
-                        const isMatch = currentDrive.toUpperCase().includes(targetDrive);
+    if (!variant) {
+        reply =
+            "📋 Em chưa xác định được phiên bản xe. Anh/chị vui lòng cho biết tên xe hoặc phiên bản cụ thể nhé.";
+        break;
+    }
 
-                        reply = `⚙️ **HỆ DẪN ĐỘNG TRÊN PHÂN KHÚC** ⚙️\n` +
-                                `──────────────────\n` +
-                                `🚗 Phiên bản **Ford ${modelName} (${variant.variantName})** sử dụng hệ thống dẫn động: **${currentDrive}**.\n` +
-                                `➔ Kết luận: ${isMatch ? 'Dạ ĐÚNG rồi ạ! Xe sử dụng hệ dẫn động ' + targetDrive : 'Dạ không ạ, bản này thực tế trang bị hệ dẫn động ' + currentDrive}.`;
-                    }
-                    // Tuyến 4: Kiểm tra trạng thái Option Boolean con nằm trong object features
-                    else {
-                        const hasFeature = variant.features?.[entities.feature];
-                        const featureLabels = {
-                            sunroof: "Cửa sổ trời toàn cảnh",
-                            camera360: "Hệ thống Camera 360 độ",
-                            autoEmergencyBrake: "Hỗ trợ phanh tự động khẩn cấp",
-                            wirelessCharging: "Bệ sạc điện thoại không dây",
-                            powerTailgate: "Cốp sau đóng mở bằng điện thông minh",
-                            leatherSeat: "Toàn bộ ghế bọc da cao cấp"
-                        };
-                        const featureNameVi = featureLabels[entities.feature] || "Tính năng cao cấp tùy chọn";
-                        
-                        if (hasFeature === true) {
-                            reply = `✅ **XÁC NHẬN CÓ TRANG BỊ CHÍNH HÃNG** ✅\n\nDạ CÓ ạ! Tính năng **${featureNameVi}** hoàn toàn được tích hợp sẵn nguyên bản trên mẫu xe **Ford ${modelName} ${variant.variantName}**.`;
-                        } else {
-                            reply = `❌ **XÁC NHẬN CHƯA CÓ TRANG BỊ CHÍNH HÃNG** ❌\n\nDạ không ạ, phiên bản **Ford ${modelName} ${variant.variantName}** rất tiếc chưa được hỗ trợ tính năng **${featureNameVi}**.`;
-                        }
-                    }
-                } else {
-                    // Trả về thông số cấu hình tổng quan (Lấy đúng cấu trúc specs lồng trong và trường ngoài)
-                    reply = `ℹ️ **THÔNG SỐ VẬN HÀNH CHUYÊN SÂU: FORD ${modelName.toUpperCase()}** ℹ️\n` +
-                            `──────────────────\n` +
-                            `• 🔹 **Phiên bản chính xác:** ${variant.variantName}\n` +
-                            `• 🔹 **Động cơ:** ${variant.specs?.engine || '1.5L EcoBoost'}\n` +
-                            `• 🔹 **Mã lực cực đại:** ${variant.specs?.horsepower || '160'} HP\n` +
-                            `• 🔹 **Mô-men xoắn:** ${variant.specs?.torque || '248'} Nm\n` +
-                            `• 🔹 **Hộp số truyền động:** ${variant.transmission || '7AT'}\n` +
-                            `• 🔹 **Hệ dẫn động phân khúc:** ${variant.driveTrain || 'FWD'}\n` +
-                            `• 🔹 **Nhiên liệu tiêu thụ:** ${variant.fuelType || 'Xăng'}\n` +
-                            `• 🔹 **Số chỗ ngồi thiết kế:** ${variant.specs?.seats || '5'} chỗ\n` +
-                            `──────────────────`;
-                }
-                break;
+    const modelName = variant.modelId?.name || "";
+    const specs = variant.specs || {};
+    const features = variant.features || {};
+
+    // ==========================
+    // AUTO MAP PRIORITY
+    // ==========================
+
+    if (
+        !entities.feature &&
+        entities.priority?.includes("technology")
+    ) {
+        entities.feature = "technology";
+    }
+
+    if (
+        !entities.feature &&
+        entities.priority?.includes("safety")
+    ) {
+        entities.feature = "safety";
+    }
+
+    // ==========================
+    // FEATURE QUERY
+    // ==========================
+
+    if (entities.feature) {
+
+        // ==========================
+        // TẤT CẢ CÔNG NGHỆ
+        // ==========================
+
+        if (
+            entities.feature === "technology" ||
+            entities.feature === "features" ||
+            entities.feature === "all_features"
+        ) {
+
+            const enabledFeatures = Object.entries(features)
+                .filter(([_, value]) => value === true)
+                .map(([key]) => FEATURE_LABELS[key])
+                .filter(Boolean);
+
+            reply =
+                `🚗 CÔNG NGHỆ & TIỆN NGHI\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                enabledFeatures.map(x => `✓ ${x}`).join("\n");
+
+            break;
+        }
+
+        // ==========================
+        // AN TOÀN
+        // ==========================
+
+        if (entities.feature === "safety") {
+
+            const safetyItems = [];
+
+            if (features.abs)
+                safetyItems.push("ABS");
+
+            if (features.adas)
+                safetyItems.push("ADAS");
+
+            if (features.blindSpot)
+                safetyItems.push("Cảnh báo điểm mù");
+
+            if (features.laneKeepAssist)
+                safetyItems.push("Hỗ trợ giữ làn");
+
+            if (features.autoEmergencyBrake)
+                safetyItems.push("Phanh khẩn cấp tự động");
+
+            if (features.rearCrossTrafficAlert)
+                safetyItems.push("Cảnh báo phương tiện cắt ngang");
+
+            if (features.trafficSignRecognition)
+                safetyItems.push("Nhận diện biển báo");
+
+            reply =
+                `🛡️ CÔNG NGHỆ AN TOÀN\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                safetyItems.map(x => `✓ ${x}`).join("\n");
+
+            break;
+        }
+
+        // ==========================
+        // ADAS
+        // ==========================
+
+        if (entities.feature === "adas") {
+
+            if (features.adas) {
+
+                reply =
+                    `🛡️ HỆ THỐNG ADAS\n` +
+                    `──────────────────\n` +
+                    `🚘 ${variant.variantName}\n\n` +
+                    `✓ Adaptive Cruise Control\n` +
+                    `✓ Cảnh báo điểm mù\n` +
+                    `✓ Hỗ trợ giữ làn\n` +
+                    `✓ Phanh khẩn cấp tự động\n` +
+                    `✓ Cảnh báo phương tiện cắt ngang\n` +
+                    `✓ Nhận diện biển báo giao thông`;
+
+            } else {
+
+                reply =
+                    `❌ ${variant.variantName} không được trang bị hệ thống ADAS.`;
             }
+
+            break;
+        }
+
+        // ==========================
+        // MÃ LỰC
+        // ==========================
+
+        if (
+            entities.feature === "horsepower" ||
+            entities.feature === "engine"
+        ) {
+
+            reply =
+                `⚙️ THÔNG TIN ĐỘNG CƠ\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                `Động cơ: ${specs.engine || "-"}\n` +
+                `Công suất: ${specs.horsepower || "-"} HP\n` +
+                `Mô-men xoắn: ${specs.torque || "-"} Nm`;
+
+            break;
+        }
+
+        // ==========================
+        // KÍCH THƯỚC
+        // ==========================
+
+        if (entities.feature === "dimensions") {
+
+            reply =
+                `📏 KÍCH THƯỚC XE\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                `• Dài: ${specs.length || "-"} mm\n` +
+                `• Rộng: ${specs.width || "-"} mm\n` +
+                `• Cao: ${specs.height || "-"} mm\n` +
+                `• Chiều dài cơ sở: ${specs.wheelbase || "-"} mm\n` +
+                `• Khoảng sáng gầm: ${specs.groundClearance || "-"} mm`;
+
+            break;
+        }
+
+        // ==========================
+        // NHIÊN LIỆU
+        // ==========================
+
+        if (entities.feature.startsWith("fuel_")) {
+
+            reply =
+                `⛽ NHIÊN LIỆU\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                `Loại nhiên liệu: ${variant.fuelType || "Xăng"}`;
+
+            break;
+        }
+
+        // ==========================
+        // HỆ DẪN ĐỘNG
+        // ==========================
+
+        if (entities.feature.startsWith("drive_")) {
+
+            reply =
+                `⚙️ HỆ DẪN ĐỘNG\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                `Hệ dẫn động: ${variant.driveTrain || "FWD"}`;
+
+            break;
+        }
+
+        // ==========================
+        // OPTION BOOLEAN
+        // ==========================
+
+        const hasFeature = features[entities.feature];
+
+        const featureName =
+            FEATURE_LABELS[entities.feature] ||
+            entities.feature;
+
+        if (hasFeature === true) {
+
+            reply =
+                `✅ CÓ TRANG BỊ\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                `Phiên bản này được trang bị:\n` +
+                `${featureName}`;
+
+        } else {
+
+            reply =
+                `❌ KHÔNG TRANG BỊ\n` +
+                `──────────────────\n` +
+                `🚘 ${variant.variantName}\n\n` +
+                `Phiên bản này không được trang bị:\n` +
+                `${featureName}`;
+        }
+
+    }
+
+    // ==========================
+    // TOÀN BỘ THÔNG SỐ
+    // ==========================
+
+    else {
+
+        const specLines = Object.entries(SPEC_LABELS)
+            .filter(([key]) =>
+                specs[key] !== undefined &&
+                specs[key] !== null &&
+                specs[key] !== ""
+            )
+            .map(([key, label]) =>
+                `• ${label}: ${specs[key]}`
+            );
+
+        reply =
+            `🚗 THÔNG SỐ KỸ THUẬT\n` +
+            `──────────────────\n` +
+            `🚘 ${variant.variantName}\n\n` +
+
+            `⚙️ Động cơ: ${specs.engine || "-"}\n` +
+            `💪 Công suất: ${specs.horsepower || "-"} HP\n` +
+            `🔩 Mô-men xoắn: ${specs.torque || "-"} Nm\n` +
+            `🔄 Hộp số: ${variant.transmission || "-"}\n` +
+            `🚘 Dẫn động: ${variant.driveTrain || "-"}\n` +
+            `⛽ Nhiên liệu: ${variant.fuelType || "-"}\n\n` +
+
+            specLines.join("\n") +
+
+            `\n\nAnh/chị muốn xem công nghệ, an toàn hay tiện nghi trên xe không ạ?`;
+    }
+
+    break;
+}
 
             case "COMPARE_QUERY": {
 
