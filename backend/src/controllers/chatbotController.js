@@ -1101,6 +1101,17 @@ top3.forEach((item, index) => {
                     "CURRENT SESSION VARIANT",
                     session.variantName
                 );
+                const activeModel =
+                    entities.modelName ||
+                    session.modelName;
+
+                const activeVariant =
+                    entities.variantName ||
+                    session.variantName;
+
+                const activeColor =
+                    entities.color ||
+                    session.color;
                 // 1. Ưu tiên xử lý nếu có mã VIN
                 if (entities.vin) {
                     const item = await Inventory.findOne({ vin: { $regex: new RegExp(entities.vin, "i") } }).populate({
@@ -1127,7 +1138,7 @@ top3.forEach((item, index) => {
                 "SESSION",
                 session
                 );
-                if (!entities.modelName && !entities.variantName) {
+                if (!activeModel && !activeVariant) {
                     reply = "Anh/chị vui lòng cho biết dòng xe để kiểm tra tồn kho";
                     break;
                 }
