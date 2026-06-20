@@ -47,25 +47,48 @@ export const handleChatInteraction = async (req, res) => {
         // 1. Phân tích ngữ cảnh
         const { intent, entities } =
             await processSemanticAI(sessionId, message);
-        if (
-            !entities.variantName &&
-            session.recommendedVariants?.length
-        ) {
+        function resolveVariantFromSession(message, variants = []) {
 
-            const msg = cleanText(message);
+    const msgTokens =
+        cleanText(message)
+            .split(" ")
+            .filter(x => x.length >= 3);
 
-            const found =
-                session.recommendedVariants.find(v => {
+    let bestVariant = null;
+    let bestScore = 0;
 
-                    const variant = cleanText(v);
+    for (const variant of variants) {
 
-                    const keywords = variant.split(" ");
+        const variantTokens =
+            cleanText(variant)
+                .split(" ")
+                .filter(x => x.length >= 3);
 
-                    return keywords.some(k =>
-                        msg.includes(k)
-                    );
-                });
+        let score = 0;
 
+        for (const token of msgTokens) {
+
+            if (variantTokens.includes(token)) {
+                score++;
+            }
+        }
+
+        if (score > bestScore) {
+            bestScore = score;
+            bestVariant = variant;
+        }
+    }
+
+    return bestScore > 0
+        ? bestVariant
+        : null;
+}
+
+const found =
+    resolveVariantFromSession(
+        message,
+        session.recommendedVariants
+    );
             if (found) {
             entities.variantName = found;
 
@@ -84,7 +107,6 @@ export const handleChatInteraction = async (req, res) => {
             }
 
             await session.save();
-        }
         }
         let finalIntent = intent;
         // Nếu đang trong quá trình tư vấn thì ép giữ CONSULTING_QUERY
@@ -307,12 +329,16 @@ session.chatHistory.push({
                     variantQuery.modelId = model._id;
                 }
             }
-            if (session.variantName && model) {
-                variantQuery.variantName = {
-                    $regex: `^${session.variantName}$`,
-                    $options: "i"
-                };
-            }
+            const activeVariant =
+    entities.variantName ||
+    session.variantName;
+    if (activeVariant && model) {
+
+    variantQuery.variantName = {
+        $regex: `^${activeVariant}$`,
+        $options: "i"
+    };
+}
 
                     switch (finalIntent){
                         
@@ -595,7 +621,7 @@ top3.forEach((item, index) => {
                             variant = await Variant.findOne({
                                 modelId: model._id,
                                 variantName: {
-                                    $regex: `^${session.variantName}$`,
+                                    $regex: `^${entities.variantName}$`,
                                     $options: "i"
                                 }
                             }).populate("modelId");
