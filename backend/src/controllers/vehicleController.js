@@ -221,6 +221,12 @@ export const updateVehicle = async (req, res) => {
 
     let data = { ...req.body };
 
+    if (typeof data.aliases === "string") {
+  data.aliases = data.aliases
+    .split(",")
+    .map(x => x.trim())
+    .filter(Boolean);
+}
     const vehicle =
       await VehicleModel.findById(
         req.params.id
