@@ -1,3 +1,19 @@
+export function shouldResetProfile(message) {
+
+    const text = message.toLowerCase();
+
+    return (
+        text.includes("doi xe") ||
+        text.includes("xe khac") ||
+        text.includes("toi muon mua xe") ||
+        text.includes("toi muon mua xe ban tai") ||
+        text.includes("mua ban tai") ||
+        text.includes("ranger") ||
+        text.includes("everest") ||
+        text.includes("territory")
+    );
+}
+
 export function extractCustomerProfile(
     message,
     currentProfile = {}
@@ -152,6 +168,18 @@ if (
         profile.cargoNeed =
             true;
     }
+    if (
+    text.includes("ban tai")
+) {
+    profile.usage = "business";
+    profile.cargoNeed = true;
+}
+if (
+    text.includes("offroad")
+) {
+    profile.usage = "business";
+    profile.wantsOffroad = true;
+}
 
     // =====================
     // XE ĐIỆN

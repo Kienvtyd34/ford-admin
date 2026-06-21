@@ -8,7 +8,7 @@ import News from '../models/News.js';
 import { processSemanticAI, cleanText } from '../nlpManager.js';
 import ChatSession from "../models/ChatSession.js";
 
-import {extractCustomerProfile} from "../utils/profileExtractor.js";
+import {extractCustomerProfile, shouldResetProfile} from "../utils/profileExtractor.js";
 
 import { FEATURE_LABELS } from "../config/featureLabels.js";
 import { SPEC_LABELS } from "../config/specLabels.js";
@@ -48,12 +48,20 @@ export const handleChatInteraction = async (req, res) => {
         // AUTO EXTRACT CUSTOMER PROFILE
         // ==========================
 
+        if (shouldResetProfile(normalizedMessage)) {
+
+            session.customerProfile = {};
+
+            session.modelName = null;
+            session.variantName = null;
+            session.color = null;
+        }
+
         const profile =
             extractCustomerProfile(
                 normalizedMessage,
                 session.customerProfile
             );
-
         session.customerProfile =
             profile;
 
