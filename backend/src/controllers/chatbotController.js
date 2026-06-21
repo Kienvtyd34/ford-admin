@@ -525,7 +525,6 @@ if (entities.usage) {
                 ]
             });
         }
-    }
 
     // ==========================
     // SCORING ENGINE
