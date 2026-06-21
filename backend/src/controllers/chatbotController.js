@@ -356,25 +356,24 @@ session.chatHistory.push({
     };
 }
 
-const collectingProfile =
-    !session.consultingCompleted &&
-    (
-        finalIntent === "CONSULTING_QUERY" ||
-        (
-            session.customerProfile &&
-            (
-                !session.customerProfile.usage ||
-                !session.customerProfile.seats ||
-                !session.customerProfile.budget ||
-                !session.customerProfile.drivingArea
-            )
-        )
-    );
+if (
+    finalIntent === "CONSULTING_QUERY" &&
+    !session.consultingCompleted
+) {
+    const profile = session.customerProfile || {};
 
-if (collectingProfile) {
-    finalIntent = "CONSULTING_QUERY";
+    const collectingProfile =
+        !profile.usage ||
+        !profile.seats ||
+        !profile.budget ||
+        !profile.drivingArea;
+
+    if (collectingProfile) {
+        finalIntent = "CONSULTING_QUERY";
+    }
 }
 
+console.log("FINAL INTENT BEFORE SWITCH =", finalIntent);
                     switch (finalIntent){
                         
                         case "CONSULTING_QUERY": {
