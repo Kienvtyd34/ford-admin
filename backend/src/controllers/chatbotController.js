@@ -60,6 +60,30 @@ export const handleChatInteraction = async (req, res) => {
         // 1. Phân tích ngữ cảnh
         const { intent, entities } =
             await processSemanticAI(sessionId, message);
+
+        if (
+    entities.purpose &&
+    entities.purpose.length
+) {
+    const p = entities.purpose[0];
+
+    if (p === "family") {
+        profile.usage = "family";
+    }
+
+    if (
+        p === "business" ||
+        p === "work"
+    ) {
+        profile.usage = "business";
+    }
+
+    if (
+        p === "transport"
+    ) {
+        profile.usage = "transport";
+    }
+}
         function resolveVariantFromSession(message, variants = []) {
 
     const msgTokens =
@@ -303,6 +327,22 @@ session.chatHistory.push({
         $regex: `^${activeVariant}$`,
         $options: "i"
     };
+}
+
+const collectingProfile =
+    finalIntent === "CONSULTING_QUERY" ||
+    (
+        session.customerProfile &&
+        (
+            !session.customerProfile.usage ||
+            !session.customerProfile.seats ||
+            !session.customerProfile.budget ||
+            !session.customerProfile.drivingArea
+        )
+    );
+
+if (collectingProfile) {
+    finalIntent = "CONSULTING_QUERY";
 }
 
                     switch (finalIntent){

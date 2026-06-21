@@ -14,28 +14,28 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("gia đình") ||
-        text.includes("vo chong") ||
-        text.includes("con nhỏ")
-    ) {
-        profile.usage = "family";
-    }
+    text.includes("gia dinh") ||
+    text.includes("vo chong") ||
+    text.includes("con nho")
+) {
+    profile.usage = "family";
+}
 
-    if (
-        text.includes("công việc") ||
-        text.includes("kinh doanh")
-    ) {
-        profile.usage = "business";
-    }
+if (
+    text.includes("cong viec") ||
+    text.includes("kinh doanh")
+) {
+    profile.usage = "business";
+}
 
-    if (
-        text.includes("vận tải") ||
-        text.includes("16 chỗ") ||
-        text.includes("18 chỗ") ||
-        text.includes("chạy dịch vụ")
-    ) {
-        profile.usage = "transport";
-    }
+if (
+    text.includes("van tai") ||
+    text.includes("16 cho") ||
+    text.includes("18 cho") ||
+    text.includes("chay dich vu")
+) {
+    profile.usage = "transport";
+}
 
     // =====================
     // SỐ CHỖ
@@ -82,8 +82,8 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("đi phố") ||
-        text.includes("đô thị")
+        text.includes("di pho") ||
+        text.includes("do thi")
     ) {
 
         profile.drivingArea =
@@ -91,9 +91,9 @@ export function extractCustomerProfile(
     }
 
     if (
-        text.includes("đường trường") ||
-        text.includes("cao tốc") ||
-        text.includes("đi xa")
+        text.includes("đuong truong") ||
+        text.includes("cao toc") ||
+        text.includes("di xa")
     ) {
 
         profile.drivingArea =
@@ -102,8 +102,8 @@ export function extractCustomerProfile(
 
     if (
         text.includes("offroad") ||
-        text.includes("địa hình") ||
-        text.includes("đèo núi")
+        text.includes("dia hinh") ||
+        text.includes("deo nui")
     ) {
 
         profile.drivingArea =
@@ -118,7 +118,7 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("an toàn") ||
+        text.includes("an toan") ||
         text.includes("adas")
     ) {
 
@@ -131,9 +131,9 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("cao cấp") ||
-        text.includes("sang trọng") ||
-        text.includes("nội thất đẹp")
+        text.includes("cao cap") ||
+        text.includes("sang trong") ||
+        text.includes("noi that đep")
     ) {
 
         profile.wantsLuxury =
@@ -145,8 +145,8 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("chở hàng") ||
-        text.includes("bán tải")
+        text.includes("cho hang") ||
+        text.includes("ban tai")
     ) {
 
         profile.cargoNeed =
@@ -158,7 +158,7 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("xe điện") ||
+        text.includes("xe dien") ||
         text.includes("electric")
     ) {
 
@@ -174,8 +174,8 @@ export function extractCustomerProfile(
     // =====================
 
     if (
-        text.includes("du lịch") ||
-        text.includes("đi xa thường xuyên")
+        text.includes("du lich") ||
+        text.includes("di xa thuong xuyen")
     ) {
 
         profile.frequentTravel =
