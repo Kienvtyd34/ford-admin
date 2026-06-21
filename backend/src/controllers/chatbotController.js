@@ -99,6 +99,17 @@ export const handleChatInteraction = async (req, res) => {
     ) {
         profile.usage = "transport";
     }
+    
+}
+
+if (
+    normalizedMessage.includes("xe dienn") ||
+    normalizedMessage.includes("oto dienn") ||
+    normalizedMessage.includes("xe xanh") ||
+    normalizedMessage.includes("tiet kiem nhien lieu") ||
+    normalizedMessage.includes("bao ve moi truong")
+) {
+    profile.ecoFriendly = true;
 }
         function resolveVariantFromSession(message, variants = []) {
 
@@ -395,6 +406,15 @@ if (entities.usage) {
     // THU THẬP THÔNG TIN
     // ==========================
 
+
+    if (profile.ecoFriendly && !profile.budget) {
+
+    reply =
+        "Hiện Ford Việt Nam đang có Mustang Mach-E. Anh/chị dự kiến ngân sách khoảng bao nhiêu ạ?";
+
+    break;
+    }
+
     if (!profile.usage) {
         reply =
             "Anh/chị mua xe chủ yếu để:\n" +
@@ -461,11 +481,30 @@ if (entities.usage) {
         });
     }
 
-    // Mustang Mach-E
-    if (
-        profile.ecoFriendly &&
-        profile.budget >= 2000000000
-    ) {
+    if (profile.ecoFriendly) {
+
+    const machEVariants =
+        variants.filter(v =>
+            v.modelId?.name
+                ?.toLowerCase()
+                .includes("mach")
+        );
+
+    machEVariants.forEach(v => {
+
+        recommendations.push({
+            variant: v,
+            score: 1000,
+            reasons: [
+                "Xe điện 100%",
+                "Tiết kiệm chi phí nhiên liệu",
+                "Nhiều công nghệ hiện đại",
+                "Thân thiện môi trường"
+            ]
+        });
+
+    });
+}
 
         const machE =
             variants.find(v =>
