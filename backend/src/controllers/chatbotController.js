@@ -529,15 +529,15 @@ if (entities.usage) {
     // SCORING ENGINE
     // ==========================
 
-    if (profile.budget) {
-    const maxAllowed = profile.budget * 1.2; // cho phép lệch 20%
-
-    if (v.basePrice > maxAllowed) {
-        continue; // loại luôn, không cho scoring
-    }
-}
-
     for (const v of variants) {
+
+        if (profile.budget) {
+            const maxAllowed = profile.budget * 1.2; // cho phép lệch 20%
+
+            if (v.basePrice > maxAllowed) {
+                continue; // loại luôn, không cho scoring
+            }
+        }
 
         let score = 0;
 
