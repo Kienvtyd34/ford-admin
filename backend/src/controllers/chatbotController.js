@@ -184,6 +184,14 @@ const found =
         const isStockQuestion =
   /(con\s*(bao nhieu|may|xe|hang)|ton kho|so luong|con lai bao nhieu xe|xe con khong)/i.test(normalizedMessage);
 
+
+  const isConsultingIntent =
+  /(mua xe|tư vấn|chọn xe|xe phù hợp|xe điện|nên mua|cần xe)/i.test(normalizedMessage);
+
+if (isConsultingIntent) {
+    finalIntent = "CONSULTING_QUERY";
+}
+
 const isSpecQuestion =
   /(cong nghe|tinh nang|trang bi|adas|camera|ghe|dong co)/i.test(normalizedMessage);
 
@@ -1093,6 +1101,12 @@ if (modelName.includes("ranger")) {
             // ℹ️ LUỒNG THÔNG SỐ KỸ THUẬT & TRANG BỊ CHUYÊN SÂU (MAPPED 100% TRƯỜNG DỮ LIỆU)
            case 'SPECS_QUERY': {
 
+            if (
+    finalIntent === "CONSULTING_QUERY" &&
+    !entities.feature
+) {
+    break; // hoặc chuyển lại CONSULTING
+}
     if (normalizedMessage.includes("ton kho") || normalizedMessage.includes("con hang")) {
     break; // tránh rơi nhầm
 }
