@@ -122,9 +122,10 @@ if (seatMatch) {
     }
 
     if (
-        text.includes("đuong truong") ||
+        text.includes("duong truong") ||
         text.includes("cao toc") ||
-        text.includes("di xa")
+        text.includes("di xa")||
+        text.includes("duong dai")
     ) {
 
         profile.drivingArea =
