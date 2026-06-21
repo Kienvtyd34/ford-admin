@@ -22,13 +22,20 @@ const chatSessionSchema = new mongoose.Schema(
 },
 customerProfile: {
    budget: Number,
+   minBudget: Number,
+   maxBudget: Number,
    seats: Number,
-   usage: String,
-   drivingArea: String,
-   fuelPreference: String,
+   usage: String, // family business transport
+   drivingArea: String, // city highway mixed offroad
+   fuelPreference: String, // gasoline diesel electric
    wantsADAS: Boolean,
    wantsLuxury: Boolean,
-   wantsOffroad: Boolean
+   wantsOffroad: Boolean,
+   cargoNeed: Boolean,
+   ecoFriendly: Boolean,
+   familyMembers: Number,
+   frequentTravel: Boolean,
+   consultationStep: Number
 },
 
 chatHistory: [{

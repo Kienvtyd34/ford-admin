@@ -8,6 +8,8 @@ import News from '../models/News.js';
 import { processSemanticAI, cleanText } from '../nlpManager.js';
 import ChatSession from "../models/ChatSession.js";
 
+import {extractCustomerProfile} from "../utils/profileExtractor.js";
+
 import { FEATURE_LABELS } from "../config/featureLabels.js";
 import { SPEC_LABELS } from "../config/specLabels.js";
 
@@ -35,14 +37,25 @@ export const handleChatInteraction = async (req, res) => {
             }
        
         const normalizedMessage = cleanText(message);
+
         session.customerProfile =
             session.customerProfile || {};
+
         session.chatHistory =
             session.chatHistory || [];
 
+        // ==========================
+        // AUTO EXTRACT CUSTOMER PROFILE
+        // ==========================
+
         const profile =
-        session.customerProfile;
-        if (!message) return res.status(400).json({ text: "Nội dung yêu cầu trống!" });
+            extractCustomerProfile(
+                normalizedMessage,
+                session.customerProfile
+            );
+
+        session.customerProfile =
+            profile;
 
         // 1. Phân tích ngữ cảnh
         const { intent, entities } =
@@ -111,12 +124,8 @@ const found =
         let finalIntent = intent;
         // Nếu đang trong quá trình tư vấn thì ép giữ CONSULTING_QUERY
         if (
-            session.customerProfile &&
-            (
-                !session.customerProfile.seats ||
-                !session.customerProfile.budget ||
-                !session.customerProfile.usage
-            )
+            finalIntent === "CONSULTING_QUERY" &&
+             session.customerProfile
         ) {
             finalIntent = "CONSULTING_QUERY";
         }
@@ -222,53 +231,9 @@ if (entities.variantName) {
 if (entities.color) {
    session.color = entities.color;
 }
-// ===== CUSTOMER PROFILE =====
 
-if (entities.seats) {
-   profile.seats = entities.seats;
-}
-
-if (entities.maxBudget) {
-   profile.budget = entities.maxBudget;
-}
-
-if (
-   normalizedMessage.includes("gia dinh")
-) {
-   profile.usage = "family";
-}
-
-if (
-   normalizedMessage.includes("kinh doanh")
-) {
-   profile.usage = "business";
-}
-
-if (
-   normalizedMessage.includes("di pho")
-) {
-   profile.drivingArea = "city";
-}
-
-if (
-   normalizedMessage.includes("duong dai")
-) {
-   profile.drivingArea = "highway";
-}
-
-if (
-   normalizedMessage.includes("offroad") ||
-   normalizedMessage.includes("phuot")
-) {
-   profile.wantsOffroad = true;
-}
-
-if (
-   normalizedMessage.includes("adas")
-) {
-   profile.wantsADAS = true;
-}
-
+session.customerProfile =
+    profile;
 session.lastIntent = finalIntent;
 
 await session.save();
@@ -342,238 +307,539 @@ session.chatHistory.push({
 
                     switch (finalIntent){
                         
-                        // 💡 LUỒNG TƯ VẤN NHU CẦU NGƯỜI DÙNG (MỚI BỔ SUNG)
-         case "CONSULTING_QUERY": {
-            const profile =
-            session.customerProfile || {};
+                        case "CONSULTING_QUERY": {
 
-            if (!profile.seats) {
-
-            reply =
-                "Anh/chị cần xe mấy chỗ ạ? (5 chỗ, 7 chỗ hoặc bán tải)";
-
-            break;
-            }
-
-            if (!profile.budget) {
-
-            reply =
-                "Anh/chị dự kiến ngân sách khoảng bao nhiêu ạ?";
-
-            break;
-            }
-
-            if (!profile.usage) {
-
-            reply =
-                "Anh/chị mua xe cho gia đình hay công việc ạ?";
-
-            break;
-            }
-            const recommendations = [];
-
-            const variants = await Variant.find({})
-                .populate("modelId");
-
-            for (const v of variants) {
-
-    let score = 0;
-    const reasons = [];
-
-    // ===== SỐ CHỖ =====
-    if (
-        profile.seats &&
-        v.specs?.seats === profile.seats
-    ) {
-        score += 30;
-
-        reasons.push(
-            `Đúng nhu cầu ${profile.seats} chỗ`
-        );
-    }
-
-    // ===== NGÂN SÁCH =====
-    if (
-        profile.budget &&
-        v.basePrice <= profile.budget
-    ) {
-        score += 20;
-
-        reasons.push(
-            "Phù hợp ngân sách"
-        );
-    }
-
-    // ===== GIA ĐÌNH =====
-    if (
-    profile.usage === "family"
-) {
-
-    if (v.specs?.seats >= 5)
-        score += 20;
-
-    reasons.push(
-        "Phù hợp nhu cầu gia đình"
-    );
+    const profile = session.customerProfile || {};
+    if (entities.seats) {
+    profile.seats = entities.seats;
 }
 
-    // ===== KINH DOANH =====
-    if (
-        profile.usage === "business" &&
-        (
-            v.modelId?.name
-                ?.toLowerCase()
-                .includes("everest") ||
-            v.modelId?.name
-                ?.toLowerCase()
-                .includes("ranger")
-        )
-    ) {
-        score += 30;
-
-        reasons.push(
-            "Phù hợp công việc và kinh doanh"
-        );
-    }
-
-    // ===== ĐI PHỐ =====
-    if (
-        profile.drivingArea === "city" &&
-        v.modelId?.name
-            ?.toLowerCase()
-            .includes("territory")
-    ) {
-        score += 30;
-
-        reasons.push(
-            "Phù hợp di chuyển trong đô thị"
-        );
-    }
-
-    // ===== ĐƯỜNG DÀI =====
-    if (
-        profile.drivingArea === "highway" &&
-        (
-            v.modelId?.name
-                ?.toLowerCase()
-                .includes("everest") ||
-            v.modelId?.name
-                ?.toLowerCase()
-                .includes("territory")
-        )
-    ) {
-        score += 20;
-
-        reasons.push(
-            "Thoải mái cho các chuyến đi đường dài"
-        );
-    }
-
-    // ===== OFFROAD =====
-    if (
-        profile.wantsOffroad &&
-        (
-            v.modelId?.name
-                ?.toLowerCase()
-                .includes("ranger") ||
-            v.variantName
-                ?.toLowerCase()
-                .includes("raptor")
-        )
-    ) {
-        score += 50;
-
-        reasons.push(
-            "Khả năng offroad vượt trội"
-        );
-    }
-
-    // ===== ADAS =====
-    if (
-   profile.wantsADAS &&
-   v.features?.adas
-) {
-   score += 20;
-
-   reasons.push(
-      "Trang bị gói ADAS hỗ trợ lái"
-   );
+if (entities.maxBudget) {
+    profile.budget = entities.maxBudget;
 }
 
-    // ===== FALLBACK TỪ TIN NHẮN =====
-    if (
-        normalizedMessage.includes("7 cho") &&
-        v.specs?.seats === 7
-    ) {
-        score += 20;
+if (entities.minBudget) {
+    profile.minBudget = entities.minBudget;
+}
+
+if (entities.drivingArea) {
+    profile.drivingArea =
+        entities.drivingArea;
+}
+
+if (entities.usage) {
+    profile.usage =
+        entities.usage;
+}
+
+    // ==========================
+    // THU THẬP THÔNG TIN
+    // ==========================
+
+    if (!profile.usage) {
+        reply =
+            "Anh/chị mua xe chủ yếu để:\n" +
+            "1. Gia đình\n" +
+            "2. Công việc\n" +
+            "3. Kinh doanh vận tải";
+        break;
     }
 
-    if (
-        normalizedMessage.includes("5 cho") &&
-        v.specs?.seats === 5
-    ) {
-        score += 20;
+    if (!profile.seats) {
+        reply =
+            "Anh/chị thường đi bao nhiêu người ạ? (5, 7, 16...)";
+        break;
     }
 
-    if (
-        normalizedMessage.includes("ban tai") &&
-        v.modelId?.name
-            ?.toLowerCase()
-            .includes("ranger")
-    ) {
-        score += 40;
+    if (!profile.budget) {
+        reply =
+            "Anh/chị dự kiến ngân sách khoảng bao nhiêu ạ?";
+        break;
     }
 
-    if (score > 0) {
+    if (!profile.drivingArea) {
+        reply =
+            "Anh/chị chủ yếu đi phố, đường trường hay offroad?";
+        break;
+    }
 
-        recommendations.push({
-            variant: v,
-            score,
-            reasons
+    if (profile.wantsADAS === undefined) {
+        reply =
+            "Anh/chị có ưu tiên công nghệ an toàn ADAS không ạ?";
+        break;
+    }
+
+    // ==========================
+    // LẤY DỮ LIỆU XE
+    // ==========================
+
+    const variants = await Variant.find({})
+        .populate("modelId");
+
+    const recommendations = [];
+
+    // ==========================
+    // RULE ENGINE
+    // ==========================
+
+    // Transit
+    if (
+        profile.usage === "transport" ||
+        profile.seats >= 16
+    ) {
+
+        const transitVariants =
+            variants.filter(v =>
+                v.modelId?.name
+                    ?.toLowerCase()
+                    .includes("transit")
+            );
+
+        transitVariants.forEach(v => {
+            recommendations.push({
+                variant: v,
+                score: 999,
+                reasons: [
+                    "Phù hợp kinh doanh vận tải",
+                    "Đáp ứng nhu cầu nhiều chỗ ngồi"
+                ]
+            });
         });
+    }
 
+    // Mustang Mach-E
+    if (
+        profile.ecoFriendly &&
+        profile.budget >= 2000000000
+    ) {
+
+        const machE =
+            variants.find(v =>
+                v.modelId?.name
+                    ?.toLowerCase()
+                    .includes("mach")
+            );
+
+        if (machE) {
+
+            recommendations.push({
+                variant: machE,
+                score: 950,
+                reasons: [
+                    "Xe điện hiện đại",
+                    "Tiết kiệm nhiên liệu",
+                    "Nhiều công nghệ thông minh"
+                ]
+            });
+        }
+    }
+
+    // ==========================
+    // SCORING ENGINE
+    // ==========================
+
+    for (const v of variants) {
+
+        let score = 0;
+
+        const reasons = [];
+
+        const modelName =
+            v.modelId?.name?.toLowerCase() || "";
+            // Territory
+
+if (
+    profile.seats <= 5 &&
+    v.basePrice < 1000000000
+) {
+
+    if (
+        modelName.includes("territory")
+    ) {
+        score += 70;
+
+        reasons.push(
+            "SUV 5 chỗ phù hợp gia đình"
+        );
     }
 }
 
-recommendations.sort(
-    (a, b) => b.score - a.score
-);
+// Everest
 
-if (!recommendations.length) {
+if (
+    profile.seats >= 7
+) {
+
+    if (
+        modelName.includes("everest")
+    ) {
+        score += 70;
+
+        reasons.push(
+            "SUV 7 chỗ rộng rãi"
+        );
+    }
+}
+
+// Ranger
+
+if (
+    profile.usage === "business"
+) {
+
+    if (
+        modelName.includes("ranger")
+    ) {
+        score += 80;
+
+        reasons.push(
+            "Phù hợp công việc"
+        );
+    }
+}
+
+        // ==================
+        // NGÂN SÁCH
+        // ==================
+
+        if (profile.budget) {
+
+            const ratio =
+                v.basePrice / profile.budget;
+            const diff =
+                v.basePrice - profile.budget;
+
+            if (ratio <= 1) {
+
+                score +=
+                    Math.round(
+                        (1 - ratio) * 30
+                    );
+                reasons.push(
+                    "Nằm trong ngân sách dự kiến"
+                );
+
+            } else if (
+                Math.abs(diff) <= 100000000
+            ) {
+
+                score += 10;
+
+                reasons.push(
+                    "Giá chỉ chênh nhẹ so với ngân sách"
+                );
+            }
+        }
+
+        // ==================
+        // SỐ CHỖ
+        // ==================
+
+        if (
+            profile.seats &&
+            v.specs?.seats
+        ) {
+
+            if (
+                v.specs.seats === profile.seats
+            ) {
+
+                score += 40;
+
+                reasons.push(
+                    `Đúng nhu cầu ${profile.seats} chỗ`
+                );
+
+            } else if (
+                v.specs.seats > profile.seats
+            ) {
+
+                score += 20;
+
+                reasons.push(
+                    "Không gian rộng rãi hơn nhu cầu"
+                );
+            }
+        }
+
+        // ==================
+        // GIA ĐÌNH
+        // ==================
+
+       if (
+            profile.usage === "family" &&
+            profile.seats <= 5
+        ) {
+
+            if (
+                modelName.includes("territory")
+            ) {
+                score += 50;
+            }
+        }
+
+        if (
+            profile.usage === "family" &&
+            profile.seats >= 7
+        ) {
+
+            if (
+                modelName.includes("everest")
+            ) {
+                score += 50;
+            }
+        }
+
+        // ==================
+        // CÔNG VIỆC
+        // ==================
+
+        if (
+            profile.usage === "business"
+        ) {
+
+            if (
+                modelName.includes("ranger")
+            ) {
+
+                score += 50;
+
+                reasons.push(
+                    "Phù hợp công việc và chở hàng"
+                );
+            }
+        }
+
+        // ==================
+        // ĐI PHỐ
+        // ==================
+
+        if (
+            profile.drivingArea === "city"
+        ) {
+
+            if (
+                modelName.includes("territory")
+            ) {
+
+                score += 40;
+
+                reasons.push(
+                    "Kích thước phù hợp đô thị"
+                );
+            }
+        }
+
+        // ==================
+        // ĐƯỜNG DÀI
+        // ==================
+
+        if (
+            profile.drivingArea === "highway"
+        ) {
+
+            if (
+                modelName.includes("everest")
+            ) {
+
+                score += 40;
+
+                reasons.push(
+                    "Êm ái và thoải mái khi đi xa"
+                );
+            }
+        }
+
+        // ==================
+        // OFFROAD
+        // ==================
+
+        if (
+            profile.wantsOffroad
+        ) {
+
+            if (
+                modelName.includes("ranger")
+            ) {
+
+                score += 40;
+
+                reasons.push(
+                    "Khả năng vận hành địa hình tốt"
+                );
+            }
+
+            if (
+                v.variantName
+                    ?.toLowerCase()
+                    .includes("raptor")
+            ) {
+
+                score += 60;
+
+                reasons.push(
+                    "Phiên bản offroad hàng đầu"
+                );
+            }
+        }
+
+        // ==================
+        // ADAS
+        // ==================
+
+        if (
+            profile.wantsADAS &&
+            v.features?.adas
+        ) {
+
+            score += 25;
+
+            reasons.push(
+                "Có gói ADAS hỗ trợ lái an toàn"
+            );
+        }
+
+        // ==================
+        // XE SANG
+        // ==================
+
+        if (
+            profile.wantsLuxury
+        ) {
+
+            if (
+                modelName.includes("everest")
+            ) {
+
+                score += 20;
+
+                reasons.push(
+                    "Nội thất cao cấp"
+                );
+            }
+
+            if (
+                modelName.includes("mach")
+            ) {
+
+                score += 40;
+
+                reasons.push(
+                    "Xe điện cao cấp nhiều công nghệ"
+                );
+            }
+        }
+
+        // ==================
+        // CHỞ HÀNG
+        // ==================
+
+        if (
+            profile.cargoNeed &&
+            modelName.includes("ranger")
+        ) {
+
+            score += 50;
+
+            reasons.push(
+                "Thùng xe phù hợp chở hàng"
+            );
+        }
+
+        // ==================
+        // DU LỊCH THƯỜNG XUYÊN
+        // ==================
+
+        if (
+            profile.frequentTravel &&
+            modelName.includes("everest")
+        ) {
+
+            score += 30;
+
+            reasons.push(
+                "Thoải mái cho các chuyến đi dài"
+            );
+        }
+
+        if (score > 0) {
+
+            recommendations.push({
+                variant: v,
+                score,
+                reasons
+            });
+        }
+    }
+
+    // ==========================
+    // SẮP XẾP
+    // ==========================
+
+    recommendations.sort(
+        (a, b) => b.score - a.score
+    );
+
+    const uniqueRecommendations =
+        recommendations.filter(
+            (item, index, self) =>
+                index ===
+                self.findIndex(
+                    x =>
+                        x.variant._id.toString() ===
+                        item.variant._id.toString()
+                )
+        );
+
+    const top3 =
+        uniqueRecommendations.slice(0, 3);
+
+    if (!top3.length) {
+
+        reply =
+            "Dạ em chưa tìm được mẫu xe phù hợp. Anh/chị có thể cung cấp thêm nhu cầu sử dụng không ạ?";
+
+        break;
+    }
+
+    // ==========================
+    // TẠO PHẢN HỒI
+    // ==========================
 
     reply =
-        "Dạ em chưa tìm được mẫu xe phù hợp. Anh/chị có thể cung cấp thêm nhu cầu sử dụng không ạ?";
+        "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n\n";
+
+    top3.forEach((item, index) => {
+
+        reply +=
+            `${index + 1}. ${item.variant.modelId?.name} ${item.variant.variantName}\n` +
+            `💰 ${item.variant.basePrice.toLocaleString("vi-VN")} VNĐ\n` +
+            `⭐ Điểm phù hợp: ${item.score}\n` +
+            `✓ ${item.reasons.join("\n✓ ")}\n\n`;
+    });
+
+    // ==========================
+    // MEMORY
+    // ==========================
+
+    session.modelName =
+        top3[0]?.variant?.modelId?.name;
+
+    session.variantName =
+        top3[0]?.variant?.variantName;
+
+    session.recommendedVariants =
+        top3.map(
+            x => x.variant.variantName
+        );
+
+    await session.save();
+
+    reply +=
+        "Anh/chị muốn em so sánh chi tiết các mẫu này hoặc tính trả góp không ạ?";
 
     break;
 }
-const top3 = recommendations.slice(0, 3);
-
-reply =
-    "🚗 Dựa trên nhu cầu của anh/chị, em đề xuất:\n\n";
-
-top3.forEach((item, index) => {
-
-    reply +=
-        `${index + 1}. ${item.variant.modelId?.name} ${item.variant.variantName}\n` +
-        `💰 ${item.variant.basePrice.toLocaleString("vi-VN")} VNĐ\n` +
-        `⭐ Điểm phù hợp: ${item.score}\n` +
-        `✓ ${item.reasons.join("\n✓ ")}\n\n`;
-});
-            // Lưu model đầu tiên vào memory
-            if (top3.length > 0) {
-                session.modelName = top3[0].variant.modelId?.name;
-
-                session.recommendedVariants =
-                    top3.map(x => x.variant.variantName);
-
-                await session.save();
-            }
-
-            reply +=
-                "Anh/chị muốn em so sánh chi tiết các mẫu này không ạ?";
-
-            break;
-        }
 
                         // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
                       case 'PRICE_QUERY': {
@@ -621,7 +887,7 @@ top3.forEach((item, index) => {
                             variant = await Variant.findOne({
                                 modelId: model._id,
                                 variantName: {
-                                    $regex: `^${entities.variantName}$`,
+                                    $regex: `^${session.variantName}$`,
                                     $options: "i"
                                 }
                             }).populate("modelId");
@@ -705,7 +971,7 @@ top3.forEach((item, index) => {
                                     variant = await Variant.findOne({
                                         modelId: model._id,
                                         variantName: {
-                                            $regex: `^${session.variantName}$`,
+                                            $regex: `^${entities.variantName}$`,
                                             $options: "i"
                                         }
                                     }).populate("modelId");
