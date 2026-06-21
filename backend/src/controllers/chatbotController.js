@@ -923,6 +923,8 @@ if (modelName.includes("ranger")) {
                         // 💰 LUỒNG TRA CỨU GIÁ XE CHÍNH HÃNG
                       case 'PRICE_QUERY': {
 
+                        let activeVariantName =
+                            entities.variantName || session.variantName;
                         let variant = null;
                         let model = null;
 
@@ -966,7 +968,7 @@ if (modelName.includes("ranger")) {
                             variant = await Variant.findOne({
                                 modelId: model._id,
                                 variantName: {
-                                    $regex: `^${session.variantName}$`,
+                                    $regex: `session.variantName`,
                                     $options: "i"
                                 }
                             }).populate("modelId");
@@ -974,12 +976,11 @@ if (modelName.includes("ranger")) {
                         // ======================================================
                         // 1. ƯU TIÊN VARIANT TRỰC TIẾP
                         // ======================================================
-                        if (session.variantName) {
-
-                        variantQuery.variantName = {
-                            $regex: `^${session.variantName}$`,
-                            $options: "i"
-                        };
+                        if (!entities.variantName && session.variantName) {
+                            variantQuery.variantName = {
+                                $regex: session.variantName,
+                                $options: "i"
+                            };
                         }
 
                         // ======================================================
