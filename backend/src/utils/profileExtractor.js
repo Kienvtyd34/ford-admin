@@ -53,19 +53,34 @@ if (
     profile.usage = "transport";
 }
 
+if (
+    text.includes("du lich") ||
+    text.includes("dich vu") ||
+    text.includes("dich vu") ||
+    text.includes("chay tour") ||
+    text.includes("dua don")
+) {
+    profile.usage = "transport";
+}
     // =====================
     // SỐ CHỖ
     // =====================
 
     const seatMatch =
-        text.match(/(\d+)\s*chỗ/);
+    text.match(/(\d+)\s*(chỗ|nguoi|người)?/i);
 
-    if (seatMatch) {
+if (seatMatch) {
 
-        profile.seats =
-            parseInt(seatMatch[1]);
+    const seats =
+        parseInt(seatMatch[1]);
+
+    if (
+        seats >= 2 &&
+        seats <= 50
+    ) {
+        profile.seats = seats;
     }
-
+}
     // =====================
     // NGÂN SÁCH
     // =====================

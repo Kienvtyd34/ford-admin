@@ -62,6 +62,14 @@ export const handleChatInteraction = async (req, res) => {
                 normalizedMessage,
                 session.customerProfile
             );
+
+        if (
+            profile.seats &&
+            !entities.seats
+        ) {
+            entities.seats =
+                profile.seats;
+        }    
         session.customerProfile =
             profile;
 
