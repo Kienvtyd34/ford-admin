@@ -346,14 +346,17 @@ session.chatHistory.push({
 }
 
 const collectingProfile =
-    finalIntent === "CONSULTING_QUERY" ||
+    !session.consultingCompleted &&
     (
-        session.customerProfile &&
+        finalIntent === "CONSULTING_QUERY" ||
         (
-            !session.customerProfile.usage ||
-            !session.customerProfile.seats ||
-            !session.customerProfile.budget ||
-            !session.customerProfile.drivingArea
+            session.customerProfile &&
+            (
+                !session.customerProfile.usage ||
+                !session.customerProfile.seats ||
+                !session.customerProfile.budget ||
+                !session.customerProfile.drivingArea
+            )
         )
     );
 
@@ -888,6 +891,8 @@ if (
         top3.map(
             x => x.variant.variantName
         );
+
+    session.consultingCompleted = true;
 
     await session.save();
 

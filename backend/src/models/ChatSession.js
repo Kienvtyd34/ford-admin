@@ -37,6 +37,10 @@ customerProfile: {
    frequentTravel: Boolean,
    consultationStep: Number
 },
+consultingCompleted:{
+    type: Boolean,
+    default: false
+},
 
 chatHistory: [{
    role: String,
@@ -47,6 +51,7 @@ chatHistory: [{
    }
 }]
 },
+
 
 {
    timestamps: true
