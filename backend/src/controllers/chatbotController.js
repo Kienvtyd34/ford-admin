@@ -62,6 +62,9 @@ export const handleChatInteraction = async (req, res) => {
                 normalizedMessage,
                 session.customerProfile
             );
+        // 1. Phân tích ngữ cảnh
+        const { intent, entities } =
+            await processSemanticAI(sessionId, message);
 
         if (
             profile.seats &&
@@ -73,9 +76,6 @@ export const handleChatInteraction = async (req, res) => {
         session.customerProfile =
             profile;
 
-        // 1. Phân tích ngữ cảnh
-        const { intent, entities } =
-            await processSemanticAI(sessionId, message);
 
         if (
     entities.purpose &&
