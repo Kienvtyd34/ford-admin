@@ -422,11 +422,6 @@ if (entities.usage) {
         break;
     }
 
-    if (profile.wantsADAS === undefined) {
-        reply =
-            "Anh/chị có ưu tiên công nghệ an toàn ADAS không ạ?";
-        break;
-    }
 
     // ==========================
     // LẤY DỮ LIỆU XE
@@ -740,22 +735,6 @@ if (
                     "Phiên bản offroad hàng đầu"
                 );
             }
-        }
-
-        // ==================
-        // ADAS
-        // ==================
-
-        if (
-            profile.wantsADAS &&
-            v.features?.adas
-        ) {
-
-            score += 25;
-
-            reasons.push(
-                "Có gói ADAS hỗ trợ lái an toàn"
-            );
         }
 
         // ==================

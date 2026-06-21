@@ -28,7 +28,6 @@ customerProfile: {
    usage: String, // family business transport
    drivingArea: String, // city highway mixed offroad
    fuelPreference: String, // gasoline diesel electric
-   wantsADAS: Boolean,
    wantsLuxury: Boolean,
    wantsOffroad: Boolean,
    cargoNeed: Boolean,
