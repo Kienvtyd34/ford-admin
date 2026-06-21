@@ -529,6 +529,14 @@ if (entities.usage) {
     // SCORING ENGINE
     // ==========================
 
+    if (profile.budget) {
+    const maxAllowed = profile.budget * 1.2; // cho phép lệch 20%
+
+    if (v.basePrice > maxAllowed) {
+        continue; // loại luôn, không cho scoring
+    }
+}
+
     for (const v of variants) {
 
         let score = 0;
@@ -574,19 +582,9 @@ if (
 
 // Ranger
 
-if (
-    profile.usage === "business"
-) {
-
-    if (
-        modelName.includes("ranger")
-    ) {
-        score += 80;
-
-        reasons.push(
-            "Phù hợp công việc"
-        );
-    }
+if (modelName.includes("ranger")) {
+    if (profile.usage === "business") score += 40;
+    if (profile.purpose?.includes("offroad")) score += 30;
 }
 
         // ==================
@@ -760,17 +758,13 @@ if (
                 );
             }
 
-            if (
-                v.variantName
-                    ?.toLowerCase()
-                    .includes("raptor")
-            ) {
-
-                score += 60;
-
-                reasons.push(
-                    "Phiên bản offroad hàng đầu"
-                );
+            if (v.variantName?.toLowerCase().includes("raptor")) {
+                if (profile.budget > 1000000000) {
+                    score += 60; // chỉ dành cho khách đủ tiền
+                } else {
+                    score += 5; // chỉ gợi ý nhẹ
+                    reasons.push("Phiên bản offroad cao cấp (vượt ngân sách đề xuất)");
+                }
             }
         }
 
