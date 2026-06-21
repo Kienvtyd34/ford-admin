@@ -516,7 +516,7 @@ if (entities.usage) {
 
             recommendations.push({
                 variant: machE,
-                score: 950,
+                score: 150,
                 reasons: [
                     "Xe điện hiện đại",
                     "Tiết kiệm nhiên liệu",
