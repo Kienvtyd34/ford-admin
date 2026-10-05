@@ -14,9 +14,13 @@ import bookingRoutes from "./src/routes/bookingRoutes.js";
 import newsRoutes from "./src/routes/newsRoutes.js";
 import aiRoutes from "./src/routes/aiRoutes.js";
 import intentRoutes from "./src/routes/intentRoutes.js";
+import customerVehicleRoutes from "./src/routes/customerVehicleRoutes.js";
+import servicePackageRoutes from "./src/routes/servicePackageRoutes.js";
+import serviceAppointmentRoutes from "./src/routes/serviceAppointmentRoutes.js";
 // Controllers
 import { handleSepayWebhook } from "./src/controllers/paymentController.js";
 import { autoCancelExpiredBookings } from "./src/controllers/bookingController.js";
+import { expireAppointments } from "./src/controllers/serviceAppointmentController.js";
 
 const app = express();
 
@@ -67,11 +71,19 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/intents", intentRoutes);
+app.use("/api/customer-vehicles", customerVehicleRoutes);
+app.use("/api/service-packages", servicePackageRoutes);
+app.use("/api/service-appointments", serviceAppointmentRoutes);
 // ================= AUTO JOB =================
 
 setInterval(
   autoCancelExpiredBookings,
   60 * 60 * 1000
+);
+
+setInterval(
+  expireAppointments,
+  60 * 1000
 );
 
 // ================= START SERVER =================

@@ -1,11 +1,28 @@
 import Booking from '../models/Booking.js';
+import {
+    processServicePaymentWebhook,
+    verifyServiceWebhook,
+} from '../utils/servicePayment.js';
 
 export const handleSepayWebhook = async (req, res) => {
     try {
+        if (!verifyServiceWebhook(req)) {
+            return res.status(401).send("Webhook không hợp lệ");
+        }
+
+        const serviceResult = await processServicePaymentWebhook(req.body);
+        if (serviceResult.handled) {
+            return res.status(200).send(serviceResult.message);
+        }
+
         const { content, id } = req.body;
         console.log(`[SePay] Giao dịch: ${id} | Nội dung: ${content}`);
 
-        const match = content.match(/DATCOC[_\s]?([a-zA-Z0-9]+)/i);
+        if (typeof content !== 'string') {
+            return res.status(200).send("Webhook không có nội dung chuyển khoản");
+        }
+
+        const match = content.match(/DATCOC[_\s-]?([a-zA-Z0-9]+)/i);
         const bookingCode = match ? match[1].toUpperCase() : null;
 
         if (!bookingCode) {

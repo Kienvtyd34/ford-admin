@@ -32,6 +32,8 @@ import TestDrivePage from './pages/TestDrivePage';
 import TestDriveList from './pages/TestDriveList';
 import Chatbot from './components/Chatbot';
 import IntentAdmin from './pages/IntentAdmin';
+import ServiceBooking from './pages/ServiceBooking';
+import ServiceManagement from './pages/ServiceManagement';
 function App() {
   return (
     <VehicleProvider>
@@ -46,6 +48,7 @@ function App() {
           <Route path="/bang-gia" element={<PriceList />} />
           <Route path="/lien-he" element={<ContactFord />} />
           <Route path="/booking-history" element={<BookingHistory />} />
+          <Route path="/bao-duong" element={<ServiceBooking />} />
           <Route path="/mua-xe-tra-gop" element={<InstallmentGuide />} />
           <Route path="/tin-tuc" element={<NewsUser />} />
           <Route path="/tin-tuc/:slug" element={<NewsDetail />} />
@@ -71,6 +74,7 @@ function App() {
   <Route path="dashboard" element={<InventoryDashboard />} />
   <Route path="vehicle" element={<AdminVehicle/>}/>
   <Route path="test-drive-list" element={<TestDriveList />} />
+  <Route path="service-management" element={<ServiceManagement />} />
   {/* CHỈ ADMIN MỚI VÀO ĐƯỢC TRANG NÀY */}
   <Route 
     path="hr-management" 

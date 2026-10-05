@@ -54,6 +54,13 @@ const AdminLayout = () => {
           >
             <span className="text-xl">🚘</span> Quản lý Xe Demo
           </Link>
+
+          <Link
+            to="/admin/service-management"
+            className="flex items-center gap-3 rounded-lg p-3 font-medium text-white transition-all hover:bg-blue-800"
+          >
+            <span className="text-xl">🔧</span> Quản lý bảo dưỡng
+          </Link>
           
           <Link 
             to="/admin/inventory" 

@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
-import * as SibApiV3Sdk from '@getbrevo/brevo'; // Sửa lại cách import này
+import * as SibApiV3Sdk from '@getbrevo/brevo'; 
 
 // Tạo Token JWT
 const generateToken = (id) => {
@@ -29,7 +29,7 @@ export const register = async (req, res) => {
 
         await user.save();
 
-        // --- CẤU HÌNH BREVO (CÁCH MỚI NHẤT) ---
+        // --- CẤU HÌNH BREVO ---
         const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
         apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
 
@@ -57,7 +57,6 @@ export const register = async (req, res) => {
     }
 };
 
-// Các hàm login, verifyEmail... giữ nguyên như logic của bạn nhưng đảm bảo return đúng res
 export const login = async (req, res) => {
     try {
         const { username, password } = req.body;

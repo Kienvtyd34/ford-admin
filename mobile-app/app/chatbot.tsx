@@ -29,7 +29,7 @@ export default function ChatbotScreen() {
     try {
       const res = await axios.post("https://ford-admin.onrender.com/api/ai/chat", {
         message: userText,
-        userId: "user_1",
+        sessionId: "user_1",
       });
 
       let reply = res.data?.text || res.data?.reply || res.data?.message || "Không có phản hồi";

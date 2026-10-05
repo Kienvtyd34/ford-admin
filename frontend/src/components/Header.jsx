@@ -252,6 +252,13 @@ const Header = () => {
             Tin tức
           </Link>
 
+          <Link
+            to="/bao-duong"
+            className="hover:text-blue-700 transition-colors font-black whitespace-nowrap"
+          >
+            Bảo dưỡng
+          </Link>
+
           {(userInfo?.user?.role === 'admin' ||
             userInfo?.user?.role === 'staff') ? (
             <Link
