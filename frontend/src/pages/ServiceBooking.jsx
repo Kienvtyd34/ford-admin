@@ -15,6 +15,49 @@ const emptyVehicle = {
   currentMileage: "",
 };
 
+const DEFAULT_SERVICE_PACKAGES = [
+  { _id: "default-basic", name: "Bảo dưỡng cơ bản", category: "Bảo dưỡng định kỳ", price: 990000, durationMinutes: 60 },
+  { _id: "default-periodic", name: "Bảo dưỡng định kỳ", category: "Bảo dưỡng định kỳ", price: 1490000, durationMinutes: 90 },
+  { _id: "default-advanced", name: "Bảo dưỡng nâng cao", category: "Bảo dưỡng định kỳ", price: 2490000, durationMinutes: 150 },
+  { _id: "default-5000", name: "Bảo dưỡng 5.000 km", category: "Bảo dưỡng định kỳ", price: 1990000, durationMinutes: 120 },
+  { _id: "default-10000", name: "Bảo dưỡng 10.000 km", category: "Bảo dưỡng định kỳ", price: 2990000, durationMinutes: 150 },
+  { _id: "default-20000", name: "Bảo dưỡng 20.000 km", category: "Bảo dưỡng định kỳ", price: 4990000, durationMinutes: 180 },
+  { _id: "default-40000", name: "Bảo dưỡng 40.000 km", category: "Bảo dưỡng định kỳ", price: 6990000, durationMinutes: 240 },
+  { _id: "default-60000", name: "Bảo dưỡng 60.000 km", category: "Bảo dưỡng định kỳ", price: 8990000, durationMinutes: 300 },
+  { _id: "default-check-general", name: "Kiểm tra tổng quát xe", category: "Gói kiểm tra – chẩn đoán", price: 590000, durationMinutes: 45 },
+  { _id: "default-check-trip", name: "Kiểm tra xe trước chuyến đi", category: "Gói kiểm tra – chẩn đoán", price: 790000, durationMinutes: 60 },
+  { _id: "default-diagnostic", name: "Chẩn đoán lỗi điện tử", category: "Gói kiểm tra – chẩn đoán", price: 1390000, durationMinutes: 90 },
+  { _id: "default-engine", name: "Kiểm tra động cơ", category: "Gói kiểm tra – chẩn đoán", price: 1090000, durationMinutes: 75 },
+  { _id: "default-electrical", name: "Kiểm tra hệ thống điện", category: "Gói kiểm tra – chẩn đoán", price: 850000, durationMinutes: 60 },
+  { _id: "default-brake", name: "Kiểm tra hệ thống phanh", category: "Gói kiểm tra – chẩn đoán", price: 950000, durationMinutes: 75 },
+  { _id: "default-suspension", name: "Kiểm tra gầm và hệ thống treo", category: "Gói kiểm tra – chẩn đoán", price: 1190000, durationMinutes: 90 },
+  { _id: "default-repair-brake", name: "Sửa chữa hệ thống phanh", category: "Gói sửa chữa", price: 2590000, durationMinutes: 180 },
+  { _id: "default-repair-suspension", name: "Sửa chữa hệ thống treo", category: "Gói sửa chữa", price: 2990000, durationMinutes: 180 },
+  { _id: "default-repair-steering", name: "Sửa chữa hệ thống lái", category: "Gói sửa chữa", price: 3190000, durationMinutes: 210 },
+  { _id: "default-repair-engine", name: "Sửa chữa động cơ", category: "Gói sửa chữa", price: 4990000, durationMinutes: 300 },
+  { _id: "default-repair-electrical", name: "Sửa chữa hệ thống điện", category: "Gói sửa chữa", price: 3490000, durationMinutes: 210 },
+  { _id: "default-repair-ac", name: "Sửa chữa điều hòa", category: "Gói sửa chữa", price: 2890000, durationMinutes: 180 },
+  { _id: "default-oil-change", name: "Thay dầu động cơ", category: "Gói sửa chữa", price: 990000, durationMinutes: 60 },
+  { _id: "default-oil-filter", name: "Thay lọc dầu", category: "Gói sửa chữa", price: 450000, durationMinutes: 30 },
+  { _id: "default-air-filter-engine", name: "Thay lọc gió động cơ", category: "Gói sửa chữa", price: 550000, durationMinutes: 45 },
+  { _id: "default-air-filter-ac", name: "Thay lọc gió điều hòa", category: "Gói sửa chữa", price: 650000, durationMinutes: 45 },
+  { _id: "default-battery", name: "Thay ắc quy", category: "Gói sửa chữa", price: 1800000, durationMinutes: 60 },
+  { _id: "default-brake-pad", name: "Thay má phanh", category: "Gói sửa chữa", price: 2190000, durationMinutes: 150 },
+  { _id: "default-wash", name: "Rửa xe", category: "Gói chăm sóc xe", price: 390000, durationMinutes: 60 },
+  { _id: "default-interior", name: "Vệ sinh nội thất", category: "Gói chăm sóc xe", price: 850000, durationMinutes: 90 },
+  { _id: "default-engine-clean", name: "Vệ sinh khoang động cơ", category: "Gói chăm sóc xe", price: 1490000, durationMinutes: 120 },
+  { _id: "default-ac-clean", name: "Vệ sinh hệ thống điều hòa", category: "Gói chăm sóc xe", price: 990000, durationMinutes: 90 },
+  { _id: "default-polish", name: "Chăm sóc và đánh bóng xe", category: "Gói chăm sóc xe", price: 1290000, durationMinutes: 120 },
+  { _id: "default-odor", name: "Khử mùi nội thất", category: "Gói chăm sóc xe", price: 700000, durationMinutes: 60 },
+  { _id: "default-tire", name: "Chăm sóc lốp và mâm xe", category: "Gói chăm sóc xe", price: 850000, durationMinutes: 60 },
+  { _id: "default-free-check", name: "Kiểm tra xe miễn phí", category: "Gói dịch vụ tiện ích", price: 0, durationMinutes: 30 },
+  { _id: "default-consult", name: "Tư vấn bảo dưỡng", category: "Gói dịch vụ tiện ích", price: 0, durationMinutes: 30 },
+  { _id: "default-rescue", name: "Cứu hộ xe", category: "Gói dịch vụ tiện ích", price: 990000, durationMinutes: 60 },
+  { _id: "default-home-support", name: "Hỗ trợ xe tại nhà", category: "Gói dịch vụ tiện ích", price: 1490000, durationMinutes: 90 },
+  { _id: "default-booking", name: "Đặt lịch bảo dưỡng", category: "Gói dịch vụ tiện ích", price: 0, durationMinutes: 15 },
+  { _id: "default-reminder", name: "Nhắc lịch bảo dưỡng định kỳ", category: "Gói dịch vụ tiện ích", price: 0, durationMinutes: 15 },
+];
+
 const formatMoney = (value) =>
   new Intl.NumberFormat("vi-VN").format(value || 0);
 
@@ -68,8 +111,13 @@ const ServiceBooking = () => {
           api.get("/service-packages"),
           api.get("/service-appointments/my-history"),
         ]);
+
+        const fallbackPackages = Array.isArray(packageRes?.data?.data) && packageRes.data.data.length > 0
+          ? packageRes.data.data
+          : DEFAULT_SERVICE_PACKAGES;
+
         setVehicles(vehicleRes.data.data || []);
-        setPackages(packageRes.data.data || []);
+        setPackages(fallbackPackages);
         setAppointments(appointmentRes.data.data || []);
       } catch (requestError) {
         setError(requestError.response?.data?.message || "Không thể tải dữ liệu bảo dưỡng");
