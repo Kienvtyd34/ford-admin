@@ -153,7 +153,7 @@ const BookingHistory = () => {
                         </div>
                         <div className="bg-white p-4 rounded-3xl border-4 border-blue-50 shadow-inner mb-6">
                             <img 
-                                src={`https://img.vietqr.io/image/${BANK_CONFIG.BANK_ID}-${BANK_CONFIG.ACCOUNT_NO}-compact2.png?amount=${showQRBooking.depositAmount}&addInfo=DATCOC_${showQRBooking._id.slice(-10)}&accountName=${encodeURIComponent(BANK_CONFIG.ACCOUNT_NAME)}`} 
+                                src={`https://img.vietqr.io/image/${BANK_CONFIG.BANK_ID}-${BANK_CONFIG.ACCOUNT_NO}-compact2.png?amount=${showQRBooking.depositAmount}&addInfo=${encodeURIComponent(`DATCOC ${showQRBooking._id.slice(-10)}`)}&accountName=${encodeURIComponent(BANK_CONFIG.ACCOUNT_NAME)}`} 
                                 alt="QR Code" 
                                 className="w-full h-auto rounded-xl"
                             />
@@ -162,9 +162,9 @@ const BookingHistory = () => {
                             <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-[10px] uppercase font-black text-blue-400">Nội dung CK:</span>
-                                    <button onClick={() => handleCopy(`DATCOC_${showQRBooking._id.slice(-10)}`)} className="text-[10px] font-black text-white bg-blue-900 px-2 py-1 rounded">SAO CHÉP</button>
+                                    <button onClick={() => handleCopy(`DATCOC ${showQRBooking._id.slice(-10)}`)} className="text-[10px] font-black text-white bg-blue-900 px-2 py-1 rounded">SAO CHÉP</button>
                                 </div>
-                                <p className="font-mono text-center bg-white py-3 rounded-xl border-2 border-blue-100 text-blue-900 font-black text-lg uppercase">DATCOC_{showQRBooking._id.slice(-10)}</p>
+                                <p className="font-mono text-center bg-white py-3 rounded-xl border-2 border-blue-100 text-blue-900 font-black text-lg uppercase">DATCOC {showQRBooking._id.slice(-10)}</p>
                             </div>
                             <button onClick={() => setShowQRBooking(null)} className="w-full text-[11px] font-black text-gray-400 hover:text-blue-900 transition-colors uppercase mt-2 tracking-widest">Đóng cửa sổ</button>
                         </div>

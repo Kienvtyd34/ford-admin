@@ -20,7 +20,7 @@ export const verifyServiceWebhook = (req) => {
 export const parseServiceTransferCode = (content) => {
   if (typeof content !== "string") return null;
   const match = content.match(new RegExp(`${SERVICE_TRANSFER_PREFIX}[_\\s-]?([a-z0-9]{6,24})`, "i"));
-  return match ? `${SERVICE_TRANSFER_PREFIX}_${match[1].toUpperCase()}` : null;
+  return match ? `${SERVICE_TRANSFER_PREFIX}${match[1].toUpperCase()}` : null;
 };
 
 export const processServicePaymentWebhook = async (payload) => {
@@ -33,7 +33,8 @@ export const processServicePaymentWebhook = async (payload) => {
     return { handled: true, paid: false, message: "Webhook thiếu mã giao dịch hoặc số tiền" };
   }
 
-  const payment = await ServicePayment.findOne({ transferCode });
+  const legacyTransferCode = `${SERVICE_TRANSFER_PREFIX}_${transferCode.slice(SERVICE_TRANSFER_PREFIX.length)}`;
+  const payment = await ServicePayment.findOne({ transferCode: { $in: [transferCode, legacyTransferCode] } });
   if (!payment) return { handled: true, paid: false, message: "Không tìm thấy khoản thanh toán" };
   if (payment.status === "Paid" && payment.sepayTransactionId === String(transactionId)) {
     return { handled: true, paid: true, duplicate: true, message: "Đã xử lý trước đó" };

@@ -119,7 +119,7 @@ export const createServiceAppointment = async (req, res) => {
       notes,
     });
 
-    const transferCode = `${SERVICE_TRANSFER_PREFIX}_${appointment._id.toString().slice(-10).toUpperCase()}`;
+    const transferCode = `${SERVICE_TRANSFER_PREFIX}${appointment._id.toString().slice(-10).toUpperCase()}`;
     let payment;
     try {
       payment = await ServicePayment.create({
