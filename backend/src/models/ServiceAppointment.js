@@ -24,8 +24,13 @@ const serviceAppointmentSchema = new mongoose.Schema(
     servicePackage: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ServicePackage",
-      required: true,
+      default: null,
     },
+    servicePackages: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ServicePackage",
+      default: [],
+    }],
     serviceDate: { type: Date, required: true },
     timeSlot: { type: String, required: true, trim: true },
     status: {

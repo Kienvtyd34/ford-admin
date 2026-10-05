@@ -24,6 +24,7 @@ const populateAppointment = (query) =>
   query
     .populate("customerVehicle")
     .populate("servicePackage")
+    .populate("servicePackages")
     .populate("user", "fullName phone email")
     .populate("handledBy", "fullName role");
 
@@ -70,7 +71,13 @@ export const getAvailableServiceSlots = async (req, res) => {
 
 export const createServiceAppointment = async (req, res) => {
   try {
-    const { customerVehicleId, servicePackageId, date, timeSlot, notes } = req.body;
+    const { customerVehicleId, servicePackageId, servicePackageIds, date, timeSlot, notes } = req.body;
+    const normalizedPackageIds = Array.isArray(servicePackageIds)
+      ? servicePackageIds
+      : servicePackageId
+        ? [servicePackageId]
+        : [];
+    const uniquePackageIds = [...new Set(normalizedPackageIds.filter(Boolean))];
     const serviceDate = parseServiceDate(date);
 
     if (!serviceDate || serviceDate < new Date(new Date().setUTCHours(0, 0, 0, 0))) {
@@ -81,24 +88,30 @@ export const createServiceAppointment = async (req, res) => {
       return res.status(400).json({ success: false, message: "Khung giờ không hợp lệ" });
     }
 
-    const [customerVehicle, servicePackage] = await Promise.all([
+    if (uniquePackageIds.length === 0) {
+      return res.status(400).json({ success: false, message: "Vui lòng chọn ít nhất một gói dịch vụ" });
+    }
+
+    const [customerVehicle, selectedPackages] = await Promise.all([
       CustomerVehicle.findOne({ _id: customerVehicleId, user: req.user._id, isActive: true }),
-      ServicePackage.findOne({ _id: servicePackageId, isActive: true }),
+      ServicePackage.find({ _id: { $in: uniquePackageIds }, isActive: true }).sort({ displayOrder: 1 }),
     ]);
 
     if (!customerVehicle) {
       return res.status(404).json({ success: false, message: "Không tìm thấy xe của bạn" });
     }
-    if (!servicePackage) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy gói dịch vụ đang hoạt động" });
+    if (selectedPackages.length !== uniquePackageIds.length) {
+      return res.status(404).json({ success: false, message: "Một hoặc nhiều gói dịch vụ không hợp lệ" });
     }
 
     await expireAppointments();
     const holdExpiresAt = new Date(Date.now() + SERVICE_HOLD_MINUTES * 60 * 1000);
+    const primaryPackageId = selectedPackages[0]._id;
     const appointment = await ServiceAppointment.create({
       user: req.user._id,
       customerVehicle: customerVehicle._id,
-      servicePackage: servicePackage._id,
+      servicePackage: primaryPackageId,
+      servicePackages: selectedPackages.map((pkg) => pkg._id),
       serviceDate,
       timeSlot,
       status: "AwaitingPayment",
@@ -132,6 +145,7 @@ export const createServiceAppointment = async (req, res) => {
         depositAmount: SERVICE_DEPOSIT_AMOUNT,
         transferCode,
         holdExpiresAt,
+        selectedPackages,
       },
     });
   } catch (error) {

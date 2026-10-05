@@ -2,9 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
-const BANK_ID = process.env.REACT_APP_SEPAY_BANK_ID;
-const ACCOUNT_NO = process.env.REACT_APP_SEPAY_ACCOUNT_NO;
-const ACCOUNT_NAME = process.env.REACT_APP_SEPAY_ACCOUNT_NAME;
+const BANK_CONFIG = {
+  BANK_ID: process.env.REACT_APP_SEPAY_BANK_ID || "MB",
+  ACCOUNT_NO: process.env.REACT_APP_SEPAY_ACCOUNT_NO || "027204010314",
+  ACCOUNT_NAME: process.env.REACT_APP_SEPAY_ACCOUNT_NAME || "NGUYEN DUC KIEN",
+  AMOUNT: 2000,
+};
 
 const emptyVehicle = {
   licensePlate: "",
@@ -58,6 +61,8 @@ const DEFAULT_SERVICE_PACKAGES = [
   { _id: "default-reminder", name: "Nhắc lịch bảo dưỡng định kỳ", category: "Gói dịch vụ tiện ích", price: 0, durationMinutes: 15 },
 ];
 
+const DEFAULT_SERVICE_DEPOSIT_AMOUNT = 2000;
+
 const formatMoney = (value) =>
   new Intl.NumberFormat("vi-VN").format(value || 0);
 
@@ -78,7 +83,7 @@ const ServiceBooking = () => {
   const [slots, setSlots] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState("");
-  const [selectedPackage, setSelectedPackage] = useState("");
+  const [selectedPackages, setSelectedPackages] = useState([]);
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("");
   const [notes, setNotes] = useState("");
@@ -86,16 +91,30 @@ const ServiceBooking = () => {
   const [payment, setPayment] = useState(null);
   const [paymentMeta, setPaymentMeta] = useState(null);
   const [appointmentDraft, setAppointmentDraft] = useState(null);
+  const [createdAppointmentId, setCreatedAppointmentId] = useState(null);
   const [showReview, setShowReview] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState("pending");
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingVehicle, setSavingVehicle] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const qrUrl = paymentMeta && BANK_ID && ACCOUNT_NO
-    ? `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact2.png?amount=${paymentMeta.amount}&addInfo=${encodeURIComponent(paymentMeta.transferCode)}&accountName=${encodeURIComponent(ACCOUNT_NAME || "")}`
+  const qrUrl = paymentMeta && BANK_CONFIG.BANK_ID && BANK_CONFIG.ACCOUNT_NO
+    ? `https://img.vietqr.io/image/${BANK_CONFIG.BANK_ID}-${BANK_CONFIG.ACCOUNT_NO}-compact2.png?amount=${paymentMeta.amount || BANK_CONFIG.AMOUNT}&addInfo=${encodeURIComponent(paymentMeta.transferCode)}&accountName=${encodeURIComponent(BANK_CONFIG.ACCOUNT_NAME || "")}`
     : null;
+
+  const paymentStateMeta = {
+    pending: {
+      label: "Chờ thanh toán",
+      className: "bg-amber-100 text-amber-700 border border-amber-200",
+    },
+    paid: {
+      label: "Đã thanh toán",
+      className: "bg-emerald-100 text-emerald-700 border border-emerald-200",
+    },
+  };
 
   useEffect(() => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
@@ -162,36 +181,46 @@ const ServiceBooking = () => {
     }
   };
 
+  const togglePackageSelection = (packageId) => {
+    setSelectedPackages((current) => {
+      if (current.includes(packageId)) {
+        return current.filter((item) => item !== packageId);
+      }
+      return [...current, packageId];
+    });
+  };
+
   const handleReviewAppointment = (event) => {
     event.preventDefault();
 
-    if (!selectedVehicle || !selectedPackage || !date || !timeSlot) {
-      setError("Vui lòng chọn xe, gói dịch vụ, ngày và khung giờ");
+    if (!selectedVehicle || selectedPackages.length === 0 || !date || !timeSlot) {
+      setError("Vui lòng chọn xe, ít nhất 1 gói dịch vụ, ngày và khung giờ");
       return;
     }
 
     const vehicle = vehicles.find((item) => item._id === selectedVehicle);
-    const servicePackage = packages.find((item) => item._id === selectedPackage);
+    const chosenPackages = packages.filter((item) => selectedPackages.includes(item._id));
 
-    if (!vehicle || !servicePackage) {
+    if (!vehicle || chosenPackages.length === 0) {
       setError("Thông tin xe hoặc gói dịch vụ không hợp lệ. Vui lòng kiểm tra lại.");
       return;
     }
 
     setAppointmentDraft({
       vehicle,
-      servicePackage,
+      servicePackages: chosenPackages,
       date,
       timeSlot,
       notes,
+      depositAmount: DEFAULT_SERVICE_DEPOSIT_AMOUNT,
     });
     setError("");
     setShowReview(true);
   };
 
   const handleCreateAppointment = async () => {
-    if (!selectedVehicle || !selectedPackage || !date || !timeSlot) {
-      setError("Vui lòng chọn xe, gói dịch vụ, ngày và khung giờ");
+    if (!selectedVehicle || selectedPackages.length === 0 || !date || !timeSlot) {
+      setError("Vui lòng chọn xe, ít nhất 1 gói dịch vụ, ngày và khung giờ");
       return;
     }
 
@@ -200,7 +229,7 @@ const ServiceBooking = () => {
     try {
       const response = await api.post("/service-appointments", {
         customerVehicleId: selectedVehicle,
-        servicePackageId: selectedPackage,
+        servicePackageIds: selectedPackages,
         date,
         timeSlot,
         notes,
@@ -208,15 +237,20 @@ const ServiceBooking = () => {
 
       const { appointment, payment: createdPayment, transferCode, holdExpiresAt, depositAmount } = response.data.data;
 
+      const paymentValue = BANK_CONFIG.AMOUNT;
+
       const paymentData = {
         ...createdPayment,
-        amount: depositAmount || createdPayment.amount,
+        amount: paymentValue,
         transferCode,
         holdExpiresAt,
       };
 
       setPayment(createdPayment);
-      setPaymentMeta(paymentData);
+      setPaymentMeta({ ...paymentData, status: "pending" });
+      setCreatedAppointmentId(appointment?._id || null);
+      setPaymentStatus("pending");
+      setShowPaymentSuccess(false);
       setAppointments((current) => [appointment, ...current]);
       setShowReview(false);
       setAppointmentDraft(null);
@@ -228,6 +262,34 @@ const ServiceBooking = () => {
       setCreating(false);
     }
   };
+
+  const handlePaymentConfirmed = () => {
+    setPaymentStatus("paid");
+    setPaymentMeta((current) => (current ? { ...current, status: "paid" } : current));
+    setShowPaymentSuccess(true);
+  };
+
+  useEffect(() => {
+    if (!createdAppointmentId) return undefined;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await api.get("/service-appointments/my-history");
+        const matching = (response.data.data || []).find((item) => item._id === createdAppointmentId);
+
+        if (matching && (matching.status === "Confirmed" || matching.status === "InService")) {
+          setPaymentStatus("paid");
+          setPaymentMeta((current) => (current ? { ...current, status: "paid" } : current));
+          setShowPaymentSuccess(true);
+          clearInterval(interval);
+        }
+      } catch (error) {
+        console.error("Đang kiểm tra trạng thái thanh toán lịch bảo dưỡng...", error);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [createdAppointmentId]);
 
   if (loading) return <div className="min-h-screen bg-slate-50 pt-32 text-center font-bold text-blue-900">Đang tải dịch vụ...</div>;
 
@@ -249,12 +311,32 @@ const ServiceBooking = () => {
                   {vehicles.map((vehicle) => <option key={vehicle._id} value={vehicle._id}>{vehicle.licensePlate || vehicle.vin} {vehicle.modelName ? `- ${vehicle.modelName}` : ""}</option>)}
                 </select>
               </label>
-              <label className="block text-sm font-bold text-slate-700">Gói dịch vụ
-                <select value={selectedPackage} onChange={(event) => setSelectedPackage(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 p-3">
-                  <option value="">-- Chọn gói --</option>
-                  {packages.map((item) => <option key={item._id} value={item._id}>{item.name} - {formatMoney(item.price)} đ</option>)}
-                </select>
-              </label>
+              <div className="block text-sm font-bold text-slate-700">
+                <span>Gói dịch vụ</span>
+                <div className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  {packages.map((item) => {
+                    const checked = selectedPackages.includes(item._id);
+                    return (
+                      <label key={item._id} className="mb-2 flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-3 last:mb-0">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => togglePackageSelection(item._id)}
+                            className="h-4 w-4 accent-blue-900"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{item.name}</p>
+                            <p className="text-xs text-slate-500">{item.category}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-black text-red-600">{formatMoney(item.price)} đ</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">Đã chọn: {selectedPackages.length} gói</p>
+              </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-bold text-slate-700">Ngày bảo dưỡng<input type="date" min={today} value={date} onChange={(event) => setDate(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 p-3" /></label>
                 <label className="text-sm font-bold text-slate-700">Khung giờ<select value={timeSlot} onChange={(event) => setTimeSlot(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 p-3"><option value="">-- Chọn slot --</option>{slots.filter((slot) => slot.available).map((slot) => <option key={slot.timeSlot} value={slot.timeSlot}>{slot.timeSlot}</option>)}</select></label>
@@ -281,11 +363,15 @@ const ServiceBooking = () => {
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="rounded-xl bg-slate-50 p-4">
                       <p className="text-xs font-black uppercase tracking-[.2em] text-slate-500">Gói dịch vụ</p>
-                      <p className="mt-2 text-base font-bold text-blue-950">{appointmentDraft.servicePackage.name}</p>
+                      <div className="mt-2 space-y-1">
+                        {appointmentDraft.servicePackages.map((item) => (
+                          <p key={item._id} className="text-base font-bold text-blue-950">• {item.name}</p>
+                        ))}
+                      </div>
                     </div>
                     <div className="rounded-xl bg-slate-50 p-4">
                       <p className="text-xs font-black uppercase tracking-[.2em] text-slate-500">Tiền cọc</p>
-                      <p className="mt-2 text-base font-bold text-red-600">{formatMoney(appointmentDraft.servicePackage.deposit || 0)} đ</p>
+                      <p className="mt-2 text-base font-bold text-red-600">{formatMoney(appointmentDraft.depositAmount || DEFAULT_SERVICE_DEPOSIT_AMOUNT)} đ</p>
                     </div>
                   </div>
 
@@ -344,7 +430,12 @@ const ServiceBooking = () => {
         <aside className="space-y-6">
           {paymentMeta && (
             <div className="rounded-2xl border-t-8 border-green-600 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-black uppercase text-blue-950">Chờ thanh toán cọc</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-black uppercase text-blue-950">Chờ thanh toán cọc</h2>
+                <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${paymentStateMeta[paymentStatus].className}`}>
+                  {paymentStateMeta[paymentStatus].label}
+                </span>
+              </div>
               <p className="mt-2 text-sm text-slate-600">Lịch của bạn đã được giữ tạm thời. Vui lòng thanh toán đúng số tiền và nội dung chuyển khoản để xác nhận lịch.</p>
               {qrUrl ? (
                 <img src={qrUrl} alt="QR thanh toán tiền cọc dịch vụ" className="mx-auto mt-5 w-full max-w-xs rounded-xl" />
@@ -359,6 +450,15 @@ const ServiceBooking = () => {
                 <p className="text-2xl font-black text-red-600">{formatMoney(paymentMeta.amount)} đ</p>
                 <p className="mt-2 text-xs text-slate-500">Giữ lịch đến: {new Date(paymentMeta.holdExpiresAt).toLocaleString("vi-VN")}</p>
               </div>
+
+              <button
+                type="button"
+                onClick={handlePaymentConfirmed}
+                disabled={paymentStatus === "paid"}
+                className={`mt-5 w-full rounded-xl px-5 py-3 text-xs font-black uppercase tracking-wide text-white transition-all ${paymentStatus === "paid" ? "bg-emerald-600" : "bg-blue-900 hover:bg-black"}`}
+              >
+                {paymentStatus === "paid" ? "Đã thanh toán" : "Tôi đã thanh toán"}
+              </button>
             </div>
           )}
 
@@ -386,6 +486,29 @@ const ServiceBooking = () => {
           </div>
         </aside>
       </div>
+      {showPaymentSuccess && paymentMeta && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border-t-[12px] border-emerald-600 bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 shadow-inner">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-black uppercase italic text-blue-900">Đã thanh toán</h2>
+            <p className="mt-3 text-sm text-slate-500">Cảm ơn quý khách. Hệ thống đã ghi nhận bạn đã thanh toán tiền cọc cho lịch bảo dưỡng.</p>
+            <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[.2em] text-emerald-600">Số tiền</p>
+              <p className="mt-2 text-2xl font-black text-emerald-700">{formatMoney(paymentMeta.amount)} đ</p>
+            </div>
+            <button
+              onClick={() => setShowPaymentSuccess(false)}
+              className="mt-6 w-full rounded-2xl bg-blue-900 px-5 py-4 text-xs font-black uppercase text-white shadow-xl"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 };
