@@ -7,11 +7,16 @@ import {
 export const handleSepayWebhook = async (req, res) => {
     try {
         if (!verifyServiceWebhook(req)) {
+            const reason = process.env.SEPAY_WEBHOOK_SECRET
+                ? "authorization header did not match configured secret"
+                : "SEPAY_WEBHOOK_SECRET is not configured";
+            console.warn(`[SePay] Webhook rejected: ${reason}`);
             return res.status(401).send("Webhook không hợp lệ");
         }
 
         const serviceResult = await processServicePaymentWebhook(req.body);
         if (serviceResult.handled) {
+            console.info(`[SePay] Service payment ${serviceResult.paid ? "accepted" : "not applied"}: ${serviceResult.message}`);
             return res.status(200).send(serviceResult.message);
         }
 

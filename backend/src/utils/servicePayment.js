@@ -10,11 +10,10 @@ export const verifyServiceWebhook = (req) => {
   if (!secret) return process.env.NODE_ENV !== "production";
 
   const provided = req.headers["x-sepay-secret"] || req.headers["authorization"];
-  const token = String(provided || "").replace(/^Bearer\s+/i, "");
-  return token.length === secret.length && crypto.timingSafeEqual(
-    Buffer.from(token),
-    Buffer.from(secret)
-  );
+  const token = String(provided || "").replace(/^(?:Bearer|Apikey)\s+/i, "").trim();
+  const tokenBuffer = Buffer.from(token);
+  const secretBuffer = Buffer.from(secret);
+  return tokenBuffer.length === secretBuffer.length && crypto.timingSafeEqual(tokenBuffer, secretBuffer);
 };
 
 export const parseServiceTransferCode = (content) => {
