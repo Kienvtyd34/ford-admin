@@ -231,6 +231,13 @@ export const updateServiceAppointmentStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "Trạng thái không hợp lệ" });
     }
 
+    if (status === "Confirmed") {
+      const paidPayment = await ServicePayment.findOne({ appointment: req.params.id, status: "Paid" });
+      if (!paidPayment) {
+        return res.status(409).json({ success: false, message: "Chỉ xác nhận lịch sau khi SePay ghi nhận thanh toán" });
+      }
+    }
+
     const update = { status, handledBy: req.user._id };
     if (status === "Confirmed") update.confirmedAt = new Date();
     if (status === "Completed") update.completedAt = new Date();

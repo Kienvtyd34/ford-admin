@@ -33,6 +33,7 @@ import TestDriveList from './pages/TestDriveList';
 import Chatbot from './components/Chatbot';
 import IntentAdmin from './pages/IntentAdmin';
 import ServiceBooking from './pages/ServiceBooking';
+import ServiceAppointmentHistory from './pages/ServiceAppointmentHistory';
 import ServiceManagement from './pages/ServiceManagement';
 function App() {
   return (
@@ -49,6 +50,7 @@ function App() {
           <Route path="/lien-he" element={<ContactFord />} />
           <Route path="/booking-history" element={<BookingHistory />} />
           <Route path="/bao-duong" element={<ServiceBooking />} />
+          <Route path="/bao-duong/lich-su" element={<ServiceAppointmentHistory />} />
           <Route path="/mua-xe-tra-gop" element={<InstallmentGuide />} />
           <Route path="/tin-tuc" element={<NewsUser />} />
           <Route path="/tin-tuc/:slug" element={<NewsDetail />} />

@@ -3,10 +3,7 @@ const parsePositiveInteger = (value, fallback) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-export const SERVICE_DEPOSIT_AMOUNT = parsePositiveInteger(
-  process.env.SERVICE_DEPOSIT_AMOUNT,
-  200000
-);
+export const SERVICE_DEPOSIT_AMOUNT = 2000;
 
 export const SERVICE_HOLD_MINUTES = parsePositiveInteger(
   process.env.SERVICE_HOLD_MINUTES,

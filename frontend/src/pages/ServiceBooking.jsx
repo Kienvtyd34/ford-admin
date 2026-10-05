@@ -88,7 +88,6 @@ const ServiceBooking = () => {
   const [timeSlot, setTimeSlot] = useState("");
   const [notes, setNotes] = useState("");
   const [vehicleForm, setVehicleForm] = useState(emptyVehicle);
-  const [payment, setPayment] = useState(null);
   const [paymentMeta, setPaymentMeta] = useState(null);
   const [appointmentDraft, setAppointmentDraft] = useState(null);
   const [createdAppointmentId, setCreatedAppointmentId] = useState(null);
@@ -237,7 +236,7 @@ const ServiceBooking = () => {
 
       const { appointment, payment: createdPayment, transferCode, holdExpiresAt, depositAmount } = response.data.data;
 
-      const paymentValue = BANK_CONFIG.AMOUNT;
+      const paymentValue = depositAmount ?? createdPayment.amount ?? BANK_CONFIG.AMOUNT;
 
       const paymentData = {
         ...createdPayment,
@@ -246,7 +245,6 @@ const ServiceBooking = () => {
         holdExpiresAt,
       };
 
-      setPayment(createdPayment);
       setPaymentMeta({ ...paymentData, status: "pending" });
       setCreatedAppointmentId(appointment?._id || null);
       setPaymentStatus("pending");
@@ -263,24 +261,19 @@ const ServiceBooking = () => {
     }
   };
 
-  const handlePaymentConfirmed = () => {
-    setPaymentStatus("paid");
-    setPaymentMeta((current) => (current ? { ...current, status: "paid" } : current));
-    setShowPaymentSuccess(true);
-  };
-
   useEffect(() => {
     if (!createdAppointmentId) return undefined;
 
     const interval = setInterval(async () => {
       try {
-        const response = await api.get("/service-appointments/my-history");
-        const matching = (response.data.data || []).find((item) => item._id === createdAppointmentId);
+        const response = await api.get(`/service-appointments/my-history/${createdAppointmentId}`);
+        const { appointment, payment: currentPayment } = response.data.data;
 
-        if (matching && (matching.status === "Confirmed" || matching.status === "InService")) {
+        if (currentPayment?.status === "Paid") {
           setPaymentStatus("paid");
           setPaymentMeta((current) => (current ? { ...current, status: "paid" } : current));
           setShowPaymentSuccess(true);
+          setAppointments((current) => current.map((item) => item._id === appointment._id ? appointment : item));
           clearInterval(interval);
         }
       } catch (error) {
@@ -436,7 +429,7 @@ const ServiceBooking = () => {
                   {paymentStateMeta[paymentStatus].label}
                 </span>
               </div>
-              <p className="mt-2 text-sm text-slate-600">Lịch của bạn đã được giữ tạm thời. Vui lòng thanh toán đúng số tiền và nội dung chuyển khoản để xác nhận lịch.</p>
+              <p className="mt-2 text-sm text-slate-600">Lịch đang được giữ tạm thời. Hệ thống sẽ tự xác nhận khi SePay báo đã nhận đúng số tiền và nội dung chuyển khoản.</p>
               {qrUrl ? (
                 <img src={qrUrl} alt="QR thanh toán tiền cọc dịch vụ" className="mx-auto mt-5 w-full max-w-xs rounded-xl" />
               ) : (
@@ -451,14 +444,12 @@ const ServiceBooking = () => {
                 <p className="mt-2 text-xs text-slate-500">Giữ lịch đến: {new Date(paymentMeta.holdExpiresAt).toLocaleString("vi-VN")}</p>
               </div>
 
-              <button
-                type="button"
-                onClick={handlePaymentConfirmed}
-                disabled={paymentStatus === "paid"}
-                className={`mt-5 w-full rounded-xl px-5 py-3 text-xs font-black uppercase tracking-wide text-white transition-all ${paymentStatus === "paid" ? "bg-emerald-600" : "bg-blue-900 hover:bg-black"}`}
-              >
-                {paymentStatus === "paid" ? "Đã thanh toán" : "Tôi đã thanh toán"}
-              </button>
+              {paymentStatus === "pending" && (
+                <div className="mt-5 flex items-center justify-center gap-3 rounded-xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800" role="status" aria-live="polite">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-700 border-t-transparent" />
+                  Đang chờ SePay xác nhận giao dịch
+                </div>
+              )}
             </div>
           )}
 
@@ -470,19 +461,27 @@ const ServiceBooking = () => {
               ) : (
                 appointments.slice(0, 5).map((item) => {
                   const status = statusMeta[item.status] || { label: item.status, className: "bg-slate-100 text-slate-600" };
+                  const selectedPackages = item.servicePackages?.length
+                    ? item.servicePackages
+                    : item.servicePackage ? [item.servicePackage] : [];
                   return (
                     <div key={item._id} className="rounded-xl bg-white/10 p-4">
                       <div className="flex items-center justify-between gap-3">
-                        <span className="font-bold">{item.servicePackage?.name || "Gói dịch vụ"}</span>
+                        <span className="font-bold">{selectedPackages.length} gói dịch vụ</span>
                         <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase ${status.className}`}>{status.label}</span>
                       </div>
+                      <ul className="mt-2 space-y-1 text-sm text-blue-100">
+                        {selectedPackages.map((servicePackage) => (
+                          <li key={servicePackage._id || servicePackage}>{servicePackage.name || "Gói dịch vụ"}</li>
+                        ))}
+                      </ul>
                       <p className="mt-2 text-sm text-blue-100">{new Date(item.serviceDate).toLocaleDateString("vi-VN")} · {item.timeSlot}</p>
                     </div>
                   );
                 })
               )}
             </div>
-            <Link to="/booking-history" className="mt-5 inline-block text-sm font-bold text-red-200 hover:text-white">Xem lịch sử đặt cọc xe →</Link>
+            <Link to="/bao-duong/lich-su" className="mt-5 inline-block text-sm font-bold text-red-200 hover:text-white">Xem lịch sử đặt lịch bảo dưỡng →</Link>
           </div>
         </aside>
       </div>
