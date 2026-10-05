@@ -6,14 +6,17 @@ import { SERVICE_TRANSFER_PREFIX } from "../config/service.js";
 const getWebhookSecret = () => process.env.SEPAY_WEBHOOK_SECRET;
 
 export const verifyServiceWebhook = (req) => {
-  const secret = getWebhookSecret();
+  const secret = getWebhookSecret()?.trim();
   if (!secret) return process.env.NODE_ENV !== "production";
 
-  const provided = req.headers["x-sepay-secret"] || req.headers["authorization"];
-  const token = String(provided || "").replace(/^(?:Bearer|Apikey)\s+/i, "").trim();
-  const tokenBuffer = Buffer.from(token);
   const secretBuffer = Buffer.from(secret);
-  return tokenBuffer.length === secretBuffer.length && crypto.timingSafeEqual(tokenBuffer, secretBuffer);
+  const providedHeaders = [req.headers["x-sepay-secret"], req.headers["authorization"]];
+
+  return providedHeaders.some((provided) => {
+    const token = String(provided || "").replace(/^(?:Bearer|Apikey)\s+/i, "").trim();
+    const tokenBuffer = Buffer.from(token);
+    return tokenBuffer.length === secretBuffer.length && crypto.timingSafeEqual(tokenBuffer, secretBuffer);
+  });
 };
 
 export const parseServiceTransferCode = (content) => {
