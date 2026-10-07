@@ -33,6 +33,7 @@ const serviceAppointmentSchema = new mongoose.Schema(
     }],
     serviceDate: { type: Date, required: true },
     timeSlot: { type: String, required: true, trim: true },
+    slotNumber: { type: Number, min: 0, required: true },
     status: {
       type: String,
       enum: [
@@ -63,7 +64,7 @@ const serviceAppointmentSchema = new mongoose.Schema(
 
 serviceAppointmentSchema.index({ serviceDate: 1, timeSlot: 1, status: 1 });
 serviceAppointmentSchema.index(
-  { serviceDate: 1, timeSlot: 1 },
+  { serviceDate: 1, timeSlot: 1, slotNumber: 1 },
   {
     unique: true,
     partialFilterExpression: {

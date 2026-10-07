@@ -5,6 +5,7 @@ import ServicePayment from "../models/ServicePayment.js";
 import {
   SERVICE_DEPOSIT_AMOUNT,
   SERVICE_HOLD_MINUTES,
+  SERVICE_SLOT_CAPACITY,
   SERVICE_TIME_SLOTS,
   SERVICE_TRANSFER_PREFIX,
 } from "../config/service.js";
@@ -27,6 +28,45 @@ const populateAppointment = (query) =>
     .populate("servicePackages")
     .populate("user", "fullName phone email")
     .populate("handledBy", "fullName role");
+
+const reserveServiceAppointment = async (appointmentData) => {
+  for (let attempt = 0; attempt < SERVICE_SLOT_CAPACITY * 3; attempt += 1) {
+    const activeAppointments = await ServiceAppointment.find({
+      serviceDate: appointmentData.serviceDate,
+      timeSlot: appointmentData.timeSlot,
+      status: { $in: ACTIVE_STATUSES },
+    }).select("slotNumber").lean();
+
+    if (activeAppointments.length >= SERVICE_SLOT_CAPACITY) return null;
+
+    const occupiedSlots = new Set(
+      activeAppointments
+        .map((appointment) => appointment.slotNumber)
+        .filter((slotNumber) => Number.isInteger(slotNumber) && slotNumber >= 0 && slotNumber < SERVICE_SLOT_CAPACITY)
+    );
+    let legacyAppointments = activeAppointments.filter(
+      (appointment) => !Number.isInteger(appointment.slotNumber)
+    ).length;
+    for (let slotNumber = 0; legacyAppointments > 0 && slotNumber < SERVICE_SLOT_CAPACITY; slotNumber += 1) {
+      if (!occupiedSlots.has(slotNumber)) {
+        occupiedSlots.add(slotNumber);
+        legacyAppointments -= 1;
+      }
+    }
+
+    const slotNumber = Array.from({ length: SERVICE_SLOT_CAPACITY }, (_, index) => index)
+      .find((candidate) => !occupiedSlots.has(candidate));
+    if (slotNumber === undefined) return null;
+
+    try {
+      return await ServiceAppointment.create({ ...appointmentData, slotNumber });
+    } catch (error) {
+      if (error.code !== 11000) throw error;
+    }
+  }
+
+  return null;
+};
 
 const expireAppointments = async () => {
   await ServiceAppointment.updateMany(
@@ -54,13 +94,18 @@ export const getAvailableServiceSlots = async (req, res) => {
     const appointments = await ServiceAppointment.find({
       serviceDate,
       status: { $in: ACTIVE_STATUSES },
-      holdExpiresAt: { $gt: new Date() },
     }).select("timeSlot");
 
-    const occupied = new Set(appointments.map((appointment) => appointment.timeSlot));
+    const bookingCounts = appointments.reduce((counts, appointment) => {
+      counts.set(appointment.timeSlot, (counts.get(appointment.timeSlot) || 0) + 1);
+      return counts;
+    }, new Map());
     const data = SERVICE_TIME_SLOTS.map((timeSlot) => ({
       timeSlot,
-      available: !occupied.has(timeSlot),
+      bookingCount: bookingCounts.get(timeSlot) || 0,
+      remainingCount: Math.max(SERVICE_SLOT_CAPACITY - (bookingCounts.get(timeSlot) || 0), 0),
+      capacity: SERVICE_SLOT_CAPACITY,
+      available: (bookingCounts.get(timeSlot) || 0) < SERVICE_SLOT_CAPACITY,
     }));
 
     res.json({ success: true, data });
@@ -107,7 +152,7 @@ export const createServiceAppointment = async (req, res) => {
     await expireAppointments();
     const holdExpiresAt = new Date(Date.now() + SERVICE_HOLD_MINUTES * 60 * 1000);
     const primaryPackageId = selectedPackages[0]._id;
-    const appointment = await ServiceAppointment.create({
+    const appointment = await reserveServiceAppointment({
       user: req.user._id,
       customerVehicle: customerVehicle._id,
       servicePackage: primaryPackageId,
@@ -118,6 +163,13 @@ export const createServiceAppointment = async (req, res) => {
       holdExpiresAt,
       notes,
     });
+    if (!appointment) {
+      return res.status(409).json({
+        success: false,
+        code: "SERVICE_SLOT_FULL",
+        message: `Khung giờ này đã đủ ${SERVICE_SLOT_CAPACITY} lịch. Vui lòng chọn khung giờ khác.`,
+      });
+    }
 
     const transferCode = `${SERVICE_TRANSFER_PREFIX}${appointment._id.toString().slice(-10).toUpperCase()}`;
     let payment;

@@ -96,6 +96,11 @@ const ServiceBooking = () => {
   const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [loading, setLoading] = useState(true);
   const [savingVehicle, setSavingVehicle] = useState(false);
+  const [editingVehicleId, setEditingVehicleId] = useState("");
+  const [editVehicleForm, setEditVehicleForm] = useState(emptyVehicle);
+  const [savingVehicleEdit, setSavingVehicleEdit] = useState(false);
+  const [confirmDeleteVehicleId, setConfirmDeleteVehicleId] = useState("");
+  const [deletingVehicleId, setDeletingVehicleId] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
 
@@ -180,6 +185,63 @@ const ServiceBooking = () => {
     }
   };
 
+  const startEditingVehicle = (vehicle) => {
+    setEditingVehicleId(vehicle._id);
+    setEditVehicleForm({
+      licensePlate: vehicle.licensePlate || "",
+      vin: vehicle.vin || "",
+      modelName: vehicle.modelName || "",
+      variantName: vehicle.variantName || "",
+      color: vehicle.color || "",
+      manufactureYear: vehicle.manufactureYear || "",
+      currentMileage: vehicle.currentMileage ?? 0,
+    });
+    setConfirmDeleteVehicleId("");
+    setError("");
+  };
+
+  const handleUpdateVehicle = async (event) => {
+    event.preventDefault();
+    if (!editVehicleForm.licensePlate && !editVehicleForm.vin) {
+      setError("Vui lòng cung cấp biển số hoặc số VIN");
+      return;
+    }
+
+    setSavingVehicleEdit(true);
+    setError("");
+    try {
+      const response = await api.patch(`/customer-vehicles/${editingVehicleId}`, editVehicleForm);
+      setVehicles((current) => current.map((vehicle) =>
+        vehicle._id === editingVehicleId ? response.data.data : vehicle
+      ));
+      setEditingVehicleId("");
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Không thể cập nhật thông tin xe");
+    } finally {
+      setSavingVehicleEdit(false);
+    }
+  };
+
+  const handleDeleteVehicle = async (vehicleId) => {
+    setDeletingVehicleId(vehicleId);
+    setError("");
+    try {
+      await api.delete(`/customer-vehicles/${vehicleId}`);
+      setVehicles((current) => current.filter((vehicle) => vehicle._id !== vehicleId));
+      setConfirmDeleteVehicleId("");
+      setEditingVehicleId((current) => current === vehicleId ? "" : current);
+      if (selectedVehicle === vehicleId) setSelectedVehicle("");
+      if (appointmentDraft?.vehicle._id === vehicleId) {
+        setShowReview(false);
+        setAppointmentDraft(null);
+      }
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "Không thể xóa xe");
+    } finally {
+      setDeletingVehicleId("");
+    }
+  };
+
   const togglePackageSelection = (packageId) => {
     setSelectedPackages((current) => {
       if (current.includes(packageId)) {
@@ -255,7 +317,19 @@ const ServiceBooking = () => {
       setTimeSlot("");
       setNotes("");
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Không thể giữ lịch bảo dưỡng");
+      const responseData = requestError.response?.data;
+      setError(responseData?.message || "Không thể giữ lịch bảo dưỡng");
+      if (responseData?.code === "SERVICE_SLOT_FULL") {
+        setTimeSlot("");
+        setShowReview(false);
+        setAppointmentDraft(null);
+        try {
+          const slotsResponse = await api.get(`/service-appointments/slots?date=${date}`);
+          setSlots(slotsResponse.data.data || []);
+        } catch (slotRequestError) {
+          setError(`${responseData.message} ${slotRequestError.response?.data?.message || "Vui lòng tải lại danh sách khung giờ."}`);
+        }
+      }
     } finally {
       setCreating(false);
     }
@@ -332,7 +406,7 @@ const ServiceBooking = () => {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-bold text-slate-700">Ngày bảo dưỡng<input type="date" min={today} value={date} onChange={(event) => setDate(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 p-3" /></label>
-                <label className="text-sm font-bold text-slate-700">Khung giờ<select value={timeSlot} onChange={(event) => setTimeSlot(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 p-3"><option value="">-- Chọn slot --</option>{slots.filter((slot) => slot.available).map((slot) => <option key={slot.timeSlot} value={slot.timeSlot}>{slot.timeSlot}</option>)}</select></label>
+                <label className="text-sm font-bold text-slate-700">Khung giờ<select value={timeSlot} onChange={(event) => setTimeSlot(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 p-3"><option value="">-- Chọn slot --</option>{slots.map((slot) => <option key={slot.timeSlot} value={slot.timeSlot} disabled={!slot.available}>{slot.timeSlot} · {slot.bookingCount}/{slot.capacity} lịch{slot.available ? ` (còn ${slot.remainingCount})` : " (đã đủ)"}</option>)}</select></label>
               </div>
               <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Mô tả vấn đề cần kiểm tra (không bắt buộc)" className="min-h-24 w-full rounded-lg border border-slate-200 p-3" />
               <button type="submit" className="w-full rounded-lg bg-blue-950 px-5 py-3 font-black uppercase tracking-wide text-white hover:bg-blue-800">Tiếp tục</button>
@@ -407,6 +481,96 @@ const ServiceBooking = () => {
               </div>
             </div>
           )}
+
+          <section className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-lg font-black uppercase text-blue-950">Xe cá nhân đã lưu</h2>
+            {vehicles.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500">Bạn chưa lưu xe nào.</p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {vehicles.map((vehicle) => (
+                  <div key={vehicle._id} className="rounded-lg border border-slate-200 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="font-bold text-blue-950">
+                          {vehicle.licensePlate || vehicle.vin || "Xe chưa có biển số/VIN"}
+                          {selectedVehicle === vehicle._id && <span className="ml-2 text-xs font-semibold text-emerald-700">Đang chọn</span>}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {[vehicle.modelName, vehicle.variantName, vehicle.color].filter(Boolean).join(" · ") || "Chưa có thông tin dòng xe"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {vehicle.vin ? `VIN: ${vehicle.vin} · ` : ""}{Number(vehicle.currentMileage || 0).toLocaleString("vi-VN")} km
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => startEditingVehicle(vehicle)}
+                          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-bold text-blue-950 hover:bg-slate-50"
+                        >
+                          Sửa
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfirmDeleteVehicleId(vehicle._id);
+                            setEditingVehicleId("");
+                            setError("");
+                          }}
+                          className="rounded-md border border-red-200 px-3 py-2 text-sm font-bold text-red-700 hover:bg-red-50"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                    {confirmDeleteVehicleId === vehicle._id && (
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md bg-red-50 p-3 text-sm">
+                        <span className="font-semibold text-red-800">Xóa xe này khỏi danh sách xe cá nhân?</span>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteVehicleId("")}
+                            disabled={deletingVehicleId === vehicle._id}
+                            className="rounded-md border border-slate-300 bg-white px-3 py-2 font-semibold text-slate-700"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVehicle(vehicle._id)}
+                            disabled={deletingVehicleId === vehicle._id}
+                            className="rounded-md bg-red-700 px-3 py-2 font-bold text-white disabled:opacity-60"
+                          >
+                            {deletingVehicleId === vehicle._id ? "Đang xóa..." : "Xác nhận xóa"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {editingVehicleId && (
+              <form onSubmit={handleUpdateVehicle} className="mt-4 rounded-lg border border-blue-200 bg-blue-50/50 p-4">
+                <h3 className="font-bold text-blue-950">Sửa thông tin xe</h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <input placeholder="Biển số xe" value={editVehicleForm.licensePlate} onChange={(event) => setEditVehicleForm((current) => ({ ...current, licensePlate: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                  <input placeholder="Số VIN" value={editVehicleForm.vin} onChange={(event) => setEditVehicleForm((current) => ({ ...current, vin: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                  <input placeholder="Dòng xe" value={editVehicleForm.modelName} onChange={(event) => setEditVehicleForm((current) => ({ ...current, modelName: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                  <input placeholder="Phiên bản" value={editVehicleForm.variantName} onChange={(event) => setEditVehicleForm((current) => ({ ...current, variantName: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                  <input placeholder="Màu xe" value={editVehicleForm.color} onChange={(event) => setEditVehicleForm((current) => ({ ...current, color: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                  <input placeholder="Năm sản xuất" type="number" min="1900" value={editVehicleForm.manufactureYear} onChange={(event) => setEditVehicleForm((current) => ({ ...current, manufactureYear: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                  <input placeholder="Số km hiện tại" type="number" min="0" value={editVehicleForm.currentMileage} onChange={(event) => setEditVehicleForm((current) => ({ ...current, currentMileage: event.target.value }))} className="rounded-lg border border-slate-200 bg-white p-3" />
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button type="button" onClick={() => setEditingVehicleId("")} disabled={savingVehicleEdit} className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700">Hủy</button>
+                  <button type="submit" disabled={savingVehicleEdit} className="rounded-md bg-blue-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{savingVehicleEdit ? "Đang lưu..." : "Lưu thay đổi"}</button>
+                </div>
+              </form>
+            )}
+          </section>
 
           <form onSubmit={handleCreateVehicle} className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-6">
             <h2 className="text-lg font-black uppercase text-blue-950">Thêm xe mới</h2>

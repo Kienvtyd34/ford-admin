@@ -21,6 +21,7 @@ import serviceAppointmentRoutes from "./src/routes/serviceAppointmentRoutes.js";
 import { handleSepayWebhook } from "./src/controllers/paymentController.js";
 import { autoCancelExpiredBookings } from "./src/controllers/bookingController.js";
 import { expireAppointments } from "./src/controllers/serviceAppointmentController.js";
+import ServiceAppointment from "./src/models/ServiceAppointment.js";
 
 const app = express();
 
@@ -92,6 +93,17 @@ const startServer = async () => {
   try {
     // DATABASE
     await connectDB();
+    const indexes = await ServiceAppointment.collection.indexes();
+    const obsoleteCapacityIndex = indexes.find((index) =>
+      index.unique &&
+      index.key.serviceDate === 1 &&
+      index.key.timeSlot === 1 &&
+      Object.keys(index.key).length === 2
+    );
+    if (obsoleteCapacityIndex) {
+      await ServiceAppointment.collection.dropIndex(obsoleteCapacityIndex.name);
+    }
+    await ServiceAppointment.createIndexes();
 
     console.log("📦 MongoDB connected");
 

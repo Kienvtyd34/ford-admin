@@ -10,6 +10,8 @@ export const SERVICE_HOLD_MINUTES = parsePositiveInteger(
   15
 );
 
+export const SERVICE_SLOT_CAPACITY = 6;
+
 export const SERVICE_TIME_SLOTS = (
   process.env.SERVICE_TIME_SLOTS || "08:00-10:00,10:00-12:00,13:30-15:30,15:30-17:30"
 )
