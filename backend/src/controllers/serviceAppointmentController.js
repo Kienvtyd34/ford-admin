@@ -239,9 +239,38 @@ export const getMyServiceAppointmentById = async (req, res) => {
 
 export const cancelMyServiceAppointment = async (req, res) => {
   try {
-    const appointment = await ServiceAppointment.findOneAndUpdate(
+    const appointment = await ServiceAppointment.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+      status: { $in: ["Held", "AwaitingPayment", "Confirmed"] },
+    });
+
+    if (!appointment) {
+      return res.status(409).json({ success: false, message: "Lịch không thể hủy ở trạng thái hiện tại" });
+    }
+
+    const slotStart = appointment.timeSlot.match(/^(\d{2}:\d{2})/);
+    if (!slotStart) {
+      return res.status(400).json({ success: false, message: "Khung giờ của lịch hẹn không hợp lệ" });
+    }
+
+    const serviceDate = appointment.serviceDate.toISOString().slice(0, 10);
+    const appointmentStart = new Date(`${serviceDate}T${slotStart[1]}:00+07:00`);
+    const payment = await ServicePayment.findOne({ appointment: appointment._id });
+    const depositForfeitureRequired =
+      payment?.status === "Paid" && appointmentStart.getTime() - Date.now() <= 2 * 60 * 60 * 1000;
+
+    if (depositForfeitureRequired && req.body.confirmDepositForfeiture !== true) {
+      return res.status(409).json({
+        success: false,
+        code: "DEPOSIT_FORFEITURE_CONFIRMATION_REQUIRED",
+        message: "Hủy lịch trong vòng 2 tiếng trước giờ hẹn sẽ mất tiền cọc",
+      });
+    }
+
+    const updatedAppointment = await ServiceAppointment.findOneAndUpdate(
       {
-        _id: req.params.id,
+        _id: appointment._id,
         user: req.user._id,
         status: { $in: ["Held", "AwaitingPayment", "Confirmed"] },
       },
@@ -249,15 +278,15 @@ export const cancelMyServiceAppointment = async (req, res) => {
       { new: true }
     );
 
-    if (!appointment) {
+    if (!updatedAppointment) {
       return res.status(409).json({ success: false, message: "Lịch không thể hủy ở trạng thái hiện tại" });
     }
 
     await ServicePayment.updateOne(
-      { appointment: appointment._id, status: "Pending" },
+      { appointment: updatedAppointment._id, status: "Pending" },
       { $set: { status: "Failed" } }
     );
-    res.json({ success: true, data: appointment });
+    res.json({ success: true, data: updatedAppointment });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

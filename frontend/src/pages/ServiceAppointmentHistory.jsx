@@ -17,6 +17,8 @@ const ServiceAppointmentHistory = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pendingCancellationId, setPendingCancellationId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
     const userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
@@ -47,6 +49,31 @@ const ServiceAppointmentHistory = () => {
       clearInterval(interval);
     };
   }, [navigate]);
+
+  const cancelAppointment = async (appointmentId, confirmDepositForfeiture = false) => {
+    setCancellingId(appointmentId);
+    setError("");
+    try {
+      const response = await api.patch(`/service-appointments/my-history/${appointmentId}/cancel`, {
+        confirmDepositForfeiture,
+      });
+      setAppointments((current) => current.map((appointment) =>
+        appointment._id === appointmentId ? { ...appointment, ...response.data.data } : appointment
+      ));
+      setPendingCancellationId(null);
+    } catch (requestError) {
+      if (requestError.response?.data?.code === "DEPOSIT_FORFEITURE_CONFIRMATION_REQUIRED") {
+        setPendingCancellationId(appointmentId);
+      } else {
+        setError(requestError.response?.data?.message || "Không thể hủy lịch bảo dưỡng");
+        setPendingCancellationId(null);
+      }
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const pendingCancellation = appointments.find((appointment) => appointment._id === pendingCancellationId);
 
   return (
     <main className="min-h-screen bg-slate-50 pb-16 pt-28">
@@ -113,6 +140,16 @@ const ServiceAppointmentHistory = () => {
                     <p className="text-xs font-bold uppercase text-slate-500">Tiền cọc</p>
                     <p className="mt-1 text-lg font-black text-red-600">2.000 đ</p>
                     <p className="mt-2 text-xs text-slate-400">Mã lịch: #{appointment._id.slice(-8).toUpperCase()}</p>
+                    {["Held", "AwaitingPayment", "Confirmed"].includes(appointment.status) && (
+                      <button
+                        type="button"
+                        disabled={cancellingId === appointment._id}
+                        onClick={() => cancelAppointment(appointment._id)}
+                        className="mt-4 rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        {cancellingId === appointment._id ? "Đang xử lý..." : "Hủy lịch"}
+                      </button>
+                    )}
                   </div>
                 </article>
               );
@@ -120,6 +157,39 @@ const ServiceAppointmentHistory = () => {
           </div>
         )}
       </div>
+      {pendingCancellation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4" role="presentation">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-appointment-title"
+            className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+          >
+            <h2 id="cancel-appointment-title" className="text-xl font-black text-blue-950">Xác nhận hủy lịch</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-700">
+              Lịch hẹn còn dưới 2 tiếng. Nếu hủy lúc này, bạn sẽ mất khoản cọc 2.000 đ.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={cancellingId === pendingCancellationId}
+                onClick={() => setPendingCancellationId(null)}
+                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Giữ nguyên lịch
+              </button>
+              <button
+                type="button"
+                disabled={cancellingId === pendingCancellationId}
+                onClick={() => cancelAppointment(pendingCancellationId, true)}
+                className="rounded-lg bg-red-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-red-800 disabled:opacity-50"
+              >
+                {cancellingId === pendingCancellationId ? "Đang xử lý..." : "Chấp nhận mất cọc"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   );
 };
